@@ -1,29 +1,52 @@
-async function getCurrentTabDomain() {
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tabs[0]?.url) return "—";
+import { supabase } from "./supabase.js";
 
-  try {
-    const url = new URL(tabs[0].url);
-    return url.hostname.replace(/^www\./, "");
-  } catch {
-    return "—";
-  }
+const authSection = document.getElementById("authSection");
+const userSection = document.getElementById("userSection");
+const userEmailEl = document.getElementById("userEmail");
+
+function showAuth() {
+  authSection.classList.remove("hidden");
+  userSection.classList.add("hidden");
 }
 
-async function updateWebsite() {
-  const el = document.getElementById("website");
-  if (!el) return;
-
-  const domain = await getCurrentTabDomain();
-  el.textContent = domain;
+function showUser(user) {
+  userEmailEl.textContent = user.email;
+  authSection.classList.add("hidden");
+  userSection.classList.remove("hidden");
 }
 
-// Initial load
-document.addEventListener("DOMContentLoaded", updateWebsite);
+document.getElementById("googleLogin").onclick = async () => {
+  await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: chrome.runtime.getURL("sidepanel.html")
+    }
+  });
+};
 
-// Listen for background notifications
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === "TAB_CHANGED") {
-    updateWebsite();
-  }
-});
+document.getElementById("emailLogin").onclick = async () => {
+  const email = prompt("Enter your email");
+  if (!email) return;
+
+  await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: chrome.runtime.getURL("sidepanel.html")
+    }
+  });
+
+  alert("Check your email for the login link.");
+};
+
+document.getElementById("logout").onclick = async () => {
+  await supabase.auth.signOut();
+  showAuth();
+};
+
+async function loadSession() {
+  const { data } = await supabase.auth.getUser();
+  if (data?.user) showUser(data.user);
+  else showAuth();
+}
+
+loadSession();

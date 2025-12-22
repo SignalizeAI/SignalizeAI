@@ -3,7 +3,7 @@
   "name": "SignalizeAI",
   "version": "0.1.0",
   "description": "Turn any business website into sales-ready signals.",
-  "permissions": ["sidePanel", "tabs"],
+  "permissions": ["sidePanel", "tabs", "storage"],
   "icons": {
     "48": "icons/48.png",
     "128": "icons/128.png"
