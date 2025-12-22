@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "SignalizeAI",
+  "version": "0.0.1",
+  "description": "Turn any business website into sales-ready signals.",
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
