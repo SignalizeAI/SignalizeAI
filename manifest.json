@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "SignalizeAI",
+  "version": "0.1.0",
+  "description": "Turn any business website into sales-ready signals.",
+  "permissions": ["sidePanel", "tabs"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "SignalizeAI"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  }
+}
