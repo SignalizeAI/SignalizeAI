@@ -1,0 +1,15 @@
+{
+  "name": "signalize",
+  "version": "1.0.0",
+  "description": "Cursor for sales pages 🚀",
+  "main": "background.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.78.0"
+  }
+}

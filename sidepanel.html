@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -11,9 +11,19 @@
       <p class="subtitle">Signals from websites</p>
     </header>
 
+    <section class="auth" id="authSection">
+      <button id="googleLogin">Sign in with Google</button>
+      <button id="emailLogin">Continue with Email</button>
+    </section>
+
+    <section class="auth hidden" id="userSection">
+      <div class="userEmail" id="userEmail"></div>
+      <button id="logout">Sign out</button>
+    </section>
+
     <section class="card">
-    <div class="label">Website</div>
-    <div class="value" id="website">Loading...</div>
+      <div class="label">Website</div>
+      <div class="value" id="website">Loading...</div>
     </section>
 
     <section class="card">
@@ -30,6 +40,8 @@
       <div class="label">Value proposition</div>
       <div class="value">Turn data into actionable insights</div>
     </section>
+
+    <script src="supabase.bundle.js"></script>
 
     <script src="sidepanel.js"></script>
   </body>
