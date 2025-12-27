@@ -96,6 +96,16 @@ function updateUI(session) {
 if (signInBtn) signInBtn.addEventListener('click', signInWithGoogle);
 if (signOutBtn) signOutBtn.addEventListener('click', signOut);
 
+const dropdownHeader = document.getElementById('dropdown-header');
+const dropdownCard = document.querySelector('.dropdown-card');
+const dropdownContent = document.getElementById('dropdown-content');
+
+if (dropdownHeader && dropdownCard) {
+  dropdownHeader.addEventListener('click', () => {
+    dropdownCard.classList.toggle('expanded');
+  });
+}
+
 supabase.auth.onAuthStateChange((event, session) => {
   updateUI(session);
 });
