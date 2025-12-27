@@ -153,8 +153,17 @@ async function extractWebsiteContent() {
           displayWebsiteContent(response.content);
 
           try {
+            const aiCard = document.getElementById('ai-analysis');
+            const aiLoading = document.getElementById('ai-loading');
+            const aiData = document.getElementById('ai-data');
+
+            if (aiCard) aiCard.classList.remove('hidden');
+            if (aiLoading) aiLoading.classList.remove('hidden');
+            if (aiData) aiData.classList.add('hidden');
+
             const analysis = await analyzeWebsiteContent(response.content);
             console.log("🧠 AI business analysis:", analysis);
+            displayAIAnalysis(analysis);
           } catch (err) {
             console.error("AI analysis failed:", err);
           }
@@ -242,6 +251,24 @@ function displayWebsiteContent(content) {
     urlEl.href = content.url;
     urlEl.textContent = content.url;
   }
+}
+
+function displayAIAnalysis(analysis) {
+  const aiCard = document.getElementById('ai-analysis');
+  const aiLoading = document.getElementById('ai-loading');
+  const aiData = document.getElementById('ai-data');
+
+  if (aiCard) aiCard.classList.remove('hidden');
+  if (aiLoading) aiLoading.classList.add('hidden');
+  if (aiData) aiData.classList.remove('hidden');
+
+  const whatEl = document.getElementById('ai-what-they-do');
+  const targetEl = document.getElementById('ai-target-customer');
+  const valueEl = document.getElementById('ai-value-prop');
+
+  if (whatEl) whatEl.textContent = analysis.whatTheyDo || '—';
+  if (targetEl) targetEl.textContent = analysis.targetCustomer || '—';
+  if (valueEl) valueEl.textContent = analysis.valueProposition || '—';
 }
 
 if (signInBtn) signInBtn.addEventListener('click', signInWithGoogle);

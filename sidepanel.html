@@ -32,7 +32,7 @@
               >
             </div>
             <div style="display: flex; align-items: center; gap: 12px">
-            <div id="user-initial" class="user-avatar-placeholder">U</div>
+              <div id="user-initial" class="user-avatar-placeholder">U</div>
               <img
                 id="dropdown-chevron"
                 src="icons/chevron-down.svg"
@@ -43,51 +43,51 @@
           </div>
 
           <div class="dropdown-content" id="dropdown-content">
-          <ul class="menu-list">
-            <li>
-              <a href="#" class="menu-item active">
+            <ul class="menu-list">
+              <li>
+                <a href="#" class="menu-item active">
                   <img src="icons/profile.svg" alt="" class="menu-icon" />
-                Profile
-              </a>
-            </li>
-            <li>
-              <a href="#" class="menu-item">
+                  Profile
+                </a>
+              </li>
+              <li>
+                <a href="#" class="menu-item">
                   <img src="icons/community.svg" alt="" class="menu-icon" />
-                Community
-                <span class="badge badge-plus">+</span>
-              </a>
-            </li>
-            <li>
-              <a href="#" class="menu-item">
+                  Community
+                  <span class="badge badge-plus">+</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" class="menu-item">
                   <img src="icons/subscription.svg" alt="" class="menu-icon" />
-                Subscription
-                <span class="badge badge-pro">PRO</span>
-              </a>
-            </li>
-            <li>
-              <a href="#" class="menu-item">
+                  Subscription
+                  <span class="badge badge-pro">PRO</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" class="menu-item">
                   <img src="icons/settings.svg" alt="" class="menu-icon" />
-                Settings
-              </a>
-            </li>
-          </ul>
+                  Settings
+                </a>
+              </li>
+            </ul>
 
-          <div class="menu-divider"></div>
+            <div class="menu-divider"></div>
 
-          <ul class="menu-list">
-            <li>
-              <a href="#" class="menu-item">
+            <ul class="menu-list">
+              <li>
+                <a href="#" class="menu-item">
                   <img src="icons/help.svg" alt="" class="menu-icon" />
-                Help center
-              </a>
-            </li>
-            <li>
-              <button id="sign-out" class="menu-item link-button">
+                  Help center
+                </a>
+              </li>
+              <li>
+                <button id="sign-out" class="menu-item link-button">
                   <img src="icons/sign-out.svg" alt="" class="menu-icon" />
-                Sign out
-              </button>
-            </li>
-          </ul>
+                  Sign out
+                </button>
+              </li>
+            </ul>
           </div>
         </div>
 
@@ -128,7 +128,37 @@
 
             <div class="content-section">
               <h4 class="section-label">URL</h4>
-              <a id="content-url" href="#" target="_blank" class="content-url">-</a>
+              <a id="content-url" href="#" target="_blank" class="content-url"
+                >-</a
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Business Analysis -->
+        <div id="ai-analysis" class="website-content-card hidden">
+          <div class="content-header">
+            <h3 class="content-title">AI Business Signals</h3>
+          </div>
+
+          <div id="ai-loading" class="content-loading hidden">
+            <p>Analyzing business signals…</p>
+          </div>
+
+          <div id="ai-data" class="content-data hidden">
+            <div class="content-section">
+              <h4 class="section-label">What they do</h4>
+              <p id="ai-what-they-do" class="content-text">—</p>
+            </div>
+
+            <div class="content-section">
+              <h4 class="section-label">Target customer</h4>
+              <p id="ai-target-customer" class="content-text">—</p>
+            </div>
+
+            <div class="content-section">
+              <h4 class="section-label">Value proposition</h4>
+              <p id="ai-value-prop" class="content-text">—</p>
             </div>
           </div>
         </div>
