@@ -1,7 +1,10 @@
+import { analyzeWebsiteContent } from "./src/ai-analyze.js";
+
 if (!window.supabase) {
   throw new Error('Supabase client not initialized. Make sure extension/supabase.bundle.js is loaded.');
 }
 const supabase = window.supabase;
+let hasExtractedOnce = false;
 
 const loginView = document.getElementById('login-view');
 const welcomeView = document.getElementById('welcome-view');
@@ -82,17 +85,20 @@ function updateUI(session) {
     const user = session.user;
     const fullName = user.user_metadata.full_name || user.email;
     if (userNameSpan) userNameSpan.textContent = fullName;
-    
     if (userInitialSpan && fullName && fullName.length > 0) {
-        userInitialSpan.textContent = fullName.charAt(0).toUpperCase();
+      userInitialSpan.textContent = fullName.charAt(0).toUpperCase();
     }
-    statusMsg.textContent = ""; 
+    statusMsg.textContent = "";
 
-    extractWebsiteContent();
+    if (!hasExtractedOnce) {
+      hasExtractedOnce = true;
+      extractWebsiteContent();
+    }
 
   } else {
     loginView.classList.remove('hidden');
     welcomeView.classList.add('hidden');
+    hasExtractedOnce = false;
   }
 }
 
@@ -115,7 +121,7 @@ async function extractWebsiteContent() {
     chrome.tabs.sendMessage(
       tab.id,
       { type: "EXTRACT_WEBSITE_CONTENT" },
-      (response) => {
+      async (response) => {
         if (chrome.runtime.lastError) {
           console.warn("Extractor not available on this page");
           return;
@@ -123,6 +129,14 @@ async function extractWebsiteContent() {
 
         if (response?.ok) {
           console.log("📄 Extracted website content:", response.content);
+
+          try {
+            const analysis = await analyzeWebsiteContent(response.content);
+            console.log("🧠 AI business analysis:", analysis);
+          } catch (err) {
+            console.error("AI analysis failed:", err);
+          }
+
         } else {
           console.error("Extraction failed:", response?.error);
         }
