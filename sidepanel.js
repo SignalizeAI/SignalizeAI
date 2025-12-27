@@ -1,76 +1,100 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const authSection = document.getElementById("authSection");
-  const userSection = document.getElementById("userSection");
+if (!window.supabase) {
+  throw new Error('Supabase client not initialized. Make sure extension/supabase.bundle.js is loaded.');
+}
+const supabase = window.supabase;
 
-  const userEmailEl = document.getElementById("userEmail");
-  const websiteEl = document.getElementById("website");
+const loginView = document.getElementById('login-view');
+const welcomeView = document.getElementById('welcome-view');
+const userNameSpan = document.getElementById('user-name');
+const userInitialSpan = document.getElementById('user-initial');
+const signInBtn = document.getElementById('google-signin');
+const signOutBtn = document.getElementById('sign-out');
+const statusMsg = document.getElementById('status-msg');
 
-  /* ---------- WAIT FOR SUPABASE ---------- */
-  function waitForSupabase() {
-    return new Promise((resolve) => {
-      const check = () => {
-        if (window.supabase?.auth) resolve();
-        else setTimeout(check, 10);
-      };
-      check();
+async function signInWithGoogle() {
+  try {
+    statusMsg.textContent = "Logging in...";
+    
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: chrome.identity.getRedirectURL(),
+        skipBrowserRedirect: true
+      }
     });
+
+    if (error) throw error;
+
+    chrome.identity.launchWebAuthFlow(
+      {
+        url: data.url,
+        interactive: true
+      },
+      async (redirectUrl) => {
+        if (chrome.runtime.lastError) {
+          statusMsg.textContent = "Login cancelled.";
+          return;
+        }
+
+        if (redirectUrl) {
+          const urlObj = new URL(redirectUrl);
+          const params = new URLSearchParams(urlObj.hash.substring(1));
+          
+          const accessToken = params.get('access_token');
+          const refreshToken = params.get('refresh_token');
+
+          if (!accessToken) {
+            statusMsg.textContent = "Error: No access token.";
+            return;
+          }
+
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+
+          if (sessionError) throw sessionError;
+        }
+      }
+    );
+
+  } catch (err) {
+    console.error("Login failed:", err);
+    statusMsg.textContent = "Login failed. Please try again.";
   }
+}
 
-  /* ---------- UI HELPERS ---------- */
-  function showAuth() {
-    authSection.classList.remove("hidden");
-    userSection.classList.add("hidden");
-  }
+async function signOut() {
+  const { error } = await supabase.auth.signOut();
+  if (error) console.error("Sign out error:", error);
+}
 
-  function showUser(user) {
-    userEmailEl.textContent = user.email;
-    authSection.classList.add("hidden");
-    userSection.classList.remove("hidden");
-  }
+function updateUI(session) {
+  if (session) {
+    loginView.classList.add('hidden');
+    welcomeView.classList.remove('hidden');
 
-  /* ---------- GOOGLE LOGIN ---------- */
-  document.getElementById("googleLogin").addEventListener("click", () => {
-    chrome.runtime.sendMessage({ type: "LOGIN_GOOGLE" }, () => {
-      void chrome.runtime.lastError;
-    });
-  });
-
-  /* ---------- LOGOUT ---------- */
-  document.getElementById("logout").addEventListener("click", async () => {
-    await waitForSupabase();
-    await window.supabase.auth.signOut({ scope: "global" });
-    showAuth();
-  });
-
-  /* ---------- SESSION ---------- */
-  async function loadSession() {
-    const { data } = await window.supabase.auth.getUser();
-    data?.user ? showUser(data.user) : showAuth();
-  }
-
-  /* ---------- TAB LISTENER ---------- */
-  chrome.runtime.onMessage.addListener((msg) => {
-    if (msg.type === "TAB_CHANGED") {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs[0]) websiteEl.textContent = tabs[0].url || "Unknown";
-      });
+    const user = session.user;
+    const fullName = user.user_metadata.full_name || user.email;
+    if (userNameSpan) userNameSpan.textContent = fullName;
+    
+    if (userInitialSpan && fullName && fullName.length > 0) {
+        userInitialSpan.textContent = fullName.charAt(0).toUpperCase();
     }
-  });
+    statusMsg.textContent = ""; 
+  } else {
+    loginView.classList.remove('hidden');
+    welcomeView.classList.add('hidden');
+  }
+}
 
-  /* ---------- INITIAL LOAD ---------- */
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs[0]) websiteEl.textContent = tabs[0].url || "Unknown";
-  });
+if (signInBtn) signInBtn.addEventListener('click', signInWithGoogle);
+if (signOutBtn) signOutBtn.addEventListener('click', signOut);
 
-  /* ---------- INIT ---------- */
-  (async () => {
-    await waitForSupabase();
+supabase.auth.onAuthStateChange((event, session) => {
+  updateUI(session);
+});
 
-    window.supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session?.user) showUser(session.user);
-      if (event === "SIGNED_OUT") showAuth();
-    });
-
-    await loadSession();
-  })();
+supabase.auth.getSession().then(({ data }) => {
+  updateUI(data.session);
 });
