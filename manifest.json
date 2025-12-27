@@ -3,26 +3,29 @@
   "name": "SignalizeAI",
   "version": "0.1.0",
   "description": "Turn any business website into sales-ready signals.",
-
-  "permissions": ["sidePanel", "tabs", "storage", "identity"],
-
+  "permissions": [
+    "sidePanel",
+    "tabs",
+    "storage",
+    "identity"
+  ],
+  "host_permissions": [
+    "https://accounts.google.com/*",
+    "https://*.supabase.co/*"
+  ],
   "icons": {
     "48": "icons/48.png",
     "128": "icons/128.png"
   },
-
   "background": {
     "service_worker": "background.js"
   },
-
   "action": {
     "default_title": "SignalizeAI"
   },
-
   "side_panel": {
     "default_path": "sidepanel.html"
   },
-
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   }

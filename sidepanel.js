@@ -14,11 +14,13 @@ const statusMsg = document.getElementById('status-msg');
 async function signInWithGoogle() {
   try {
     statusMsg.textContent = "Logging in...";
-    
+
+    const redirectUrl = chrome.identity.getRedirectURL('supabase-auth');
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: chrome.identity.getRedirectURL(),
+        redirectTo: redirectUrl,
         skipBrowserRedirect: true
       }
     });
@@ -31,30 +33,33 @@ async function signInWithGoogle() {
         interactive: true
       },
       async (redirectUrl) => {
-        if (chrome.runtime.lastError) {
+        if (chrome.runtime.lastError || !redirectUrl) {
           statusMsg.textContent = "Login cancelled.";
           return;
         }
 
-        if (redirectUrl) {
-          const urlObj = new URL(redirectUrl);
-          const params = new URLSearchParams(urlObj.hash.substring(1));
-          
-          const accessToken = params.get('access_token');
-          const refreshToken = params.get('refresh_token');
-
-          if (!accessToken) {
-            statusMsg.textContent = "Error: No access token.";
-            return;
-          }
-
-          const { error: sessionError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken
-          });
-
-          if (sessionError) throw sessionError;
+        if (!redirectUrl.includes('access_token')) {
+          statusMsg.textContent = "Authentication failed.";
+          return;
         }
+
+        const url = new URL(redirectUrl);
+        const params = new URLSearchParams(url.hash.substring(1));
+
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+
+        if (!accessToken) {
+          statusMsg.textContent = "No access token received.";
+          return;
+        }
+
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+
+        if (sessionError) throw sessionError;
       }
     );
 
