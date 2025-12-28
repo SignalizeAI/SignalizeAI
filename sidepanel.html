@@ -196,6 +196,10 @@
         <div id="saved-analyses" class="website-content-card hidden">
           <div class="content-header">
             <h3 class="content-title">Saved Analyses</h3>
+                    <div class="export-actions">
+              <button id="export-csv" class="secondary-btn">Export CSV</button>
+              <button id="export-xlsx" class="secondary-btn">Export Excel</button>
+            </div>
           </div>
 
           <div id="saved-loading" class="content-loading hidden">
@@ -213,6 +217,6 @@
     </div>
 
     <script src="extension/supabase.bundle.js"></script>
-    <script type="module" src="sidepanel.js"></script>
+    <script type="module" src="extension/sidepanel.bundle.js"></script>
   </body>
 </html>

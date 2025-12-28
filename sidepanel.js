@@ -1,4 +1,5 @@
 import { analyzeWebsiteContent } from "./src/ai-analyze.js";
+import * as XLSX from "xlsx";
 
 if (!window.supabase) {
   throw new Error('Supabase client not initialized. Make sure extension/supabase.bundle.js is loaded.');
@@ -377,6 +378,76 @@ function renderSavedItem(item) {
   return wrapper;
 }
 
+function exportToCSV(rows) {
+  if (!rows.length) return;
+
+  const headers = [
+    "Title",
+    "Domain",
+    "URL",
+    "Sales Readiness Score",
+    "What They Do",
+    "Target Customer",
+    "Value Proposition",
+    "Best Sales Persona",
+    "Persona Reason",
+    "Sales Angle",
+    "Saved At"
+  ];
+
+  const csvRows = [
+    headers.join(","),
+    ...rows.map(item => [
+      item.title,
+      item.domain,
+      item.url,
+      item.sales_readiness_score,
+      `"${item.what_they_do || ""}"`,
+      `"${item.target_customer || ""}"`,
+      `"${item.value_proposition || ""}"`,
+      item.best_sales_persona,
+      `"${item.best_sales_persona_reason || ""}"`,
+      `"${item.sales_angle || ""}"`,
+      item.created_at
+    ].join(","))
+  ];
+
+  const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "signalize_saved_analyses.csv";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+function exportToExcel(rows) {
+  if (!rows.length) return;
+
+  const formatted = rows.map(item => ({
+    Title: item.title,
+    Domain: item.domain,
+    URL: item.url,
+    "Sales Readiness": item.sales_readiness_score,
+    "What They Do": item.what_they_do,
+    "Target Customer": item.target_customer,
+    "Value Proposition": item.value_proposition,
+    "Best Sales Persona": item.best_sales_persona,
+    "Persona Reason": item.best_sales_persona_reason,
+    "Sales Angle": item.sales_angle,
+    "Saved At": item.created_at
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(formatted);
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Saved Analyses");
+
+  XLSX.writeFile(workbook, "signalize_saved_analyses.xlsx");
+}
+
 async function loadSavedAnalyses() {
   document.getElementById("saved-analyses")?.classList.remove("hidden");
   const listEl = document.getElementById("saved-list");
@@ -407,6 +478,21 @@ async function loadSavedAnalyses() {
   data.forEach(item => {
     listEl.appendChild(renderSavedItem(item));
   });
+}
+
+async function fetchSavedAnalysesData() {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData?.session?.user;
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("saved_analyses")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data;
 }
 
 if (signInBtn) signInBtn.addEventListener('click', signInWithGoogle);
@@ -518,4 +604,14 @@ profileMenu?.addEventListener("click", (e) => {
   document.querySelector(".dropdown-card")?.classList.remove("expanded");
 
   showSavedAnalysesView();
+});
+
+document.getElementById("export-csv")?.addEventListener("click", async () => {
+  const data = await fetchSavedAnalysesData();
+  exportToCSV(data);
+});
+
+document.getElementById("export-xlsx")?.addEventListener("click", async () => {
+  const data = await fetchSavedAnalysesData();
+  exportToExcel(data);
 });
