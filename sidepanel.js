@@ -5,8 +5,10 @@ if (!window.supabase) {
   throw new Error('Supabase client not initialized. Make sure extension/supabase.bundle.js is loaded.');
 }
 const supabase = window.supabase;
+let lastContentHash = null;
 let lastAnalysis = null;
 let lastExtractedMeta = null;
+let lastAnalyzedDomain = null;
 
 const loginView = document.getElementById('login-view');
 const welcomeView = document.getElementById('welcome-view');
@@ -78,6 +80,23 @@ async function signInWithGoogle() {
 async function signOut() {
   const { error } = await supabase.auth.signOut();
   if (error) console.error("Sign out error:", error);
+}
+
+async function hashContent(content) {
+  const text = [
+    content.title,
+    content.metaDescription,
+    ...(content.headings || []),
+    ...(content.paragraphs || [])
+  ].join(" ");
+
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function showSavedAnalysesView() {
@@ -171,6 +190,13 @@ async function extractWebsiteContent() {
             domain: new URL(response.content.url).hostname
           };
 
+          const currentDomain = lastExtractedMeta.domain;
+
+          if (lastAnalyzedDomain === currentDomain && lastContentHash) return;
+
+          lastContentHash = await hashContent(response.content);
+          lastAnalyzedDomain = currentDomain;
+
           const btn = document.getElementById("saveButton");
           btn?.classList.remove("active");
           if (btn) btn.dataset.label = "Save";
@@ -178,15 +204,19 @@ async function extractWebsiteContent() {
           const { data: sessionData } = await supabase.auth.getSession();
           const user = sessionData?.session?.user;
 
+          let existing = null;
+
           if (user) {
             const { data } = await supabase
               .from("saved_analyses")
-              .select("id")
+              .select("*")
               .eq("user_id", user.id)
               .eq("domain", lastExtractedMeta.domain)
               .maybeSingle();
 
-            if (data) {
+            existing = data;
+
+            if (existing) {
               btn?.classList.add("active");
               if (btn) btn.dataset.label = "Remove";
             }
@@ -198,13 +228,47 @@ async function extractWebsiteContent() {
             const aiData = document.getElementById('ai-data');
 
             if (aiCard) aiCard.classList.remove('hidden');
-            if (aiLoading) aiLoading.classList.remove('hidden');
-            if (aiData) aiData.classList.add('hidden');
 
-            const analysis = await analyzeWebsiteContent(response.content);
-            console.log("🧠 AI business analysis:", analysis);
-            lastAnalysis = analysis;
-            displayAIAnalysis(analysis);
+            if (existing && existing.content_hash === lastContentHash) {
+              if (aiLoading) aiLoading.classList.add("hidden");
+              lastAnalysis = {
+                whatTheyDo: existing.what_they_do,
+                targetCustomer: existing.target_customer,
+                valueProposition: existing.value_proposition,
+                salesAngle: existing.sales_angle,
+                salesReadinessScore: existing.sales_readiness_score,
+                bestSalesPersona: {
+                  persona: existing.best_sales_persona,
+                  reason: existing.best_sales_persona_reason
+                }
+              };
+
+              displayAIAnalysis(lastAnalysis);
+
+            } else {
+              if (aiLoading) aiLoading.classList.remove("hidden");
+              if (aiData) aiData.classList.add("hidden");
+              const analysis = await analyzeWebsiteContent(response.content);
+              lastAnalysis = analysis;
+              displayAIAnalysis(analysis);
+
+              if (existing) {
+                await supabase
+                  .from("saved_analyses")
+                  .update({
+                    content_hash: lastContentHash,
+                    last_analyzed_at: new Date().toISOString(),
+                    what_they_do: analysis.whatTheyDo,
+                    target_customer: analysis.targetCustomer,
+                    value_proposition: analysis.valueProposition,
+                    sales_angle: analysis.salesAngle,
+                    sales_readiness_score: analysis.salesReadinessScore,
+                    best_sales_persona: analysis.bestSalesPersona?.persona,
+                    best_sales_persona_reason: analysis.bestSalesPersona?.reason
+                  })
+                  .eq("id", existing.id);
+              }
+            }
           } catch (err) {
             console.error("AI analysis failed:", err);
           }
@@ -568,6 +632,8 @@ button?.addEventListener("click", async () => {
       domain,
       url: lastExtractedMeta.url,
       title: lastExtractedMeta.title,
+      content_hash: lastContentHash,
+      last_analyzed_at: new Date().toISOString(),
       what_they_do: lastAnalysis.whatTheyDo,
       target_customer: lastAnalysis.targetCustomer,
       value_proposition: lastAnalysis.valueProposition,
