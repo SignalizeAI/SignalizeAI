@@ -9,7 +9,8 @@ Return ONLY valid JSON in this exact shape:
   "whatTheyDo": "",
   "targetCustomer": "",
   "valueProposition": "",
-  "salesAngle": ""
+  "salesAngle": "",
+  "salesReadinessScore": 0
 }
 
 Rules:
@@ -22,6 +23,11 @@ Guidelines for salesAngle:
 - One short paragraph
 - Explain how someone could approach, pitch, or engage this business
 - Focus on their audience, offering, or positioning
+
+salesReadinessScore rules:
+- Integer between 0 and 100
+- Higher = easier to sell to
+- Consider clarity, maturity, and market focus
 
 Website information:
 Title: ${extracted.title}

@@ -275,11 +275,13 @@ function displayAIAnalysis(analysis) {
   const targetEl = document.getElementById('ai-target-customer');
   const valueEl = document.getElementById('ai-value-prop');
   const salesEl = document.getElementById('ai-sales-angle');
+  const scoreEl = document.getElementById('ai-sales-score');
 
   if (whatEl) whatEl.textContent = analysis.whatTheyDo || '—';
   if (targetEl) targetEl.textContent = analysis.targetCustomer || '—';
   if (valueEl) valueEl.textContent = analysis.valueProposition || '—';
   if (salesEl) salesEl.textContent = analysis.salesAngle || '—';
+  if (scoreEl) scoreEl.textContent = analysis.salesReadinessScore ?? '—';
 }
 
 async function saveCurrentAnalysis() {
@@ -297,7 +299,8 @@ async function saveCurrentAnalysis() {
     what_they_do: lastAnalysis.whatTheyDo,
     target_customer: lastAnalysis.targetCustomer,
     value_proposition: lastAnalysis.valueProposition,
-    sales_angle: lastAnalysis.salesAngle
+    sales_angle: lastAnalysis.salesAngle,
+    sales_readiness_score: lastAnalysis.salesReadinessScore
   });
 }
 
