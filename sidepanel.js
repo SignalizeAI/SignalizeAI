@@ -5,6 +5,8 @@ if (!window.supabase) {
 }
 const supabase = window.supabase;
 let hasExtractedOnce = false;
+let lastAnalysis = null;
+let lastExtractedMeta = null;
 
 const loginView = document.getElementById('login-view');
 const welcomeView = document.getElementById('welcome-view');
@@ -152,6 +154,12 @@ async function extractWebsiteContent() {
           console.log("📄 Extracted website content:", response.content);
           displayWebsiteContent(response.content);
 
+          lastExtractedMeta = {
+            title: response.content.title,
+            url: response.content.url,
+            domain: new URL(response.content.url).hostname
+          };
+
           try {
             const aiCard = document.getElementById('ai-analysis');
             const aiLoading = document.getElementById('ai-loading');
@@ -163,6 +171,7 @@ async function extractWebsiteContent() {
 
             const analysis = await analyzeWebsiteContent(response.content);
             console.log("🧠 AI business analysis:", analysis);
+            lastAnalysis = analysis;
             displayAIAnalysis(analysis);
           } catch (err) {
             console.error("AI analysis failed:", err);
@@ -273,6 +282,25 @@ function displayAIAnalysis(analysis) {
   if (salesEl) salesEl.textContent = analysis.salesAngle || '—';
 }
 
+async function saveCurrentAnalysis() {
+  if (!lastAnalysis || !lastExtractedMeta) return;
+
+  const { data } = await supabase.auth.getSession();
+  const user = data?.session?.user;
+  if (!user) return;
+
+  await supabase.from('saved_analyses').insert({
+    user_id: user.id,
+    domain: lastExtractedMeta.domain,
+    url: lastExtractedMeta.url,
+    title: lastExtractedMeta.title,
+    what_they_do: lastAnalysis.whatTheyDo,
+    target_customer: lastAnalysis.targetCustomer,
+    value_proposition: lastAnalysis.valueProposition,
+    sales_angle: lastAnalysis.salesAngle
+  });
+}
+
 if (signInBtn) signInBtn.addEventListener('click', signInWithGoogle);
 if (signOutBtn) signOutBtn.addEventListener('click', signOut);
 
@@ -313,6 +341,10 @@ document.addEventListener('visibilitychange', () => {
     });
   }
 });
+
+document
+  .getElementById('save-analysis')
+  ?.addEventListener('click', saveCurrentAnalysis);
 
 supabase.auth.onAuthStateChange((event, session) => {
   updateUI(session);

@@ -382,3 +382,36 @@ body:has(#welcome-view:not(.hidden)) {
   color: #5a9fff;
   text-decoration: underline;
 }
+
+.content-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #6e8bff, #4f6ef7);
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s;
+}
+
+.primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(79, 110, 247, 0.35);
+}
+
+.primary-btn:active {
+  transform: translateY(0);
+  opacity: 0.9;
+}
+
+.primary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
