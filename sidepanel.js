@@ -160,6 +160,8 @@ async function extractWebsiteContent() {
             domain: new URL(response.content.url).hostname
           };
 
+          document.getElementById("saveButton")?.classList.remove("active");
+
           try {
             const aiCard = document.getElementById('ai-analysis');
             const aiLoading = document.getElementById('ai-loading');
@@ -345,9 +347,41 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-document
-  .getElementById('save-analysis')
-  ?.addEventListener('click', saveCurrentAnalysis);
+const button = document.getElementById("saveButton");
+
+button?.addEventListener("click", async () => {
+  if (!lastAnalysis || !lastExtractedMeta) return;
+
+  const { data } = await supabase.auth.getSession();
+  const user = data?.session?.user;
+  if (!user) return;
+
+  const domain = lastExtractedMeta.domain;
+
+  if (button.classList.contains("active")) {
+    await supabase
+      .from("saved_analyses")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("domain", domain);
+
+    button.classList.remove("active");
+  } else {
+    await supabase.from("saved_analyses").insert({
+      user_id: user.id,
+      domain,
+      url: lastExtractedMeta.url,
+      title: lastExtractedMeta.title,
+      what_they_do: lastAnalysis.whatTheyDo,
+      target_customer: lastAnalysis.targetCustomer,
+      value_proposition: lastAnalysis.valueProposition,
+      sales_angle: lastAnalysis.salesAngle,
+      sales_readiness_score: lastAnalysis.salesReadinessScore
+    });
+
+    button.classList.add("active");
+  }
+});
 
 supabase.auth.onAuthStateChange((event, session) => {
   updateUI(session);
@@ -355,10 +389,4 @@ supabase.auth.onAuthStateChange((event, session) => {
 
 supabase.auth.getSession().then(({ data }) => {
   updateUI(data.session);
-});
-
-const button = document.getElementById("saveButton");
-
-button.addEventListener("click", () => {
-  button.classList.toggle("active");
 });
