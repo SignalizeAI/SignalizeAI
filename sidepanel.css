@@ -385,45 +385,36 @@ body:has(#welcome-view:not(.hidden)) {
   text-decoration: underline;
 }
 
-/* Button Wrapper (Invisible container) */
 .save-btn {
-  background: transparent; /* No background */
-  border: none;            /* No border */
+  background: transparent;
+  border: none;
   cursor: pointer;
   outline: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Icon Styling */
 .save-icon {
-  width: 20px; /* Increased size since there is no button circle */
+  width: 20px;
   height: 20px;
-  
-  /* Default State (Unsaved) */
+
   fill: transparent;
-  stroke: #888888; /* Grey outline */
+  stroke: #888888;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
   
-  /* Smooth transition for color and glow */
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Hover Effect (Unsaved) */
 .save-btn:hover .save-icon {
-  stroke: #ffffff; /* Brighten to white on hover */
-  transform: scale(1.1); /* Slight grow */
+  stroke: #ffffff;
+  transform: scale(1.1);
 }
 
-/* --- ACTIVE (SAVED) STATE --- */
-
 .save-btn.active .save-icon {
-  /* Neon Purple Fill & Stroke */
   fill: #ffffff;
   stroke: rgb(255, 255, 255);
 
-  /* THE NEON GLOW (Follows the icon shape) */
   filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8)) 
           drop-shadow(0 0 15px rgba(255, 255, 255, 0.4));
   
@@ -436,4 +427,32 @@ body:has(#welcome-view:not(.hidden)) {
   50% { transform: scale(0.9) rotate(-5deg); }
   75% { transform: scale(1.1) rotate(3deg); }
   100% { transform: scale(1) rotate(0); }
+}
+
+.save-btn {
+  position: relative;
+}
+
+.save-btn::after {
+  content: attr(data-label);
+  position: absolute;
+  top: -32px;
+  right: 50%;
+  transform: translateX(50%);
+  
+  background: #1a1a1a;
+  color: #ffffff;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.save-btn:hover::after {
+  opacity: 1;
+  transform: translateX(50%) translateY(-4px);
 }

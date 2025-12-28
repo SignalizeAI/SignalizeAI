@@ -359,15 +359,21 @@ button?.addEventListener("click", async () => {
   const domain = lastExtractedMeta.domain;
 
   if (button.classList.contains("active")) {
-    await supabase
+    const { error } = await supabase
       .from("saved_analyses")
       .delete()
       .eq("user_id", user.id)
       .eq("domain", domain);
 
+    if (error) {
+      console.error("Failed to delete:", error);
+      return;
+    }
+
     button.classList.remove("active");
+    button.dataset.label = "Save";
   } else {
-    await supabase.from("saved_analyses").insert({
+    const { error } = await supabase.from("saved_analyses").insert({
       user_id: user.id,
       domain,
       url: lastExtractedMeta.url,
@@ -379,7 +385,13 @@ button?.addEventListener("click", async () => {
       sales_readiness_score: lastAnalysis.salesReadinessScore
     });
 
+    if (error) {
+      console.error("Failed to save:", error);
+      return;
+    }
+
     button.classList.add("active");
+    button.dataset.label = "Remove";
   }
 });
 
