@@ -353,3 +353,9 @@ supabase.auth.onAuthStateChange((event, session) => {
 supabase.auth.getSession().then(({ data }) => {
   updateUI(data.session);
 });
+
+const button = document.getElementById("saveButton");
+
+button.addEventListener("click", () => {
+  button.classList.toggle("active");
+});
