@@ -99,6 +99,34 @@ async function hashContent(content) {
     .join("");
 }
 
+function showContentBlocked(message) {
+  const contentCard = document.getElementById("website-content");
+  const contentLoading = document.getElementById("content-loading");
+  const contentError = document.getElementById("content-error");
+  const aiCard = document.getElementById("ai-analysis");
+  const saveBtn = document.getElementById("saveButton");
+
+  if (contentCard) contentCard.classList.add("hidden")
+  if (contentLoading) contentLoading.classList.add("hidden");
+
+  if (contentError) {
+    contentError.textContent = message;
+    contentError.classList.remove("hidden");
+  }
+
+  if (aiCard) aiCard.classList.add("hidden");
+  if (saveBtn) {
+    saveBtn.classList.remove("active");
+    saveBtn.dataset.label = "Save";
+  }
+
+
+  lastAnalysis = null;
+  lastContentHash = null;
+  lastExtractedMeta = null;
+  lastAnalyzedDomain = null;
+}
+
 function showSavedAnalysesView() {
   document.getElementById("website-content")?.classList.add("hidden");
   document.getElementById("ai-analysis")?.classList.add("hidden");
@@ -182,7 +210,6 @@ async function extractWebsiteContent() {
 
         if (response?.ok && response.content) {
           console.log("📄 Extracted website content:", response.content);
-          displayWebsiteContent(response.content);
 
           lastExtractedMeta = {
             title: response.content.title,
@@ -192,9 +219,8 @@ async function extractWebsiteContent() {
 
           const currentDomain = lastExtractedMeta.domain;
 
-          if (lastAnalyzedDomain === currentDomain && lastContentHash) return;
-
           lastContentHash = await hashContent(response.content);
+          if (lastAnalyzedDomain === currentDomain) return;
           lastAnalyzedDomain = currentDomain;
 
           const btn = document.getElementById("saveButton");
@@ -248,6 +274,12 @@ async function extractWebsiteContent() {
             } else {
               if (aiLoading) aiLoading.classList.remove("hidden");
               if (aiData) aiData.classList.add("hidden");
+
+              if (!response.content.paragraphs?.length && !response.content.headings?.length) {
+                showContentBlocked("Not enough readable content to analyze.");
+                return;
+              }
+              displayWebsiteContent(response.content);
               const analysis = await analyzeWebsiteContent(response.content);
               lastAnalysis = analysis;
               displayAIAnalysis(analysis);
@@ -273,9 +305,22 @@ async function extractWebsiteContent() {
             console.error("AI analysis failed:", err);
           }
 
-        } else {
-          console.error("Extraction failed:", response?.error);
-          if (contentError) contentError.classList.remove('hidden');
+        }
+        else if (response?.reason === "THIN_CONTENT") {
+          showContentBlocked(
+            "Not enough public content on this page to analyze."
+          );
+          return;
+        }
+        else if (response?.reason === "RESTRICTED") {
+          showContentBlocked(
+            "This page requires login or consent before content can be analyzed."
+          );
+          return;
+        }
+        else {
+          console.error("Extraction failed:", response?.error || response);
+          showContentBlocked("Unable to analyze this page.");
         }
       }
     );
