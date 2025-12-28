@@ -425,9 +425,10 @@ function displayAIAnalysis(analysis) {
   if (valueEl) valueEl.textContent = analysis.valueProposition || '—';
   if (salesEl) salesEl.textContent = analysis.salesAngle || '—';
   if (scoreEl) scoreEl.textContent = analysis.salesReadinessScore ?? '—';
-  if (personaEl) personaEl.textContent = analysis.bestSalesPersona?.persona || '—';
+  if (personaEl) personaEl.textContent =
+   analysis.bestSalesPersona?.persona || 'Mid-Market AE';
   if (personaReasonEl) {
-    const reason = analysis.bestSalesPersona?.reason;
+    const reason = analysis.bestSalesPersona?.reason || '';
     personaReasonEl.textContent = reason ? `(${reason})` : '—';
   }
 }
