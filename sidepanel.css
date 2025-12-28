@@ -298,6 +298,8 @@ body:has(#welcome-view:not(.hidden)) {
 }
 
 .content-header {
+  display: flex;
+  justify-content: space-between;;
   margin-bottom: 16px;
   padding-bottom: 12px;
   border-bottom: 1px solid #333333;
@@ -383,35 +385,55 @@ body:has(#welcome-view:not(.hidden)) {
   text-decoration: underline;
 }
 
-.content-actions {
-  margin-top: 12px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.primary-btn {
-  background: linear-gradient(135deg, #6e8bff, #4f6ef7);
-  color: #fff;
-  border: none;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  border-radius: 8px;
+/* Button Wrapper (Invisible container) */
+.save-btn {
+  background: transparent; /* No background */
+  border: none;            /* No border */
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.primary-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(79, 110, 247, 0.35);
+/* Icon Styling */
+.save-icon {
+  width: 20px; /* Increased size since there is no button circle */
+  height: 20px;
+  
+  /* Default State (Unsaved) */
+  fill: transparent;
+  stroke: #888888; /* Grey outline */
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  
+  /* Smooth transition for color and glow */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.primary-btn:active {
-  transform: translateY(0);
-  opacity: 0.9;
+/* Hover Effect (Unsaved) */
+.save-btn:hover .save-icon {
+  stroke: #ffffff; /* Brighten to white on hover */
+  transform: scale(1.1); /* Slight grow */
 }
 
-.primary-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+/* --- ACTIVE (SAVED) STATE --- */
+
+.save-btn.active .save-icon {
+  /* Neon Purple Fill & Stroke */
+  fill: #ffffff;
+  stroke: rgb(255, 255, 255);
+
+  /* THE NEON GLOW (Follows the icon shape) */
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8)) 
+          drop-shadow(0 0 15px rgba(255, 255, 255, 0.4));
+  
+  animation: jelly 0.5s ease-in-out;
+}
+
+@keyframes jelly {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.25) rotate(5deg); } 
+  50% { transform: scale(0.9) rotate(-5deg); }
+  75% { transform: scale(1.1) rotate(3deg); }
+  100% { transform: scale(1) rotate(0); }
 }
