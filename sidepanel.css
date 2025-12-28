@@ -393,19 +393,6 @@ body:has(#welcome-view:not(.hidden)) {
   -webkit-tap-highlight-color: transparent;
 }
 
-.save-icon {
-  width: 20px;
-  height: 20px;
-
-  fill: transparent;
-  stroke: #888888;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
 .save-btn:hover .save-icon {
   stroke: #ffffff;
   transform: scale(1.1);
