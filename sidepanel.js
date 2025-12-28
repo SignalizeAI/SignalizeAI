@@ -265,10 +265,12 @@ function displayAIAnalysis(analysis) {
   const whatEl = document.getElementById('ai-what-they-do');
   const targetEl = document.getElementById('ai-target-customer');
   const valueEl = document.getElementById('ai-value-prop');
+  const salesEl = document.getElementById('ai-sales-angle');
 
   if (whatEl) whatEl.textContent = analysis.whatTheyDo || '—';
   if (targetEl) targetEl.textContent = analysis.targetCustomer || '—';
   if (valueEl) valueEl.textContent = analysis.valueProposition || '—';
+  if (salesEl) salesEl.textContent = analysis.salesAngle || '—';
 }
 
 if (signInBtn) signInBtn.addEventListener('click', signInWithGoogle);

@@ -8,7 +8,8 @@ Return ONLY valid JSON in this exact shape:
 {
   "whatTheyDo": "",
   "targetCustomer": "",
-  "valueProposition": ""
+  "valueProposition": "",
+  "salesAngle": ""
 }
 
 Rules:
@@ -16,6 +17,11 @@ Rules:
 - No explanations
 - No extra text
 - Strings only
+
+Guidelines for salesAngle:
+- One short paragraph
+- Explain how someone could approach, pitch, or engage this business
+- Focus on their audience, offering, or positioning
 
 Website information:
 Title: ${extracted.title}
@@ -38,7 +44,7 @@ Content: ${(extracted.paragraphs || []).join(" ").slice(0, 2000)}
           { role: "user", content: prompt }
         ],
         temperature: 0.2,
-        max_tokens: 300
+        max_tokens: 400
       })
     }
   );
