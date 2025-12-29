@@ -10,7 +10,8 @@
     if (!text) return false;
 
     const length = text.length;
-    if (length < 40 || length > 300) return false;
+
+    if (length < 12 || length > 500) return false;
 
     const blacklist = [
       "cookie",
@@ -21,6 +22,8 @@
       "login",
       "accept all",
       "©",
+      "home",
+      "menu"
     ];
 
     const lower = text.toLowerCase();
@@ -30,27 +33,19 @@
   function detectRestriction() {
     const bodyText = document.body?.innerText?.toLowerCase() || "";
 
-    const restrictedPhrases = [
-      "sign in",
-      "log in",
-      "login to continue",
-      "please login",
-      "create an account",
-      "subscribe to read",
-      "accept cookies",
-      "enable cookies",
+    const HARD_BLOCKERS = [
+      "verify you are human",
+      "checking your browser",
       "access denied",
       "403 forbidden",
-      "not authorized",
-      "verify you are human"
+      "401 unauthorized",
+      "enable javascript",
+      "captcha",
+      "cloudflare"
     ];
 
-    const matched = restrictedPhrases.find(p => bodyText.includes(p));
-    if (matched) {
-      return `Restricted page detected: "${matched}"`;
-    }
-
-    return null;
+    const matched = HARD_BLOCKERS.find(p => bodyText.includes(p));
+    return matched ? `Hard restricted page: "${matched}"` : null;
   }
 
   function isThinContent(content) {
@@ -61,8 +56,9 @@
       content.paragraphs.join("").length;
 
     return (
-      totalTextLength < 300 ||
-      content.paragraphs.length < 2
+      totalTextLength < 180 &&
+      content.paragraphs.length < 4 &&
+      content.headings.length < 1
     );
   }
 
@@ -80,13 +76,17 @@
       document.querySelector("section") ||
       document.body;
 
-    const paragraphs = Array.from(containers.querySelectorAll("p"))
-      .map(p => cleanText(p.innerText))
+    const elements = Array.from(
+      containers.querySelectorAll("p, div, span")
+    );
+
+    const texts = elements
+      .map(el => cleanText(el.innerText))
       .filter(isMeaningful);
 
-    const unique = Array.from(new Set(paragraphs));
+    const unique = Array.from(new Set(texts));
 
-    return unique.slice(0, 15);
+    return unique.slice(0, 20);
   }
 
   function extractContent() {
