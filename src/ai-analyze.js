@@ -84,9 +84,47 @@ Content: ${(extracted.paragraphs || []).join(" ").slice(0, 2000)}
   }
 
   try {
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    return normalizeAnalysis(parsed);
   } catch {
     console.error("Raw AI output:", raw);
     throw new Error("AI did not return valid JSON");
   }
+}
+
+function normalizeAnalysis(raw) {
+  const PERSONA_MAP = [
+    "Founder / CEO",
+    "Enterprise Account Executive",
+    "Mid-Market AE",
+    "SMB Sales Rep",
+    "Product-Led Growth (PLG)",
+    "Partnerships / Alliances"
+  ];
+
+  const cleanText = (v, max = 240) =>
+    typeof v === "string"
+      ? v.replace(/\s+/g, " ").trim().slice(0, max)
+      : "";
+
+  const normalizePersona = (p) =>
+    PERSONA_MAP.find(x => x.toLowerCase() === String(p).toLowerCase())
+    || "Mid-Market AE";
+
+  return {
+    whatTheyDo: cleanText(raw.whatTheyDo, 200),
+    targetCustomer: cleanText(raw.targetCustomer, 180),
+    valueProposition: cleanText(raw.valueProposition, 220),
+    salesAngle: cleanText(raw.salesAngle, 360),
+
+    salesReadinessScore: Math.max(
+      0,
+      Math.min(100, Number(raw.salesReadinessScore) || 0)
+    ),
+
+    bestSalesPersona: {
+      persona: normalizePersona(raw.bestSalesPersona?.persona),
+      reason: cleanText(raw.bestSalesPersona?.reason, 160)
+    }
+  };
 }

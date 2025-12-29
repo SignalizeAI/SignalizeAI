@@ -51,6 +51,12 @@
                 </a>
               </li>
               <li>
+                <a href="#" class="menu-item" id="menu-saved-analyses">
+                  <img src="icons/bookmark.svg" alt="" class="menu-icon" />
+                  Saved analyses
+                </a>
+              </li>
+              <li>
                 <a href="#" class="menu-item">
                   <img src="icons/community.svg" alt="" class="menu-icon" />
                   Community
@@ -185,10 +191,32 @@
             </div>
           </div>
         </div>
+
+        <!-- Saved Analyses -->
+        <div id="saved-analyses" class="website-content-card hidden">
+          <div class="content-header">
+            <h3 class="content-title">Saved Analyses</h3>
+                    <div class="export-actions">
+              <button id="export-csv" class="secondary-btn">Export CSV</button>
+              <button id="export-xlsx" class="secondary-btn">Export Excel</button>
+            </div>
+          </div>
+
+          <div id="saved-loading" class="content-loading hidden">
+            <p>Loading saved companies…</p>
+          </div>
+
+          <div id="saved-empty" class="content-empty hidden">
+            <p>No saved companies yet.</p>
+          </div>
+
+          <div id="saved-list" class="saved-list"></div>
+        </div>
+
       </div>
     </div>
 
     <script src="extension/supabase.bundle.js"></script>
-    <script type="module" src="sidepanel.js"></script>
+    <script type="module" src="extension/sidepanel.bundle.js"></script>
   </body>
 </html>

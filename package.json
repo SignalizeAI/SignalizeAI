@@ -4,15 +4,15 @@
   "description": "Cursor for sales pages 🚀",
   "main": "background.js",
   "scripts": {
-    "build": "esbuild src/sidepanel-entry.js --bundle --format=iife --outfile=extension/supabase.bundle.js",
-    "watch": "esbuild src/sidepanel-entry.js --bundle --format=iife --outfile=extension/supabase.bundle.js --watch",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "esbuild src/sidepanel-entry.js --bundle --format=iife --outfile=extension/supabase.bundle.js && esbuild sidepanel.js --bundle --platform=browser --format=esm --outfile=extension/sidepanel.bundle.js",
+    "watch": "esbuild src/sidepanel-entry.js --bundle --format=iife --outfile=extension/supabase.bundle.js --watch"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@supabase/supabase-js": "^2.78.0"
+    "@supabase/supabase-js": "^2.78.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "esbuild": "^0.27.2"

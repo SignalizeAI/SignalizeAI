@@ -27,6 +27,45 @@
     return !blacklist.some(word => lower.includes(word));
   }
 
+  function detectRestriction() {
+    const bodyText = document.body?.innerText?.toLowerCase() || "";
+
+    const restrictedPhrases = [
+      "sign in",
+      "log in",
+      "login to continue",
+      "please login",
+      "create an account",
+      "subscribe to read",
+      "accept cookies",
+      "enable cookies",
+      "access denied",
+      "403 forbidden",
+      "not authorized",
+      "verify you are human"
+    ];
+
+    const matched = restrictedPhrases.find(p => bodyText.includes(p));
+    if (matched) {
+      return `Restricted page detected: "${matched}"`;
+    }
+
+    return null;
+  }
+
+  function isThinContent(content) {
+    const totalTextLength =
+      (content.title?.length || 0) +
+      (content.metaDescription?.length || 0) +
+      content.headings.join("").length +
+      content.paragraphs.join("").length;
+
+    return (
+      totalTextLength < 300 ||
+      content.paragraphs.length < 2
+    );
+  }
+
   function extractHeadings() {
     return Array.from(document.querySelectorAll("h1, h2"))
       .map(h => cleanText(h.innerText))
@@ -64,7 +103,26 @@
   chrome.runtime.onMessage.addListener((msg, _, sendResponse) => {
     if (msg?.type === "EXTRACT_WEBSITE_CONTENT") {
       try {
+        const restriction = detectRestriction();
+        if (restriction) {
+          sendResponse({
+            ok: false,
+            reason: "RESTRICTED",
+            details: restriction
+          });
+          return;
+        }
+
         const content = extractContent();
+
+        if (isThinContent(content)) {
+          sendResponse({
+            ok: false,
+            reason: "THIN_CONTENT"
+          });
+          return;
+        }
+
         sendResponse({ ok: true, content });
       } catch (err) {
         sendResponse({ ok: false, error: err.message });

@@ -1,12 +1,14 @@
 import { analyzeWebsiteContent } from "./src/ai-analyze.js";
+import * as XLSX from "xlsx";
 
 if (!window.supabase) {
   throw new Error('Supabase client not initialized. Make sure extension/supabase.bundle.js is loaded.');
 }
 const supabase = window.supabase;
-let hasExtractedOnce = false;
+let lastContentHash = null;
 let lastAnalysis = null;
 let lastExtractedMeta = null;
+let lastAnalyzedDomain = null;
 
 const loginView = document.getElementById('login-view');
 const welcomeView = document.getElementById('welcome-view');
@@ -80,6 +82,63 @@ async function signOut() {
   if (error) console.error("Sign out error:", error);
 }
 
+async function hashContent(content) {
+  const text = [
+    content.title,
+    content.metaDescription,
+    ...(content.headings || []),
+    ...(content.paragraphs || [])
+  ].join(" ");
+
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function showContentBlocked(message) {
+  const contentCard = document.getElementById("website-content");
+  const contentLoading = document.getElementById("content-loading");
+  const contentError = document.getElementById("content-error");
+  const aiCard = document.getElementById("ai-analysis");
+  const saveBtn = document.getElementById("saveButton");
+
+  if (contentCard) contentCard.classList.add("hidden")
+  if (contentLoading) contentLoading.classList.add("hidden");
+
+  if (contentError) {
+    contentError.textContent = message;
+    contentError.classList.remove("hidden");
+  }
+
+  if (aiCard) aiCard.classList.add("hidden");
+  if (saveBtn) {
+    saveBtn.classList.remove("active");
+    saveBtn.dataset.label = "Save";
+  }
+
+
+  lastAnalysis = null;
+  lastContentHash = null;
+  lastExtractedMeta = null;
+  lastAnalyzedDomain = null;
+}
+
+function showSavedAnalysesView() {
+  document.getElementById("website-content")?.classList.add("hidden");
+  document.getElementById("ai-analysis")?.classList.add("hidden");
+
+  document.getElementById("content-loading")?.classList.add("hidden");
+  document.getElementById("ai-loading")?.classList.add("hidden");
+
+  document.getElementById("saved-analyses")?.classList.remove("hidden");
+
+  loadSavedAnalyses();
+}
+
 function updateUI(session) {
   if (session) {
     loginView.classList.add('hidden');
@@ -101,7 +160,6 @@ function updateUI(session) {
   } else {
     loginView.classList.remove('hidden');
     welcomeView.classList.add('hidden');
-    hasExtractedOnce = false;
   }
 }
 
@@ -152,7 +210,6 @@ async function extractWebsiteContent() {
 
         if (response?.ok && response.content) {
           console.log("📄 Extracted website content:", response.content);
-          displayWebsiteContent(response.content);
 
           lastExtractedMeta = {
             title: response.content.title,
@@ -160,7 +217,36 @@ async function extractWebsiteContent() {
             domain: new URL(response.content.url).hostname
           };
 
-          document.getElementById("saveButton")?.classList.remove("active");
+          const currentDomain = lastExtractedMeta.domain;
+
+          lastContentHash = await hashContent(response.content);
+          if (lastAnalyzedDomain === currentDomain) return;
+          lastAnalyzedDomain = currentDomain;
+
+          const btn = document.getElementById("saveButton");
+          btn?.classList.remove("active");
+          if (btn) btn.dataset.label = "Save";
+
+          const { data: sessionData } = await supabase.auth.getSession();
+          const user = sessionData?.session?.user;
+
+          let existing = null;
+
+          if (user) {
+            const { data } = await supabase
+              .from("saved_analyses")
+              .select("*")
+              .eq("user_id", user.id)
+              .eq("domain", lastExtractedMeta.domain)
+              .maybeSingle();
+
+            existing = data;
+
+            if (existing) {
+              btn?.classList.add("active");
+              if (btn) btn.dataset.label = "Remove";
+            }
+          }
 
           try {
             const aiCard = document.getElementById('ai-analysis');
@@ -168,20 +254,73 @@ async function extractWebsiteContent() {
             const aiData = document.getElementById('ai-data');
 
             if (aiCard) aiCard.classList.remove('hidden');
-            if (aiLoading) aiLoading.classList.remove('hidden');
-            if (aiData) aiData.classList.add('hidden');
 
-            const analysis = await analyzeWebsiteContent(response.content);
-            console.log("🧠 AI business analysis:", analysis);
-            lastAnalysis = analysis;
-            displayAIAnalysis(analysis);
+            if (existing && existing.content_hash === lastContentHash) {
+              if (aiLoading) aiLoading.classList.add("hidden");
+              lastAnalysis = {
+                whatTheyDo: existing.what_they_do,
+                targetCustomer: existing.target_customer,
+                valueProposition: existing.value_proposition,
+                salesAngle: existing.sales_angle,
+                salesReadinessScore: existing.sales_readiness_score,
+                bestSalesPersona: {
+                  persona: existing.best_sales_persona,
+                  reason: existing.best_sales_persona_reason
+                }
+              };
+
+              displayAIAnalysis(lastAnalysis);
+
+            } else {
+              if (aiLoading) aiLoading.classList.remove("hidden");
+              if (aiData) aiData.classList.add("hidden");
+
+              if (!response.content.paragraphs?.length && !response.content.headings?.length) {
+                showContentBlocked("Not enough readable content to analyze.");
+                return;
+              }
+              displayWebsiteContent(response.content);
+              const analysis = await analyzeWebsiteContent(response.content);
+              lastAnalysis = analysis;
+              displayAIAnalysis(analysis);
+
+              if (existing) {
+                await supabase
+                  .from("saved_analyses")
+                  .update({
+                    content_hash: lastContentHash,
+                    last_analyzed_at: new Date().toISOString(),
+                    what_they_do: analysis.whatTheyDo,
+                    target_customer: analysis.targetCustomer,
+                    value_proposition: analysis.valueProposition,
+                    sales_angle: analysis.salesAngle,
+                    sales_readiness_score: analysis.salesReadinessScore,
+                    best_sales_persona: analysis.bestSalesPersona?.persona,
+                    best_sales_persona_reason: analysis.bestSalesPersona?.reason
+                  })
+                  .eq("id", existing.id);
+              }
+            }
           } catch (err) {
             console.error("AI analysis failed:", err);
           }
 
-        } else {
-          console.error("Extraction failed:", response?.error);
-          if (contentError) contentError.classList.remove('hidden');
+        }
+        else if (response?.reason === "THIN_CONTENT") {
+          showContentBlocked(
+            "Not enough public content on this page to analyze."
+          );
+          return;
+        }
+        else if (response?.reason === "RESTRICTED") {
+          showContentBlocked(
+            "This page requires login or consent before content can be analyzed."
+          );
+          return;
+        }
+        else {
+          console.error("Extraction failed:", response?.error || response);
+          showContentBlocked("Unable to analyze this page.");
         }
       }
     );
@@ -286,11 +425,218 @@ function displayAIAnalysis(analysis) {
   if (valueEl) valueEl.textContent = analysis.valueProposition || '—';
   if (salesEl) salesEl.textContent = analysis.salesAngle || '—';
   if (scoreEl) scoreEl.textContent = analysis.salesReadinessScore ?? '—';
-  if (personaEl) personaEl.textContent = analysis.bestSalesPersona?.persona || '—';
+  if (personaEl) personaEl.textContent =
+   analysis.bestSalesPersona?.persona || 'Mid-Market AE';
   if (personaReasonEl) {
-    const reason = analysis.bestSalesPersona?.reason;
+    const reason = analysis.bestSalesPersona?.reason || '';
     personaReasonEl.textContent = reason ? `(${reason})` : '—';
   }
+}
+
+function renderSavedItem(item) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "saved-item";
+
+  wrapper.innerHTML = `
+  <div class="saved-item-header">
+    <div class="header-info">
+      <strong>${item.title || item.domain}</strong>
+      <div style="font-size:12px; opacity:0.7">${item.domain}</div>
+    </div>
+
+    <div class="header-actions">
+      <div class="toggle-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </div>
+
+      <button class="delete-saved-btn" title="Remove">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+          <path d="M10 11v6"></path>
+          <path d="M14 11v6"></path>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="saved-item-body hidden">
+    <p><strong>Sales readiness:</strong> ${item.sales_readiness_score ?? "—"}</p>
+    <p><strong>What they do:</strong> ${item.what_they_do || "—"}</p>
+    <p><strong>Target customer:</strong> ${item.target_customer || "—"}</p>
+    <p><strong>Value proposition:</strong> ${item.value_proposition || "—"}</p>
+    <p><strong>Best sales persona:</strong> ${item.best_sales_persona || "—"}</p>
+    <p style="opacity:0.7; font-size:13px">(${item.best_sales_persona_reason || "—"})</p>
+    <p><strong>Sales angle:</strong> ${item.sales_angle || "—"}</p>
+  </div>
+`;
+
+  const header = wrapper.querySelector(".saved-item-header");
+  const body = wrapper.querySelector(".saved-item-body");
+
+  header.addEventListener("click", (e) => {
+    if (e.target.closest(".delete-saved-btn")) return;
+
+    const container = wrapper.parentElement;
+    if (container) {
+      const allBodies = container.querySelectorAll(".saved-item-body");
+      allBodies.forEach((otherBody) => {
+        if (otherBody !== body) {
+          otherBody.classList.add("hidden");
+        }
+      });
+    }
+
+    body.classList.toggle("hidden");
+  });
+
+  wrapper.querySelector(".delete-saved-btn").addEventListener("click", async (e) => {
+    e.stopPropagation();
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData?.session?.user;
+    if (!user) return;
+
+    await supabase
+      .from("saved_analyses")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("id", item.id);
+
+    wrapper.remove();
+  });
+
+  return wrapper;
+}
+
+function exportToCSV(rows) {
+  if (!rows.length) return;
+
+  const headers = [
+    "Title",
+    "Domain",
+    "URL",
+    "Sales Readiness Score",
+    "What They Do",
+    "Target Customer",
+    "Value Proposition",
+    "Best Sales Persona",
+    "Persona Reason",
+    "Sales Angle",
+    "Saved At"
+  ];
+
+  const csvRows = [
+    headers.join(","),
+    ...rows.map(item => [
+      item.title,
+      item.domain,
+      item.url,
+      item.sales_readiness_score,
+      `"${item.what_they_do || ""}"`,
+      `"${item.target_customer || ""}"`,
+      `"${item.value_proposition || ""}"`,
+      item.best_sales_persona,
+      `"${item.best_sales_persona_reason || ""}"`,
+      `"${item.sales_angle || ""}"`,
+      item.created_at
+    ].join(","))
+  ];
+
+  const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "signalize_saved_analyses.csv";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+function exportToExcel(rows) {
+  if (!rows.length) return;
+
+  const formatted = rows.map(item => ({
+    Title: item.title,
+    Domain: item.domain,
+    URL: item.url,
+    "Sales Readiness": item.sales_readiness_score,
+    "What They Do": item.what_they_do,
+    "Target Customer": item.target_customer,
+    "Value Proposition": item.value_proposition,
+    "Best Sales Persona": item.best_sales_persona,
+    "Persona Reason": item.best_sales_persona_reason,
+    "Sales Angle": item.sales_angle,
+    "Saved At": item.created_at
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(formatted);
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Saved Analyses");
+
+  XLSX.writeFile(workbook, "signalize_saved_analyses.xlsx");
+}
+
+async function loadSavedAnalyses() {
+  document.getElementById("saved-analyses")?.classList.remove("hidden");
+  const listEl = document.getElementById("saved-list");
+  const loadingEl = document.getElementById("saved-loading");
+  const emptyEl = document.getElementById("saved-empty");
+
+  listEl.innerHTML = "";
+  loadingEl.classList.remove("hidden");
+  emptyEl.classList.add("hidden");
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData?.session?.user;
+  if (!user) return;
+
+  const { data, error } = await supabase
+    .from("saved_analyses")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  loadingEl.classList.add("hidden");
+
+  if (error || !data || data.length === 0) {
+    emptyEl.classList.remove("hidden");
+    return;
+  }
+
+  data.forEach(item => {
+    listEl.appendChild(renderSavedItem(item));
+  });
+}
+
+async function fetchSavedAnalysesData() {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData?.session?.user;
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("saved_analyses")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data;
 }
 
 if (signInBtn) signInBtn.addEventListener('click', signInWithGoogle);
@@ -306,13 +652,10 @@ if (dropdownHeader && dropdownCard) {
   });
 }
 
-// Listen for tab change messages from background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "TAB_CHANGED") {
-    // Check if user is logged in and welcome view is visible
     supabase.auth.getSession().then(({ data }) => {
       if (data.session && welcomeView && !welcomeView.classList.contains('hidden')) {
-        // Small delay to ensure content script is ready
         setTimeout(() => {
           extractWebsiteContent();
         }, 300);
@@ -321,7 +664,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// Also listen for visibility changes (when sidepanel becomes visible)
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
     supabase.auth.getSession().then(({ data }) => {
@@ -359,12 +701,15 @@ button?.addEventListener("click", async () => {
 
     button.classList.remove("active");
     button.dataset.label = "Save";
+    loadSavedAnalyses();
   } else {
     const { error } = await supabase.from("saved_analyses").insert({
       user_id: user.id,
       domain,
       url: lastExtractedMeta.url,
       title: lastExtractedMeta.title,
+      content_hash: lastContentHash,
+      last_analyzed_at: new Date().toISOString(),
       what_they_do: lastAnalysis.whatTheyDo,
       target_customer: lastAnalysis.targetCustomer,
       value_proposition: lastAnalysis.valueProposition,
@@ -381,6 +726,7 @@ button?.addEventListener("click", async () => {
 
     button.classList.add("active");
     button.dataset.label = "Remove";
+    loadSavedAnalyses();
   }
 });
 
@@ -390,4 +736,24 @@ supabase.auth.onAuthStateChange((event, session) => {
 
 supabase.auth.getSession().then(({ data }) => {
   updateUI(data.session);
+});
+
+const profileMenu = document.getElementById("menu-saved-analyses");
+
+profileMenu?.addEventListener("click", (e) => {
+  e.preventDefault();
+
+  document.querySelector(".dropdown-card")?.classList.remove("expanded");
+
+  showSavedAnalysesView();
+});
+
+document.getElementById("export-csv")?.addEventListener("click", async () => {
+  const data = await fetchSavedAnalysesData();
+  exportToCSV(data);
+});
+
+document.getElementById("export-xlsx")?.addEventListener("click", async () => {
+  const data = await fetchSavedAnalysesData();
+  exportToExcel(data);
 });
