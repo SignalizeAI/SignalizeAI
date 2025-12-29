@@ -215,6 +215,7 @@ async function extractWebsiteContent() {
 
           lastExtractedMeta = {
             title: response.content.title,
+            description: response.content.metaDescription,
             url: response.content.url,
             domain: new URL(response.content.url).hostname
           };
@@ -270,7 +271,6 @@ async function extractWebsiteContent() {
                   reason: existing.best_sales_persona_reason
                 }
               };
-              displayWebsiteContent(response.content);
               displayAIAnalysis(lastAnalysis);
 
             } else {
@@ -281,7 +281,7 @@ async function extractWebsiteContent() {
                 showContentBlocked("Not enough readable content to analyze.");
                 return;
               }
-              displayWebsiteContent(response.content);
+
               const analysis = await analyzeWebsiteContent(response.content);
               lastAnalysis = analysis;
               displayAIAnalysis(analysis);
@@ -333,78 +333,6 @@ async function extractWebsiteContent() {
   }
 }
 
-function displayWebsiteContent(content) {
-  const contentCard = document.getElementById('website-content');
-  const contentData = document.getElementById('content-data');
-  const contentError = document.getElementById('content-error');
-
-  if (!contentCard || !contentData) return;
-
-  // Hide error, show data
-  if (contentError) contentError.classList.add('hidden');
-  contentData.classList.remove('hidden');
-  contentCard.classList.remove('hidden');
-
-  // Display title
-  const titleEl = document.getElementById('content-title-text');
-  if (titleEl) {
-    titleEl.textContent = content.title || 'No title available';
-  }
-
-  // Display meta description
-  const metaDescEl = document.getElementById('content-meta-description');
-  const metaDescSection = document.getElementById('meta-description-section');
-  if (metaDescEl) {
-    if (content.metaDescription) {
-      metaDescEl.textContent = content.metaDescription;
-      if (metaDescSection) metaDescSection.classList.remove('hidden');
-    } else {
-      if (metaDescSection) metaDescSection.classList.add('hidden');
-    }
-  }
-
-  // Display headings
-  const headingsEl = document.getElementById('content-headings');
-  const headingsSection = document.getElementById('headings-section');
-  if (headingsEl) {
-    headingsEl.innerHTML = '';
-    if (content.headings && content.headings.length > 0) {
-      content.headings.forEach(heading => {
-        const li = document.createElement('li');
-        li.textContent = heading;
-        headingsEl.appendChild(li);
-      });
-      if (headingsSection) headingsSection.classList.remove('hidden');
-    } else {
-      if (headingsSection) headingsSection.classList.add('hidden');
-    }
-  }
-
-  // Display paragraphs
-  const paragraphsEl = document.getElementById('content-paragraphs');
-  const paragraphsSection = document.getElementById('paragraphs-section');
-  if (paragraphsEl) {
-    paragraphsEl.innerHTML = '';
-    if (content.paragraphs && content.paragraphs.length > 0) {
-      content.paragraphs.forEach(para => {
-        const li = document.createElement('li');
-        li.textContent = para;
-        paragraphsEl.appendChild(li);
-      });
-      if (paragraphsSection) paragraphsSection.classList.remove('hidden');
-    } else {
-      if (paragraphsSection) paragraphsSection.classList.add('hidden');
-    }
-  }
-
-  // Display URL
-  const urlEl = document.getElementById('content-url');
-  if (urlEl && content.url) {
-    urlEl.href = content.url;
-    urlEl.textContent = content.url;
-  }
-}
-
 function displayAIAnalysis(analysis) {
   const aiCard = document.getElementById('ai-analysis');
   const aiLoading = document.getElementById('ai-loading');
@@ -413,6 +341,22 @@ function displayAIAnalysis(analysis) {
   if (aiCard) aiCard.classList.remove('hidden');
   if (aiLoading) aiLoading.classList.add('hidden');
   if (aiData) aiData.classList.remove('hidden');
+
+  const aiTitleEl = document.getElementById('ai-title-text');
+  if (aiTitleEl && lastExtractedMeta?.title) {
+    aiTitleEl.textContent = lastExtractedMeta.title || '—';
+  }
+
+  const aiDescEl = document.getElementById('ai-description-text');
+  if (aiDescEl && lastExtractedMeta?.description) {
+    aiDescEl.textContent = lastExtractedMeta.description || '—';
+  }
+
+  const aiUrlEl = document.getElementById('ai-url-text');
+  if (aiUrlEl && lastExtractedMeta?.url) {
+    aiUrlEl.href = lastExtractedMeta.url;
+    aiUrlEl.textContent = lastExtractedMeta.url;
+  }
 
   const whatEl = document.getElementById('ai-what-they-do');
   const targetEl = document.getElementById('ai-target-customer');

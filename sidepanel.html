@@ -97,54 +97,10 @@
           </div>
         </div>
 
-        <!-- Website Content Display -->
-        <div id="website-content" class="website-content-card hidden">
-          <div class="content-header">
-            <h3 class="content-title">Website Content</h3>
-          </div>
-
-          <div id="content-loading" class="content-loading hidden">
-            <p>Extracting content...</p>
-          </div>
-
-          <div id="content-error" class="content-error hidden">
-            <p>Unable to extract content from this page.</p>
-          </div>
-
-          <div id="content-data" class="content-data hidden">
-            <div class="content-section">
-              <h4 class="section-label">Title</h4>
-              <p id="content-title-text" class="content-text">-</p>
-            </div>
-
-            <div class="content-section" id="meta-description-section">
-              <h4 class="section-label">Description</h4>
-              <p id="content-meta-description" class="content-text">-</p>
-            </div>
-
-            <div class="content-section" id="headings-section">
-              <h4 class="section-label">Headings</h4>
-              <ul id="content-headings" class="content-list"></ul>
-            </div>
-
-            <div class="content-section" id="paragraphs-section">
-              <h4 class="section-label">Key Content</h4>
-              <ul id="content-paragraphs" class="content-list"></ul>
-            </div>
-
-            <div class="content-section">
-              <h4 class="section-label">URL</h4>
-              <a id="content-url" href="#" target="_blank" class="content-url"
-                >-</a
-              >
-            </div>
-          </div>
-        </div>
-
         <!-- AI Business Analysis -->
         <div id="ai-analysis" class="website-content-card hidden">
           <div class="content-header">
-            <h3 class="content-title">AI Business Signals</h3>
+            <h3 class="content-title">Website Information</h3>
             <div style="display:flex; gap:8px;">
               <button class="refresh-btn" id="refreshButton" title="Re-analyze">
                 <svg viewBox="0 0 24 24" class="refresh-icon">
@@ -168,15 +124,15 @@
 
           <div id="ai-data" class="content-data hidden">
             <div class="content-section">
-              <h4 class="section-label">Sales readiness</h4>
-              <p id="ai-sales-score" class="content-text">—</p>
+              <h4 class="section-label">Title</h4>
+              <p id="ai-title-text" class="content-text">—</p>
             </div>
-
+            
             <div class="content-section">
               <h4 class="section-label">What they do</h4>
               <p id="ai-what-they-do" class="content-text">—</p>
             </div>
-
+            
             <div class="content-section">
               <h4 class="section-label">Target customer</h4>
               <p id="ai-target-customer" class="content-text">—</p>
@@ -186,17 +142,33 @@
               <h4 class="section-label">Value proposition</h4>
               <p id="ai-value-prop" class="content-text">—</p>
             </div>
+            
+            <div class="content-section">
+              <h4 class="section-label">Sales readiness</h4>
+              <p id="ai-sales-score" class="content-text">—</p>
+            </div>
 
             <div class="content-section">
               <h4 class="section-label">Best sales persona recommendation</h4>
               <p id="ai-sales-persona" class="content-text">—</p>
               <p id="ai-sales-persona-reason" class="content-text" style="font-size: 13px; opacity: 0.8;">—</p>
             </div>
-
+            
             <div class="content-section">
               <h4 class="section-label">Sales angle</h4>
               <p id="ai-sales-angle" class="content-text">—</p>
             </div>
+
+            <div class="content-section">
+              <h4 class="section-label">Company overview</h4>
+              <p id="ai-description-text" class="content-text">—</p>
+            </div>
+            
+            <div class="content-section">
+              <h4 class="section-label">URL</h4>
+              <a id="ai-url-text" href="#" target="_blank" class="content-url">—</a>
+            </div>
+
           </div>
         </div>
 
