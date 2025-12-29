@@ -118,7 +118,6 @@ function showContentBlocked(message) {
   if (aiCard) aiCard.classList.add("hidden");
   if (saveBtn) {
     saveBtn.classList.remove("active");
-    saveBtn.dataset.label = "Save";
   }
 
 
@@ -226,7 +225,7 @@ async function extractWebsiteContent() {
 
           const btn = document.getElementById("saveButton");
           btn?.classList.remove("active");
-          if (btn) btn.dataset.label = "Save";
+          if (btn) btn.title = "Save";
 
           const { data: sessionData } = await supabase.auth.getSession();
           const user = sessionData?.session?.user;
@@ -245,7 +244,7 @@ async function extractWebsiteContent() {
 
             if (existing) {
               btn?.classList.add("active");
-              if (btn) btn.dataset.label = "Remove";
+              if (btn) btn.title = "Remove";
             }
           }
 
@@ -401,6 +400,13 @@ function renderSavedItem(item) {
     </div>
 
     <div class="header-actions">
+      <button class="copy-btn copy-saved-btn" title="Copy analysis">
+        <svg viewBox="0 0 24 24" class="copy-icon">
+          <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+      </button>
+
       <div class="toggle-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="6 9 12 15 18 9"></polyline>
@@ -462,8 +468,44 @@ function renderSavedItem(item) {
   const header = wrapper.querySelector(".saved-item-header");
   const body = wrapper.querySelector(".saved-item-body");
 
+  const copySavedBtn = wrapper.querySelector(".copy-saved-btn");
+
+  copySavedBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+
+    const text = `
+  Website: ${item.title || ""}
+  Domain: ${item.domain || ""}
+  URL: ${item.url || ""}
+
+  What they do:
+  ${item.what_they_do || "—"}
+
+  Target customer:
+  ${item.target_customer || "—"}
+
+  Value proposition:
+  ${item.value_proposition || "—"}
+
+  Sales angle:
+  ${item.sales_angle || "—"}
+
+  Sales readiness score:
+  ${item.sales_readiness_score ?? "—"}
+
+  Best sales persona:
+  ${item.best_sales_persona || "—"}
+  ${item.best_sales_persona_reason ? `(${item.best_sales_persona_reason})` : ""}
+  `.trim();
+
+    copyAnalysisText(text, copySavedBtn);
+  });
+
   header.addEventListener("click", (e) => {
-    if (e.target.closest(".delete-saved-btn")) return;
+    if (
+      e.target.closest(".delete-saved-btn") ||
+      e.target.closest(".copy-saved-btn")
+    ) return;
 
     const container = wrapper.parentElement;
     if (container) {
@@ -675,7 +717,7 @@ button?.addEventListener("click", async () => {
     }
 
     button.classList.remove("active");
-    button.dataset.label = "Save";
+    button.title = "Save";
     loadSavedAnalyses();
   } else {
     const { error } = await supabase.from("saved_analyses").insert({
@@ -701,7 +743,7 @@ button?.addEventListener("click", async () => {
     }
 
     button.classList.add("active");
-    button.dataset.label = "Remove";
+    button.title = "Remove";
     loadSavedAnalyses();
   }
 });
@@ -802,17 +844,12 @@ ${lastAnalysis.bestSalesPersona?.reason ? `(${lastAnalysis.bestSalesPersona.reas
 `.trim();
 }
 
-const copyBtn = document.getElementById("copyButton");
+function copyAnalysisText(text, anchorEl) {
+  if (!text || !anchorEl) return;
 
-copyBtn?.addEventListener("click", async () => {
-  const text = buildCopyText();
-  if (!text) return;
-
-  try {
-    await navigator.clipboard.writeText(text);
-
-    const existing = copyBtn.querySelector(".copy-tooltip");
-    if (existing) existing.remove();
+  navigator.clipboard.writeText(text).then(() => {
+    const existingTooltip = anchorEl.querySelector(".copy-tooltip");
+    if (existingTooltip) existingTooltip.remove();
 
     const tooltip = document.createElement("span");
     tooltip.className = "copy-tooltip";
@@ -833,14 +870,17 @@ copyBtn?.addEventListener("click", async () => {
       zIndex: "9999"
     });
 
-    copyBtn.style.position = "relative";
-    copyBtn.appendChild(tooltip);
+    anchorEl.style.position = "relative";
+    anchorEl.appendChild(tooltip);
 
-    setTimeout(() => {
-      tooltip.remove();
-    }, 1200);
-
-  } catch (err) {
+    setTimeout(() => tooltip.remove(), 1200);
+  }).catch(err => {
     console.error("Copy failed:", err);
-  }
+  });
+}
+
+const copyBtn = document.getElementById("copyButton");
+
+copyBtn?.addEventListener("click", () => {
+  copyAnalysisText(buildCopyText(), copyBtn);
 });

@@ -411,12 +411,7 @@ body:has(#welcome-view:not(.hidden)) {
 
 .save-btn.active .save-icon {
   fill: #ffffff;
-  stroke: rgb(255, 255, 255);
-
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8)) 
-          drop-shadow(0 0 15px rgba(255, 255, 255, 0.4));
-  
-  animation: jelly 0.5s ease-in-out;
+  stroke: #ffffff;
 }
 
 @keyframes jelly {
@@ -429,30 +424,6 @@ body:has(#welcome-view:not(.hidden)) {
 
 .save-btn {
   position: relative;
-}
-
-.save-btn::after {
-  content: attr(data-label);
-  position: absolute;
-  top: -32px;
-  right: 50%;
-  transform: translateX(50%);
-  
-  background: #1a1a1a;
-  color: #ffffff;
-  font-size: 11px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  white-space: nowrap;
-  
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.save-btn:hover::after {
-  opacity: 1;
-  transform: translateX(50%) translateY(-4px);
 }
 
 #saved-analyses {
@@ -562,7 +533,7 @@ body:has(#welcome-view:not(.hidden)) {
   border: 1px solid #333;
   border-radius: 8px;
   margin-bottom: 10px;
-  overflow: hidden;
+  overflow: visible;
   transition: border-color 0.2s;
 }
 
@@ -645,7 +616,7 @@ body:has(#welcome-view:not(.hidden)) {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .toggle-icon {
@@ -752,3 +723,13 @@ body:has(#welcome-view:not(.hidden)) {
   stroke-linejoin: round;
 }
 
+.copy-btn.copy-saved-btn {
+  color: rgba(255, 255, 255, 0.65);
+  width: 34px;
+  height: 34px;
+  padding: 0;
+}
+
+.copy-btn.copy-saved-btn:hover {
+  color: #ffffff;
+}
