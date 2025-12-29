@@ -438,37 +438,71 @@ function renderSavedItem(item) {
   wrapper.className = "saved-item";
 
   wrapper.innerHTML = `
-    <div class="saved-item-header">
-      <div>
-        <strong>${item.title || item.domain}</strong>
-        <div style="font-size:12px; opacity:0.7">${item.domain}</div>
+  <div class="saved-item-header">
+    <div class="header-info">
+      <strong>${item.title || item.domain}</strong>
+      <div style="font-size:12px; opacity:0.7">${item.domain}</div>
+    </div>
+
+    <div class="header-actions">
+      <div class="toggle-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
       </div>
-      <button class="delete-saved-btn">✕</button>
-    </div>
 
-    <div class="saved-item-body hidden">
-      <p><strong>Sales readiness:</strong> ${item.sales_readiness_score ?? "—"}</p>
-      <p><strong>What they do:</strong> ${item.what_they_do || "—"}</p>
-      <p><strong>Target customer:</strong> ${item.target_customer || "—"}</p>
-      <p><strong>Value proposition:</strong> ${item.value_proposition || "—"}</p>
-      <p><strong>Best sales persona:</strong> ${item.best_sales_persona || "—"}</p>
-      <p style="opacity:0.7; font-size:13px">
-        (${item.best_sales_persona_reason || "—"})
-      </p>
-      <p><strong>Sales angle:</strong> ${item.sales_angle || "—"}</p>
+      <button class="delete-saved-btn" title="Remove">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+          <path d="M10 11v6"></path>
+          <path d="M14 11v6"></path>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+        </svg>
+      </button>
     </div>
-  `;
+  </div>
 
-  // Toggle accordion
+  <div class="saved-item-body hidden">
+    <p><strong>Sales readiness:</strong> ${item.sales_readiness_score ?? "—"}</p>
+    <p><strong>What they do:</strong> ${item.what_they_do || "—"}</p>
+    <p><strong>Target customer:</strong> ${item.target_customer || "—"}</p>
+    <p><strong>Value proposition:</strong> ${item.value_proposition || "—"}</p>
+    <p><strong>Best sales persona:</strong> ${item.best_sales_persona || "—"}</p>
+    <p style="opacity:0.7; font-size:13px">(${item.best_sales_persona_reason || "—"})</p>
+    <p><strong>Sales angle:</strong> ${item.sales_angle || "—"}</p>
+  </div>
+`;
+
   const header = wrapper.querySelector(".saved-item-header");
   const body = wrapper.querySelector(".saved-item-body");
 
   header.addEventListener("click", (e) => {
-    if (e.target.classList.contains("delete-saved-btn")) return;
+    if (e.target.closest(".delete-saved-btn")) return;
+
+    const container = wrapper.parentElement;
+    if (container) {
+      const allBodies = container.querySelectorAll(".saved-item-body");
+      allBodies.forEach((otherBody) => {
+        if (otherBody !== body) {
+          otherBody.classList.add("hidden");
+        }
+      });
+    }
+
     body.classList.toggle("hidden");
   });
 
-  // Delete saved company
   wrapper.querySelector(".delete-saved-btn").addEventListener("click", async (e) => {
     e.stopPropagation();
 
@@ -618,13 +652,10 @@ if (dropdownHeader && dropdownCard) {
   });
 }
 
-// Listen for tab change messages from background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "TAB_CHANGED") {
-    // Check if user is logged in and welcome view is visible
     supabase.auth.getSession().then(({ data }) => {
       if (data.session && welcomeView && !welcomeView.classList.contains('hidden')) {
-        // Small delay to ensure content script is ready
         setTimeout(() => {
           extractWebsiteContent();
         }, 300);
@@ -633,7 +664,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// Also listen for visibility changes (when sidepanel becomes visible)
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
     supabase.auth.getSession().then(({ data }) => {
