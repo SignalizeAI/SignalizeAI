@@ -223,7 +223,14 @@ async function extractWebsiteContent() {
           const currentDomain = lastExtractedMeta.domain;
           const sameDomain = lastAnalyzedDomain === currentDomain;
           lastContentHash = await hashContent(response.content);
-          if (!forceRefresh && sameDomain) return;
+          if (
+            !forceRefresh &&
+            sameDomain &&
+            existing &&
+            existing.content_hash === lastContentHash
+          ) {
+            return;
+          }
           lastAnalyzedDomain = currentDomain;
 
           const btn = document.getElementById("saveButton");
@@ -260,6 +267,7 @@ async function extractWebsiteContent() {
 
             if (!forceRefresh && existing && existing.content_hash === lastContentHash) {
               if (aiLoading) aiLoading.classList.add("hidden");
+              
               lastAnalysis = {
                 whatTheyDo: existing.what_they_do,
                 targetCustomer: existing.target_customer,
@@ -271,6 +279,14 @@ async function extractWebsiteContent() {
                   reason: existing.best_sales_persona_reason
                 }
               };
+
+              lastExtractedMeta = {
+                title: existing.title,
+                description: existing.description,
+                url: existing.url,
+                domain: existing.domain
+              };
+
               displayAIAnalysis(lastAnalysis);
 
             } else {
@@ -292,6 +308,9 @@ async function extractWebsiteContent() {
                   .update({
                     content_hash: lastContentHash,
                     last_analyzed_at: new Date().toISOString(),
+                    title: lastExtractedMeta.title,
+                    description: lastExtractedMeta.description,
+                    url: lastExtractedMeta.url,
                     what_they_do: analysis.whatTheyDo,
                     target_customer: analysis.targetCustomer,
                     value_proposition: analysis.valueProposition,
@@ -398,17 +417,8 @@ function renderSavedItem(item) {
       </div>
 
       <button class="delete-saved-btn" title="Remove">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="3 6 5 6 21 6"></polyline>
           <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
           <path d="M10 11v6"></path>
@@ -424,9 +434,37 @@ function renderSavedItem(item) {
     <p><strong>What they do:</strong> ${item.what_they_do || "—"}</p>
     <p><strong>Target customer:</strong> ${item.target_customer || "—"}</p>
     <p><strong>Value proposition:</strong> ${item.value_proposition || "—"}</p>
-    <p><strong>Best sales persona:</strong> ${item.best_sales_persona || "—"}</p>
-    <p style="opacity:0.7; font-size:13px">(${item.best_sales_persona_reason || "—"})</p>
+    <p>
+      <strong>Best sales persona:</strong> ${item.best_sales_persona || "—"}
+      <span style="opacity:0.7; font-size:13px">
+        ${item.best_sales_persona_reason ? `(${item.best_sales_persona_reason})` : ""}
+      </span>
+    </p>
     <p><strong>Sales angle:</strong> ${item.sales_angle || "—"}</p>
+
+    <hr style="margin:8px 0; opacity:0.3" />
+
+    <p style="opacity:0.85">
+      <strong>Company overview:</strong>
+      ${item.description || "—"}
+    </p>
+
+    ${
+      item.url
+        ? `
+          <p>
+            <strong>URL:</strong>
+            <a
+              href="${item.url}"
+              target="_blank"
+              class="saved-url"
+            >
+              ${item.url}
+            </a>
+          </p>
+        `
+        : ""
+    }
   </div>
 `;
 
@@ -438,11 +476,8 @@ function renderSavedItem(item) {
 
     const container = wrapper.parentElement;
     if (container) {
-      const allBodies = container.querySelectorAll(".saved-item-body");
-      allBodies.forEach((otherBody) => {
-        if (otherBody !== body) {
-          otherBody.classList.add("hidden");
-        }
+      container.querySelectorAll(".saved-item-body").forEach((other) => {
+        if (other !== body) other.classList.add("hidden");
       });
     }
 
@@ -475,6 +510,7 @@ function exportToCSV(rows) {
     "Title",
     "Domain",
     "URL",
+    "Description",
     "Sales Readiness Score",
     "What They Do",
     "Target Customer",
@@ -491,6 +527,7 @@ function exportToCSV(rows) {
       item.title,
       item.domain,
       item.url,
+      `"${item.description || ""}"`,
       item.sales_readiness_score,
       `"${item.what_they_do || ""}"`,
       `"${item.target_customer || ""}"`,
@@ -520,6 +557,7 @@ function exportToExcel(rows) {
     Title: item.title,
     Domain: item.domain,
     URL: item.url,
+    Description: item.description,
     "Sales Readiness": item.sales_readiness_score,
     "What They Do": item.what_they_do,
     "Target Customer": item.target_customer,
@@ -651,9 +689,10 @@ button?.addEventListener("click", async () => {
   } else {
     const { error } = await supabase.from("saved_analyses").insert({
       user_id: user.id,
-      domain,
+      domain: lastExtractedMeta.domain,
       url: lastExtractedMeta.url,
       title: lastExtractedMeta.title,
+      description: lastExtractedMeta.description,
       content_hash: lastContentHash,
       last_analyzed_at: new Date().toISOString(),
       what_they_do: lastAnalysis.whatTheyDo,

@@ -646,3 +646,14 @@ body:has(#welcome-view:not(.hidden)) {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+.saved-url {
+  color: rgba(138, 180, 248, 0.85);
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.saved-url:hover {
+  color: rgba(174, 203, 250, 1);
+  text-decoration: underline;
+}
