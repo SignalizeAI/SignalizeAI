@@ -100,19 +100,43 @@ async function hashContent(content) {
     .join("");
 }
 
-function showContentBlocked(message) {
+function showContentBlocked(message, options = {}) {
   const contentCard = document.getElementById("website-content");
   const contentLoading = document.getElementById("content-loading");
   const contentError = document.getElementById("content-error");
   const aiCard = document.getElementById("ai-analysis");
   const saveBtn = document.getElementById("saveButton");
 
-  if (contentCard) contentCard.classList.add("hidden")
+  document.getElementById("content-data")?.classList.add("hidden");
   if (contentLoading) contentLoading.classList.add("hidden");
 
   if (contentError) {
-    contentError.textContent = message;
+    contentError.innerHTML = `
+      <div class="blocked-message">
+        <p>${message}</p>
+
+        ${
+          options.allowHomepageFallback
+            ? `<button id="analyze-homepage-btn" class="primary-btn">
+                Analyze homepage instead
+              </button>`
+            : ""
+        }
+      </div>
+    `;
     contentError.classList.remove("hidden");
+  }
+
+  if (options.allowHomepageFallback) {
+    setTimeout(() => {
+      const btn = document.getElementById("analyze-homepage-btn");
+      if (!btn) return;
+
+      btn.addEventListener("click", () => {
+        const homepageUrl = new URL(options.originalUrl).origin;
+        analyzeSpecificUrl(homepageUrl);
+      });
+    }, 0);
   }
 
   if (aiCard) aiCard.classList.add("hidden");
@@ -204,7 +228,6 @@ async function extractWebsiteContent() {
         if (contentLoading) contentLoading.classList.add('hidden');
 
         if (chrome.runtime.lastError) {
-          console.warn("Extractor not available on this page");
           if (contentError) contentError.classList.remove('hidden');
           return;
         }
@@ -319,13 +342,21 @@ async function extractWebsiteContent() {
         }
         else if (response?.reason === "THIN_CONTENT") {
           showContentBlocked(
-            "Not enough public content on this page to analyze."
+            "This page has limited public content.",
+            {
+              allowHomepageFallback: true,
+              originalUrl: tab.url
+            }
           );
           return;
         }
         else if (response?.reason === "RESTRICTED") {
           showContentBlocked(
-            "This page requires login or consent before content can be analyzed."
+            "This page requires login or consent before content can be analyzed.",
+            {
+              allowHomepageFallback: true,
+              originalUrl: tab.url
+            }
           );
           return;
         }
@@ -340,6 +371,48 @@ async function extractWebsiteContent() {
     if (contentLoading) contentLoading.classList.add('hidden');
     if (contentError) contentError.classList.remove('hidden');
   }
+}
+
+async function analyzeSpecificUrl(url) {
+  const contentLoading = document.getElementById('content-loading');
+  const contentError = document.getElementById('content-error');
+
+  if (contentError) contentError.classList.add("hidden");
+  if (contentLoading) contentLoading.classList.remove("hidden");
+
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) return;
+
+  chrome.tabs.sendMessage(
+    tab.id,
+    {
+      type: "EXTRACT_WEBSITE_CONTENT",
+      overrideUrl: url
+    },
+    async (response) => {
+      if (contentLoading) contentLoading.classList.add("hidden");
+
+      if (!response?.ok || !response.content) {
+        showContentBlocked("Unable to analyze homepage.");
+        return;
+      }
+
+      lastExtractedMeta = {
+        title: response.content.title,
+        description: response.content.metaDescription,
+        url: response.content.url,
+        domain: new URL(response.content.url).hostname
+      };
+
+      lastContentHash = await hashContent(response.content);
+      lastAnalyzedDomain = lastExtractedMeta.domain;
+
+      const analysis = await analyzeWebsiteContent(response.content);
+      lastAnalysis = analysis;
+
+      displayAIAnalysis(analysis);
+    }
+  );
 }
 
 function displayAIAnalysis(analysis) {

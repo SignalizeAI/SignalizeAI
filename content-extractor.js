@@ -62,19 +62,19 @@
     );
   }
 
-  function extractHeadings() {
-    return Array.from(document.querySelectorAll("h1, h2"))
+  function extractHeadings(doc) {
+    return Array.from(doc.querySelectorAll("h1, h2"))
       .map(h => cleanText(h.innerText))
       .filter(Boolean)
       .slice(0, 10);
   }
 
-  function extractParagraphs() {
+  function extractParagraphs(doc) {
     const containers =
-      document.querySelector("main") ||
-      document.querySelector("article") ||
-      document.querySelector("section") ||
-      document.body;
+      doc.querySelector("main") ||
+      doc.querySelector("article") ||
+      doc.querySelector("section") ||
+      doc.body;
 
     const elements = Array.from(
       containers.querySelectorAll("p, div, span")
@@ -89,44 +89,64 @@
     return unique.slice(0, 20);
   }
 
-  function extractContent() {
+  function extractContent(doc, url) {
     return {
-      url: location.href,
-      title: document.title || "",
+      url,
+      title: doc.title || "",
       metaDescription:
-        document.querySelector("meta[name='description']")?.content || "",
-      headings: extractHeadings(),
-      paragraphs: extractParagraphs(),
+        doc.querySelector("meta[name='description']")?.content || "",
+      headings: extractHeadings(doc),
+      paragraphs: extractParagraphs(doc)
     };
   }
 
   chrome.runtime.onMessage.addListener((msg, _, sendResponse) => {
-    if (msg?.type === "EXTRACT_WEBSITE_CONTENT") {
-      try {
-        const restriction = detectRestriction();
-        if (restriction) {
-          sendResponse({
-            ok: false,
-            reason: "RESTRICTED",
-            details: restriction
+    if (msg?.type !== "EXTRACT_WEBSITE_CONTENT") return;
+
+    try {
+      const targetUrl = msg.overrideUrl || window.location.href;
+
+      if (msg.overrideUrl && msg.overrideUrl !== window.location.href) {
+        fetch(targetUrl)
+          .then(res => res.text())
+          .then(html => {
+            const doc = new DOMParser().parseFromString(html, "text/html");
+            const content = extractContent(doc, targetUrl);
+
+            if (isThinContent(content)) {
+              sendResponse({ ok: false, reason: "THIN_CONTENT" });
+              return;
+            }
+
+            sendResponse({ ok: true, content });
+          })
+          .catch(err => {
+            sendResponse({ ok: false, error: err.message });
           });
-          return;
-        }
 
-        const content = extractContent();
-
-        if (isThinContent(content)) {
-          sendResponse({
-            ok: false,
-            reason: "THIN_CONTENT"
-          });
-          return;
-        }
-
-        sendResponse({ ok: true, content });
-      } catch (err) {
-        sendResponse({ ok: false, error: err.message });
+        return true;
       }
+
+      const restriction = detectRestriction();
+      if (restriction) {
+        sendResponse({
+          ok: false,
+          reason: "RESTRICTED",
+          details: restriction
+        });
+        return;
+      }
+
+      const content = extractContent(document, window.location.href);
+
+      if (isThinContent(content)) {
+        sendResponse({ ok: false, reason: "THIN_CONTENT" });
+        return;
+      }
+
+      sendResponse({ ok: true, content });
+    } catch (err) {
+      sendResponse({ ok: false, error: err.message });
     }
 
     return true;
