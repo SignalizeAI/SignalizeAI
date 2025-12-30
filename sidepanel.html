@@ -208,6 +208,46 @@
                 </svg>
               </button>
 
+              <!-- Filter Panel -->
+              <div id="filter-panel" class="filter-panel hidden">
+                <div class="filter-header">
+                  <h4>Filter</h4>
+                  <span class="filter-reset">Reset</span>
+                </div>
+
+                <div class="filter-group">
+                  <div class="filter-label-row">
+                    <span class="filter-label">Score readiness</span>
+                    <span class="filter-value" id="filter-score-value">0 – 100</span>
+                  </div>
+
+                  <input
+                    type="range"
+                    id="filter-sales-score"
+                    min="0"
+                    max="100"
+                    value="0"
+                    step="1"
+                    class="filter-range"
+                  />
+                </div>
+
+                <div class="filter-group">
+                  <div class="filter-label">Best sales persona</div>
+                  <select class="filter-select" id="filter-persona">
+                    <option value="">All Personas</option>
+                    <option value="founder / ceo">Founder / CEO</option>
+                    <option value="enterprise account executive">Enterprise Account Executive</option>
+                    <option value="mid-market ae">Mid-Market AE</option>
+                    <option value="smb sales rep">SMB Sales Rep</option>
+                    <option value="product-led growth (plg)">Product-Led Growth (PLG)</option>
+                    <option value="partnerships / alliances">Partnerships / Alliances</option>
+                  </select>
+                </div>
+
+                <button class="filter-apply">Apply</button>
+              </div>
+
               <div class="export-actions">
                 <button
                   id="export-menu-toggle"
@@ -252,6 +292,7 @@
               </div>
             </div>
           </div>
+
 
           <div id="saved-loading" class="content-loading hidden">
             <p>Loading saved companies…</p>

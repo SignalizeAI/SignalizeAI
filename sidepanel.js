@@ -10,6 +10,10 @@ let lastAnalysis = null;
 let lastExtractedMeta = null;
 let lastAnalyzedDomain = null;
 let forceRefresh = false;
+let activeFilters = {
+  minScore: 0,
+  persona: ""
+};
 
 const DEFAULT_SETTINGS = {
   autoReanalysis: true,
@@ -180,6 +184,27 @@ function showSavedAnalysesView() {
   loadSavedAnalyses();
 }
 
+function applySavedFilters() {
+  const items = document.querySelectorAll("#saved-list .saved-item");
+
+  items.forEach(item => {
+    let visible = true;
+
+    const itemScore = Number(item.dataset.salesScore || 0);
+
+    if (activeFilters.minScore > 0) {
+      visible = itemScore >= activeFilters.minScore;
+    }
+
+    if (visible && activeFilters.persona) {
+      visible =
+        item.dataset.persona === activeFilters.persona;
+    }
+
+    item.style.display = visible ? "" : "none";
+  });
+}
+
 function cleanTitle(title = "") {
   return title.replace(/^\(\d+\)\s*/, "").trim();
 }
@@ -192,6 +217,8 @@ function hideAllMainViews() {
 
   document.getElementById("content-loading")?.classList.add("hidden");
   document.getElementById("ai-loading")?.classList.add("hidden");
+  document.getElementById("filter-panel")?.classList.add("hidden");
+  document.getElementById("filter-toggle")?.setAttribute("aria-expanded", "false");
 }
 
 function applySettingsToUI(settings) {
@@ -530,6 +557,10 @@ function displayAIAnalysis(analysis) {
 
 function renderSavedItem(item) {
   const wrapper = document.createElement("div");
+  wrapper.dataset.salesScore = Number(item.sales_readiness_score ?? 0);
+  wrapper.dataset.persona = (item.best_sales_persona || "")
+    .toLowerCase()
+    .trim();
   wrapper.className = "saved-item";
 
   wrapper.innerHTML = `
@@ -758,6 +789,7 @@ async function loadSavedAnalyses() {
   data.forEach(item => {
     listEl.appendChild(renderSavedItem(item));
   });
+  applySavedFilters();
 }
 
 async function fetchSavedAnalysesData() {
@@ -1136,5 +1168,82 @@ profileMenuItem?.addEventListener("click", async (e) => {
 
     document.getElementById("profile-email").textContent =
       user.email || "—";
+  }
+});
+
+const filterToggle = document.getElementById("filter-toggle");
+const filterPanel = document.getElementById("filter-panel");
+const exportToggleBtn = document.getElementById("export-menu-toggle");
+
+filterToggle?.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  // Close export menu if open
+  document.getElementById("export-menu")?.classList.add("hidden");
+  exportToggleBtn?.setAttribute("aria-expanded", "false");
+
+  filterPanel?.classList.toggle("hidden");
+
+  const expanded = filterToggle.getAttribute("aria-expanded") === "true";
+  filterToggle.setAttribute("aria-expanded", expanded ? "false" : "true");
+});
+
+document.addEventListener("click", (e) => {
+  if (!filterPanel || filterPanel.classList.contains("hidden")) return;
+
+  if (
+    !filterPanel.contains(e.target) &&
+    !filterToggle.contains(e.target)
+  ) {
+    filterPanel.classList.add("hidden");
+    filterToggle.setAttribute("aria-expanded", "false");
+  }
+});
+
+const filterApplyBtn = document.querySelector(".filter-apply");
+
+filterApplyBtn?.addEventListener("click", () => {
+  activeFilters.minScore = Number(
+    document.getElementById("filter-sales-score")?.value || 0
+  );
+
+  activeFilters.persona =
+    document.getElementById("filter-persona")?.value
+      .toLowerCase()
+      .trim();
+
+  applySavedFilters();
+
+  filterPanel?.classList.add("hidden");
+  filterToggle?.setAttribute("aria-expanded", "false");
+});
+
+const filterResetBtn = document.querySelector(".filter-reset");
+
+filterResetBtn?.addEventListener("click", () => {
+  activeFilters.minScore = 0;
+  activeFilters.persona = "";
+
+  document.getElementById("filter-sales-score").value = 0;
+  document.getElementById("filter-persona").value = "";
+
+  document.querySelectorAll("#saved-list .saved-item").forEach(item => {
+    item.style.display = "";
+  });
+
+  filterPanel?.classList.add("hidden");
+  filterToggle?.setAttribute("aria-expanded", "false");
+});
+
+const scoreSlider = document.getElementById("filter-sales-score");
+const scoreLabel = document.getElementById("filter-score-value");
+
+scoreSlider?.addEventListener("input", () => {
+  activeFilters.minScore = Number(scoreSlider.value);
+  applySavedFilters();
+
+  if (scoreLabel) {
+    scoreLabel.textContent = `${scoreSlider.value} – 100`;
   }
 });
