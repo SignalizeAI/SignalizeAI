@@ -664,10 +664,19 @@ const dropdownCard = document.querySelector('.dropdown-card');
 const dropdownContent = document.getElementById('dropdown-content');
 
 if (dropdownHeader && dropdownCard) {
-  dropdownHeader.addEventListener('click', () => {
+  dropdownHeader.addEventListener('click', (e) => {
+    e.stopPropagation();
     dropdownCard.classList.toggle('expanded');
   });
 }
+
+document.addEventListener("click", (e) => {
+  if (!dropdownCard) return;
+
+  if (!dropdownCard.contains(e.target)) {
+    dropdownCard.classList.remove("expanded");
+  }
+});
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "TAB_CHANGED") {

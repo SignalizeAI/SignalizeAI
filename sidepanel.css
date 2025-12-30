@@ -126,17 +126,20 @@ body:has(#welcome-view:not(.hidden)) {
   padding: 12px;
   border: 1px solid #333333;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  position: relative;
 }
 
 .dropdown-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 14px 20px 14px;
+  padding: 10px 14px;
   cursor: pointer;
   user-select: none;
   transition: background-color 0.2s ease;
   border-radius: 12px;
+  gap: 8px;
+  box-shadow: inset 0 -1px 0 rgba(255,255,255,0.04);
 }
 
 .dropdown-header:hover {
@@ -152,24 +155,24 @@ body:has(#welcome-view:not(.hidden)) {
   font-weight: 600;
   font-size: 16px;
   color: #ffffff;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .user-email-text {
-  font-size: 13px;
+  font-size: 12px;
   color: #888888;
 }
 
 .user-avatar-placeholder {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
   border-radius: 50%;
   background: linear-gradient(135deg, #4285F4, #34A853);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
   font-weight: 700;
   border: 2px solid #000000;
   box-shadow: 0 0 0 2px #333333;
@@ -178,11 +181,12 @@ body:has(#welcome-view:not(.hidden)) {
 .dropdown-chevron {
   width: 20px;
   height: 20px;
-  color: #888888;
+  color: #7a7a7a;
   transition: transform 0.3s ease, filter 0.2s ease;
   flex-shrink: 0;
   display: block;
   filter: brightness(0) invert(0.53);
+  margin-left: 6px;
 }
 
 .dropdown-header:hover .dropdown-chevron {
@@ -194,14 +198,33 @@ body:has(#welcome-view:not(.hidden)) {
 }
 
 .dropdown-content {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease-out;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+
+  z-index: 1000;
+  margin-top: 8px;
+  padding: 6px 0;
+
+  background-color: #111111;
+  border: 1px solid #333333;
+  border-radius: 16px;
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .dropdown-card.expanded .dropdown-content {
-  max-height: 1000px;
-  transition: max-height 0.4s ease-in;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 .menu-list {
