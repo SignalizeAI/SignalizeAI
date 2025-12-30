@@ -1077,3 +1077,12 @@ body:has(#welcome-view:not(.hidden)) {
   max-width: 65%;
   word-break: break-word;
 }
+
+.user-email-text {
+  opacity: 0.8;
+  margin-top: 5px;
+}
+
+.user-email-text:hover {
+  opacity: 1;
+}

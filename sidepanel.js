@@ -10,6 +10,7 @@ let lastAnalysis = null;
 let lastExtractedMeta = null;
 let lastAnalyzedDomain = null;
 let forceRefresh = false;
+let currentView = "analysis";
 let activeFilters = {
   minScore: 0,
   persona: ""
@@ -20,7 +21,9 @@ const DEFAULT_SETTINGS = {
   reanalysisMode: "content-change", 
   copyFormat: "full"
 };
-
+const headerSubtitle = document.querySelector(
+  "#welcome-view .user-email-text"
+);
 const loginView = document.getElementById('login-view');
 const welcomeView = document.getElementById('welcome-view');
 const userInitialSpan = document.getElementById('user-initial');
@@ -85,6 +88,53 @@ async function signInWithGoogle() {
   } catch (err) {
     console.error("Login failed:", err);
     statusMsg.textContent = "Login failed. Please try again.";
+  }
+}
+
+function navigateTo(view) {
+  currentView = view;
+
+  document.getElementById("ai-analysis")?.classList.add("hidden");
+  document.getElementById("saved-analyses")?.classList.add("hidden");
+  document.getElementById("profile-view")?.classList.add("hidden");
+  document.getElementById("settings-view")?.classList.add("hidden");
+
+  document.getElementById("ai-loading")?.classList.add("hidden");
+  document.getElementById("filter-panel")?.classList.add("hidden");
+
+  document.querySelector(".dropdown-card")?.classList.remove("expanded");
+
+  if (headerSubtitle) {
+    if (view === "analysis") {
+      headerSubtitle.textContent = "Cursor for sales pages";
+      headerSubtitle.style.cursor = "default";
+      headerSubtitle.onclick = null;
+    } else {
+      headerSubtitle.textContent = "Back to Website Information";
+      headerSubtitle.style.cursor = "pointer";
+      headerSubtitle.onclick = (e) => {
+        e.stopPropagation();
+        navigateTo("analysis");
+      };
+    }
+  }
+
+  if (view === "analysis") {
+    document.getElementById("ai-analysis")?.classList.remove("hidden");
+    extractWebsiteContent();
+  }
+
+  if (view === "saved") {
+    document.getElementById("saved-analyses")?.classList.remove("hidden");
+    loadSavedAnalyses();
+  }
+
+  if (view === "profile") {
+    document.getElementById("profile-view")?.classList.remove("hidden");
+  }
+
+  if (view === "settings") {
+    document.getElementById("settings-view")?.classList.remove("hidden");
   }
 }
 
@@ -172,18 +222,6 @@ function showContentBlocked(message, options = {}) {
   forceRefresh = false;
 }
 
-function showSavedAnalysesView() {
-  document.getElementById("website-content")?.classList.add("hidden");
-  document.getElementById("ai-analysis")?.classList.add("hidden");
-
-  document.getElementById("content-loading")?.classList.add("hidden");
-  document.getElementById("ai-loading")?.classList.add("hidden");
-
-  document.getElementById("saved-analyses")?.classList.remove("hidden");
-
-  loadSavedAnalyses();
-}
-
 function applySavedFilters() {
   const items = document.querySelectorAll("#saved-list .saved-item");
 
@@ -207,18 +245,6 @@ function applySavedFilters() {
 
 function cleanTitle(title = "") {
   return title.replace(/^\(\d+\)\s*/, "").trim();
-}
-
-function hideAllMainViews() {
-  document.getElementById("ai-analysis")?.classList.add("hidden");
-  document.getElementById("saved-analyses")?.classList.add("hidden");
-  document.getElementById("website-content")?.classList.add("hidden");
-  document.getElementById("settings-view")?.classList.add("hidden");
-
-  document.getElementById("content-loading")?.classList.add("hidden");
-  document.getElementById("ai-loading")?.classList.add("hidden");
-  document.getElementById("filter-panel")?.classList.add("hidden");
-  document.getElementById("filter-toggle")?.setAttribute("aria-expanded", "false");
 }
 
 function applySettingsToUI(settings) {
@@ -257,8 +283,7 @@ function updateUI(session) {
       userInitialSpan.textContent = fullName.charAt(0).toUpperCase();
     }
     statusMsg.textContent = "";
-
-    extractWebsiteContent();
+    navigateTo("analysis");
 
     loadSettings().then(settings => {
       applySettingsToUI(settings);
@@ -290,11 +315,11 @@ async function shouldAutoAnalyze() {
 }
 
 async function extractWebsiteContent() {
+  if (currentView !== "analysis") return;
   const contentCard = document.getElementById('website-content');
   const contentLoading = document.getElementById('content-loading');
   const contentError = document.getElementById('content-error');
   const contentData = document.getElementById('content-data');
-  if (!settingsView?.classList.contains("hidden")) return;
   const settings = await loadSettings();
 
   // Show loading state
@@ -829,7 +854,6 @@ if (signOutBtn) signOutBtn.addEventListener('click', signOut);
 
 const dropdownHeader = document.getElementById('dropdown-header');
 const dropdownCard = document.querySelector('.dropdown-card');
-const dropdownContent = document.getElementById('dropdown-content');
 
 if (dropdownHeader && dropdownCard) {
   dropdownHeader.addEventListener('click', (e) => {
@@ -837,6 +861,15 @@ if (dropdownHeader && dropdownCard) {
     dropdownCard.classList.toggle('expanded');
   });
 }
+
+const homeTitle = document.querySelector(
+  "#welcome-view .user-name-text"
+);
+
+homeTitle?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  navigateTo("analysis");
+});
 
 document.addEventListener("click", (e) => {
   if (!dropdownCard) return;
@@ -852,7 +885,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (!enabled) return;
 
       supabase.auth.getSession().then(({ data }) => {
-        if (data.session && welcomeView && !welcomeView.classList.contains('hidden')) {
+        if (currentView === "analysis") {
           setTimeout(extractWebsiteContent, 300);
         }
       });
@@ -866,7 +899,7 @@ document.addEventListener('visibilitychange', () => {
       if (!enabled) return;
 
       supabase.auth.getSession().then(({ data }) => {
-        if (data.session && welcomeView && !welcomeView.classList.contains('hidden')) {
+        if (currentView === "analysis") {
           setTimeout(extractWebsiteContent, 300);
         }
       });
@@ -931,11 +964,7 @@ button?.addEventListener("click", async () => {
 
 settingsMenu?.addEventListener("click", (e) => {
   e.preventDefault();
-
-  document.querySelector(".dropdown-card")?.classList.remove("expanded");
-
-  hideAllMainViews();
-  settingsView?.classList.remove("hidden");
+  navigateTo("settings");
 });
 
 const autoReanalysisCheckbox = document.getElementById("setting-auto-reanalysis");
@@ -952,6 +981,7 @@ autoReanalysisCheckbox?.addEventListener("change", async (e) => {
 const refreshBtn = document.getElementById("refreshButton");
 
 refreshBtn?.addEventListener("click", async () => {
+  if (currentView !== "analysis") return;
   if (!lastExtractedMeta || refreshBtn.disabled) return;
 
   refreshBtn.disabled = true;
@@ -982,10 +1012,7 @@ const dropdownMenu = document.getElementById("menu-saved-analyses");
 
 dropdownMenu?.addEventListener("click", (e) => {
   e.preventDefault();
-
-  document.querySelector(".dropdown-card")?.classList.remove("expanded");
-
-  showSavedAnalysesView();
+  navigateTo("saved");
 });
 
 document.getElementById("export-csv")?.addEventListener("click", async () => {
@@ -1171,10 +1198,7 @@ const profileView = document.getElementById("profile-view");
 
 profileMenuItem?.addEventListener("click", async (e) => {
   e.preventDefault();
-
-  document.querySelector(".dropdown-card")?.classList.remove("expanded");
-  hideAllMainViews();
-  profileView?.classList.remove("hidden");
+  navigateTo("profile");
 
   const { data } = await supabase.auth.getSession();
   const user = data?.session?.user;
