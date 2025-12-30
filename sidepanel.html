@@ -186,29 +186,113 @@
         <div id="saved-analyses" class="website-content-card hidden">
           <div class="content-header">
             <h3 class="content-title">Saved Analyses</h3>
-            <div class="export-actions">
+            <div class="header-actions-right">
               <button
-                id="export-menu-toggle"
+                id="filter-toggle"
                 class="secondary-btn"
+                title="Filter saved analyses"
                 aria-haspopup="true"
                 aria-expanded="false"
-                aria-label="Export options"
               >
-                <svg viewBox="0 0 24 24" class="export-toggle-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
-                  <polyline points="16 6 12 2 8 6"></polyline>
-                  <line x1="12" y1="2" x2="12" y2="15"></line>
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polygon points="3 4 21 4 14 12 14 19 10 21 10 12 3 4"></polygon>
                 </svg>
               </button>
-              
-              <div id="export-menu" class="export-menu hidden" role="menu" aria-labelledby="export-menu-toggle">
-                <ul class="menu-list">
-                  <li><button id="export-csv" class="menu-item" role="menuitem">CSV (.csv)</button></li>
-                  <li><button id="export-xlsx" class="menu-item" role="menuitem">Excel (.xlsx)</button></li>
-                </ul>
+
+              <!-- Filter Panel -->
+              <div id="filter-panel" class="filter-panel hidden">
+                <div class="filter-header">
+                  <h4>Filter</h4>
+                  <span class="filter-reset">Reset</span>
+                </div>
+
+                <div class="filter-group">
+                  <div class="filter-label-row">
+                    <span class="filter-label">Score readiness</span>
+                    <span class="filter-value" id="filter-score-value">0 – 100</span>
+                  </div>
+
+                  <input
+                    type="range"
+                    id="filter-sales-score"
+                    min="0"
+                    max="100"
+                    value="0"
+                    step="1"
+                    class="filter-range"
+                  />
+                </div>
+
+                <div class="filter-group">
+                  <div class="filter-label">Best sales persona</div>
+                  <select class="filter-select" id="filter-persona">
+                    <option value="">All Personas</option>
+                    <option value="founder / ceo">Founder / CEO</option>
+                    <option value="enterprise account executive">Enterprise Account Executive</option>
+                    <option value="mid-market ae">Mid-Market AE</option>
+                    <option value="smb sales rep">SMB Sales Rep</option>
+                    <option value="product-led growth (plg)">Product-Led Growth (PLG)</option>
+                    <option value="partnerships / alliances">Partnerships / Alliances</option>
+                  </select>
+                </div>
+
+                <button class="filter-apply">Apply</button>
+              </div>
+
+              <div class="export-actions">
+                <button
+                  id="export-menu-toggle"
+                  class="secondary-btn"
+                  aria-haspopup="true"
+                  aria-expanded="false"
+                  aria-label="Export options"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    class="export-toggle-icon"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+                    <polyline points="16 6 12 2 8 6"></polyline>
+                    <line x1="12" y1="2" x2="12" y2="15"></line>
+                  </svg>
+                </button>
+                <div
+                  id="export-menu"
+                  class="export-menu hidden"
+                  role="menu"
+                  aria-labelledby="export-menu-toggle"
+                >
+                  <ul class="menu-list">
+                    <li>
+                      <button id="export-csv" class="menu-item" role="menuitem">
+                        CSV (.csv)
+                      </button>
+                    </li>
+                    <li>
+                      <button id="export-xlsx" class="menu-item" role="menuitem">
+                        Excel (.xlsx)
+                      </button>
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
+
 
           <div id="saved-loading" class="content-loading hidden">
             <p>Loading saved companies…</p>
