@@ -269,6 +269,21 @@ function updateUI(session) {
   }
 }
 
+function updateSavedEmptyState() {
+  const listEl = document.getElementById("saved-list");
+  const emptyEl = document.getElementById("saved-empty");
+
+  if (!listEl || !emptyEl) return;
+
+  const hasItems = listEl.querySelector(".saved-item");
+
+  if (hasItems) {
+    emptyEl.classList.add("hidden");
+  } else {
+    emptyEl.classList.remove("hidden");
+  }
+}
+
 async function shouldAutoAnalyze() {
   const settings = await loadSettings();
   return settings.autoReanalysis;
@@ -681,6 +696,7 @@ function renderSavedItem(item) {
       .eq("id", item.id);
 
     wrapper.remove();
+    updateSavedEmptyState();
   });
 
   return wrapper;
@@ -790,6 +806,7 @@ async function loadSavedAnalyses() {
     listEl.appendChild(renderSavedItem(item));
   });
   applySavedFilters();
+  updateSavedEmptyState();
 }
 
 async function fetchSavedAnalysesData() {
