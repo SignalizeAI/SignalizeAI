@@ -608,34 +608,10 @@ function renderSavedItem(item) {
 
   const copySavedBtn = wrapper.querySelector(".copy-saved-btn");
 
-  copySavedBtn.addEventListener("click", (e) => {
+  copySavedBtn.addEventListener("click", async (e) => {
     e.stopPropagation();
 
-    const text = `
-  Website: ${item.title || ""}
-  Domain: ${item.domain || ""}
-  URL: ${item.url || ""}
-
-  What they do:
-  ${item.what_they_do || "—"}
-
-  Target customer:
-  ${item.target_customer || "—"}
-
-  Value proposition:
-  ${item.value_proposition || "—"}
-
-  Sales angle:
-  ${item.sales_angle || "—"}
-
-  Sales readiness score:
-  ${item.sales_readiness_score ?? "—"}
-
-  Best sales persona:
-  ${item.best_sales_persona || "—"}
-  ${item.best_sales_persona_reason ? `(${item.best_sales_persona_reason})` : ""}
-  `.trim();
-
+    const text = await buildSavedCopyText(item);
     copyAnalysisText(text, copySavedBtn);
   });
 
@@ -986,10 +962,13 @@ document.addEventListener("click", () => {
   }
 });
 
-function buildCopyText() {
+async function buildCopyText() {
   if (!lastAnalysis || !lastExtractedMeta) return "";
 
-  return `
+  const settings = await loadSettings();
+  const isShort = settings.copyFormat === "short";
+
+  let text = `
 Website: ${lastExtractedMeta.title || ""}
 Domain: ${lastExtractedMeta.domain || ""}
 URL: ${lastExtractedMeta.url || ""}
@@ -1000,19 +979,63 @@ ${lastAnalysis.whatTheyDo || "—"}
 Target customer:
 ${lastAnalysis.targetCustomer || "—"}
 
+Sales readiness score:
+${lastAnalysis.salesReadinessScore ?? "—"}
+`.trim();
+
+  if (!isShort) {
+    text += `
+
 Value proposition:
 ${lastAnalysis.valueProposition || "—"}
 
 Sales angle:
 ${lastAnalysis.salesAngle || "—"}
 
-Sales readiness score:
-${lastAnalysis.salesReadinessScore ?? "—"}
-
 Best sales persona:
 ${lastAnalysis.bestSalesPersona?.persona || "—"}
 ${lastAnalysis.bestSalesPersona?.reason ? `(${lastAnalysis.bestSalesPersona.reason})` : ""}
+`;
+  }
+
+  return text.trim();
+}
+
+async function buildSavedCopyText(item) {
+  const settings = await loadSettings();
+  const isShort = settings.copyFormat === "short";
+
+  let text = `
+Website: ${item.title || ""}
+Domain: ${item.domain || ""}
+URL: ${item.url || ""}
+
+What they do:
+${item.what_they_do || "—"}
+
+Target customer:
+${item.target_customer || "—"}
+
+Sales readiness score:
+${item.sales_readiness_score ?? "—"}
 `.trim();
+
+  if (!isShort) {
+    text += `
+
+Value proposition:
+${item.value_proposition || "—"}
+
+Sales angle:
+${item.sales_angle || "—"}
+
+Best sales persona:
+${item.best_sales_persona || "—"}
+${item.best_sales_persona_reason ? `(${item.best_sales_persona_reason})` : ""}
+`;
+  }
+
+  return text.trim();
 }
 
 function copyAnalysisText(text, anchorEl) {
@@ -1052,8 +1075,15 @@ function copyAnalysisText(text, anchorEl) {
 
 const copyBtn = document.getElementById("copyButton");
 
-copyBtn?.addEventListener("click", () => {
-  copyAnalysisText(buildCopyText(), copyBtn);
+copyBtn?.addEventListener("click", async () => {
+  const text = await buildCopyText();
+  copyAnalysisText(text, copyBtn);
+});
+
+document.querySelectorAll('input[name="copy-format"]').forEach(radio => {
+  radio.addEventListener("change", (e) => {
+    saveSettings({ copyFormat: e.target.value });
+  });
 });
 
 const clearCacheBtn = document.getElementById("clear-cache-btn");
