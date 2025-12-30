@@ -180,6 +180,10 @@ function showSavedAnalysesView() {
   loadSavedAnalyses();
 }
 
+function cleanTitle(title = "") {
+  return title.replace(/^\(\d+\)\s*/, "").trim();
+}
+
 function hideAllMainViews() {
   document.getElementById("ai-analysis")?.classList.add("hidden");
   document.getElementById("saved-analyses")?.classList.add("hidden");
@@ -293,7 +297,7 @@ async function extractWebsiteContent() {
           console.log("📄 Extracted website content:", response.content);
 
           lastExtractedMeta = {
-            title: response.content.title,
+            title: cleanTitle(response.content.title),
             description: response.content.metaDescription,
             url: response.content.url,
             domain: new URL(response.content.url).hostname
@@ -357,7 +361,7 @@ async function extractWebsiteContent() {
               };
 
               lastExtractedMeta = {
-                title: existing.title,
+                title: cleanTitle(existing.title),
                 description: existing.description,
                 url: existing.url,
                 domain: existing.domain
@@ -461,7 +465,7 @@ async function analyzeSpecificUrl(url) {
       }
 
       lastExtractedMeta = {
-        title: response.content.title,
+        title: cleanTitle(response.content.title),
         description: response.content.metaDescription,
         url: response.content.url,
         domain: new URL(response.content.url).hostname
