@@ -11,14 +11,20 @@ let lastExtractedMeta = null;
 let lastAnalyzedDomain = null;
 let forceRefresh = false;
 
+const DEFAULT_SETTINGS = {
+  autoReanalysis: true,
+  reanalysisMode: "content-change", 
+  copyFormat: "full"
+};
+
 const loginView = document.getElementById('login-view');
 const welcomeView = document.getElementById('welcome-view');
-const userNameSpan = document.getElementById('user-name');
-const userEmailSpan = document.getElementById('user-email');
 const userInitialSpan = document.getElementById('user-initial');
 const signInBtn = document.getElementById('google-signin');
 const signOutBtn = document.getElementById('sign-out');
 const statusMsg = document.getElementById('status-msg');
+const settingsMenu = document.querySelector('.menu-item img[src*="settings"]')?.closest('.menu-item');
+const settingsView = document.getElementById("settings-view");
 
 async function signInWithGoogle() {
   try {
@@ -100,6 +106,16 @@ async function hashContent(content) {
     .join("");
 }
 
+async function loadSettings() {
+  return new Promise(resolve => {
+    chrome.storage.sync.get(DEFAULT_SETTINGS, resolve);
+  });
+}
+
+function saveSettings(partial) {
+  chrome.storage.sync.set(partial);
+}
+
 function showContentBlocked(message, options = {}) {
   const contentCard = document.getElementById("website-content");
   const contentLoading = document.getElementById("content-loading");
@@ -164,28 +180,71 @@ function showSavedAnalysesView() {
   loadSavedAnalyses();
 }
 
+function cleanTitle(title = "") {
+  return title.replace(/^\(\d+\)\s*/, "").trim();
+}
+
+function hideAllMainViews() {
+  document.getElementById("ai-analysis")?.classList.add("hidden");
+  document.getElementById("saved-analyses")?.classList.add("hidden");
+  document.getElementById("website-content")?.classList.add("hidden");
+  document.getElementById("settings-view")?.classList.add("hidden");
+
+  document.getElementById("content-loading")?.classList.add("hidden");
+  document.getElementById("ai-loading")?.classList.add("hidden");
+}
+
+function applySettingsToUI(settings) {
+  document.getElementById("setting-auto-reanalysis") &&
+    (document.getElementById("setting-auto-reanalysis").checked = settings.autoReanalysis);
+
+  document.querySelector(`input[name="reanalysis-mode"][value="${settings.reanalysisMode}"]`)?.click();
+  document.querySelector(`input[name="copy-format"][value="${settings.copyFormat}"]`)?.click();
+
+  updateReanalysisUI(settings);
+}
+
+function updateReanalysisUI(settings) {
+  const section = document.getElementById("reanalysis-section");
+  if (!section) return;
+
+  if (!settings.autoReanalysis) {
+    section.classList.add("disabled");
+  } else {
+    section.classList.remove("disabled");
+  }
+}
+
 function updateUI(session) {
   if (session) {
     loginView.classList.add('hidden');
     welcomeView.classList.remove('hidden');
 
     const user = session.user;
-    const fullName = user.user_metadata.full_name || user.email;
-    if (userNameSpan) userNameSpan.textContent = fullName;
-    if (userEmailSpan) {
-      userEmailSpan.textContent = user.email || 'user@signalize.ai';
-    }
-    if (userInitialSpan && fullName && fullName.length > 0) {
+    const fullName =
+      user?.user_metadata?.full_name ||
+      user?.email ||
+      "";
+
+    if (userInitialSpan && fullName) {
       userInitialSpan.textContent = fullName.charAt(0).toUpperCase();
     }
     statusMsg.textContent = "";
 
     extractWebsiteContent();
 
+    loadSettings().then(settings => {
+      applySettingsToUI(settings);
+    });
   } else {
     loginView.classList.remove('hidden');
     welcomeView.classList.add('hidden');
   }
+}
+
+async function shouldAutoAnalyze() {
+  const settings = await loadSettings();
+  return settings.autoReanalysis;
 }
 
 async function extractWebsiteContent() {
@@ -193,6 +252,8 @@ async function extractWebsiteContent() {
   const contentLoading = document.getElementById('content-loading');
   const contentError = document.getElementById('content-error');
   const contentData = document.getElementById('content-data');
+  if (!settingsView?.classList.contains("hidden")) return;
+  const settings = await loadSettings();
 
   // Show loading state
   if (contentCard) contentCard.classList.remove('hidden');
@@ -236,7 +297,7 @@ async function extractWebsiteContent() {
           console.log("📄 Extracted website content:", response.content);
 
           lastExtractedMeta = {
-            title: response.content.title,
+            title: cleanTitle(response.content.title),
             description: response.content.metaDescription,
             url: response.content.url,
             domain: new URL(response.content.url).hostname
@@ -278,7 +339,13 @@ async function extractWebsiteContent() {
 
             if (aiCard) aiCard.classList.remove('hidden');
 
-            if (!forceRefresh && existing && existing.content_hash === lastContentHash) {
+            const shouldReuse =
+              settings.reanalysisMode === "content-change" &&
+              !forceRefresh &&
+              existing &&
+              existing.content_hash === lastContentHash;
+
+            if (shouldReuse) {
               if (aiLoading) aiLoading.classList.add("hidden");
               
               lastAnalysis = {
@@ -294,7 +361,7 @@ async function extractWebsiteContent() {
               };
 
               lastExtractedMeta = {
-                title: existing.title,
+                title: cleanTitle(existing.title),
                 description: existing.description,
                 url: existing.url,
                 domain: existing.domain
@@ -398,7 +465,7 @@ async function analyzeSpecificUrl(url) {
       }
 
       lastExtractedMeta = {
-        title: response.content.title,
+        title: cleanTitle(response.content.title),
         description: response.content.metaDescription,
         url: response.content.url,
         domain: new URL(response.content.url).hostname
@@ -543,35 +610,14 @@ function renderSavedItem(item) {
 
   const copySavedBtn = wrapper.querySelector(".copy-saved-btn");
 
-  copySavedBtn.addEventListener("click", (e) => {
+  copySavedBtn.addEventListener("click", async (e) => {
     e.stopPropagation();
 
-    const text = `
-  Website: ${item.title || ""}
-  Domain: ${item.domain || ""}
-  URL: ${item.url || ""}
+    const settings = await loadSettings();
+    const formatLabel = settings.copyFormat === "short" ? "short" : "full";
 
-  What they do:
-  ${item.what_they_do || "—"}
-
-  Target customer:
-  ${item.target_customer || "—"}
-
-  Value proposition:
-  ${item.value_proposition || "—"}
-
-  Sales angle:
-  ${item.sales_angle || "—"}
-
-  Sales readiness score:
-  ${item.sales_readiness_score ?? "—"}
-
-  Best sales persona:
-  ${item.best_sales_persona || "—"}
-  ${item.best_sales_persona_reason ? `(${item.best_sales_persona_reason})` : ""}
-  `.trim();
-
-    copyAnalysisText(text, copySavedBtn);
+    const text = await buildSavedCopyText(item);
+    copyAnalysisText(text, copySavedBtn, formatLabel);
   });
 
   header.addEventListener("click", (e) => {
@@ -753,24 +799,28 @@ document.addEventListener("click", (e) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "TAB_CHANGED") {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session && welcomeView && !welcomeView.classList.contains('hidden')) {
-        setTimeout(() => {
-          extractWebsiteContent();
-        }, 300);
-      }
+    shouldAutoAnalyze().then(enabled => {
+      if (!enabled) return;
+
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session && welcomeView && !welcomeView.classList.contains('hidden')) {
+          setTimeout(extractWebsiteContent, 300);
+        }
+      });
     });
   }
 });
 
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session && welcomeView && !welcomeView.classList.contains('hidden')) {
-        setTimeout(() => {
-          extractWebsiteContent();
-        }, 300);
-      }
+    shouldAutoAnalyze().then(enabled => {
+      if (!enabled) return;
+
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session && welcomeView && !welcomeView.classList.contains('hidden')) {
+          setTimeout(extractWebsiteContent, 300);
+        }
+      });
     });
   }
 });
@@ -830,6 +880,26 @@ button?.addEventListener("click", async () => {
   }
 });
 
+settingsMenu?.addEventListener("click", (e) => {
+  e.preventDefault();
+
+  document.querySelector(".dropdown-card")?.classList.remove("expanded");
+
+  hideAllMainViews();
+  settingsView?.classList.remove("hidden");
+});
+
+const autoReanalysisCheckbox = document.getElementById("setting-auto-reanalysis");
+
+autoReanalysisCheckbox?.addEventListener("change", async (e) => {
+  const autoReanalysis = e.target.checked;
+
+  saveSettings({ autoReanalysis });
+
+  const settings = await loadSettings();
+  updateReanalysisUI(settings);
+});
+
 const refreshBtn = document.getElementById("refreshButton");
 
 refreshBtn?.addEventListener("click", async () => {
@@ -859,9 +929,9 @@ supabase.auth.getSession().then(({ data }) => {
   updateUI(data.session);
 });
 
-const profileMenu = document.getElementById("menu-saved-analyses");
+const dropdownMenu = document.getElementById("menu-saved-analyses");
 
-profileMenu?.addEventListener("click", (e) => {
+dropdownMenu?.addEventListener("click", (e) => {
   e.preventDefault();
 
   document.querySelector(".dropdown-card")?.classList.remove("expanded");
@@ -897,10 +967,13 @@ document.addEventListener("click", () => {
   }
 });
 
-function buildCopyText() {
+async function buildCopyText() {
   if (!lastAnalysis || !lastExtractedMeta) return "";
 
-  return `
+  const settings = await loadSettings();
+  const isShort = settings.copyFormat === "short";
+
+  let text = `
 Website: ${lastExtractedMeta.title || ""}
 Domain: ${lastExtractedMeta.domain || ""}
 URL: ${lastExtractedMeta.url || ""}
@@ -911,22 +984,66 @@ ${lastAnalysis.whatTheyDo || "—"}
 Target customer:
 ${lastAnalysis.targetCustomer || "—"}
 
+Sales readiness score:
+${lastAnalysis.salesReadinessScore ?? "—"}
+`.trim();
+
+  if (!isShort) {
+    text += `
+
 Value proposition:
 ${lastAnalysis.valueProposition || "—"}
 
 Sales angle:
 ${lastAnalysis.salesAngle || "—"}
 
-Sales readiness score:
-${lastAnalysis.salesReadinessScore ?? "—"}
-
 Best sales persona:
 ${lastAnalysis.bestSalesPersona?.persona || "—"}
 ${lastAnalysis.bestSalesPersona?.reason ? `(${lastAnalysis.bestSalesPersona.reason})` : ""}
-`.trim();
+`;
+  }
+
+  return text.trim();
 }
 
-function copyAnalysisText(text, anchorEl) {
+async function buildSavedCopyText(item) {
+  const settings = await loadSettings();
+  const isShort = settings.copyFormat === "short";
+
+  let text = `
+Website: ${item.title || ""}
+Domain: ${item.domain || ""}
+URL: ${item.url || ""}
+
+What they do:
+${item.what_they_do || "—"}
+
+Target customer:
+${item.target_customer || "—"}
+
+Sales readiness score:
+${item.sales_readiness_score ?? "—"}
+`.trim();
+
+  if (!isShort) {
+    text += `
+
+Value proposition:
+${item.value_proposition || "—"}
+
+Sales angle:
+${item.sales_angle || "—"}
+
+Best sales persona:
+${item.best_sales_persona || "—"}
+${item.best_sales_persona_reason ? `(${item.best_sales_persona_reason})` : ""}
+`;
+  }
+
+  return text.trim();
+}
+
+function copyAnalysisText(text, anchorEl, formatLabel = "") {
   if (!text || !anchorEl) return;
 
   navigator.clipboard.writeText(text).then(() => {
@@ -935,7 +1052,9 @@ function copyAnalysisText(text, anchorEl) {
 
     const tooltip = document.createElement("span");
     tooltip.className = "copy-tooltip";
-    tooltip.textContent = "Copied";
+    tooltip.textContent = formatLabel
+      ? `Copied (${formatLabel})`
+      : "Copied";
 
     Object.assign(tooltip.style, {
       position: "absolute",
@@ -963,6 +1082,59 @@ function copyAnalysisText(text, anchorEl) {
 
 const copyBtn = document.getElementById("copyButton");
 
-copyBtn?.addEventListener("click", () => {
-  copyAnalysisText(buildCopyText(), copyBtn);
+copyBtn?.addEventListener("click", async () => {
+  const settings = await loadSettings();
+  const formatLabel = settings.copyFormat === "short" ? "short" : "full";
+
+  const text = await buildCopyText();
+  copyAnalysisText(text, copyBtn, formatLabel);
+});
+
+document.querySelectorAll('input[name="copy-format"]').forEach(radio => {
+  radio.addEventListener("change", (e) => {
+    saveSettings({ copyFormat: e.target.value });
+  });
+});
+
+const clearCacheBtn = document.getElementById("clear-cache-btn");
+
+clearCacheBtn?.addEventListener("click", async () => {
+  // Clear local state
+  lastAnalysis = null;
+  lastContentHash = null;
+  lastExtractedMeta = null;
+  lastAnalyzedDomain = null;
+
+  chrome.storage.local.clear();
+
+  const originalText = clearCacheBtn.textContent;
+  clearCacheBtn.textContent = "Cleared";
+  clearCacheBtn.classList.add("cleared");
+
+  setTimeout(() => {
+    clearCacheBtn.textContent = originalText;
+    clearCacheBtn.classList.remove("cleared");
+  }, 1200);
+});
+
+const profileMenuItem = document.getElementById("menu-profile");
+const profileView = document.getElementById("profile-view");
+
+profileMenuItem?.addEventListener("click", async (e) => {
+  e.preventDefault();
+
+  document.querySelector(".dropdown-card")?.classList.remove("expanded");
+  hideAllMainViews();
+  profileView?.classList.remove("hidden");
+
+  const { data } = await supabase.auth.getSession();
+  const user = data?.session?.user;
+
+  if (user) {
+    document.getElementById("profile-name").textContent =
+      user.user_metadata?.full_name || "—";
+
+    document.getElementById("profile-email").textContent =
+      user.email || "—";
+  }
 });
