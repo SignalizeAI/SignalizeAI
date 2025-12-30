@@ -26,10 +26,8 @@
         <div class="dropdown-card">
           <div class="dropdown-header" id="dropdown-header">
             <div class="user-details">
-              <span id="user-name" class="user-name-text">Loading...</span>
-              <span id="user-email" class="user-email-text"
-                >user@signalize.ai</span
-              >
+              <span class="user-name-text">SignalizeAI</span>
+              <span class="user-email-text">Cursor for sales pages</span>
             </div>
             <div style="display: flex; align-items: center; gap: 12px">
               <div id="user-initial" class="user-avatar-placeholder">U</div>
@@ -45,7 +43,7 @@
           <div class="dropdown-content" id="dropdown-content">
             <ul class="menu-list">
               <li>
-                <a href="#" class="menu-item active">
+                <a href="#" class="menu-item" id="menu-profile">
                   <img src="icons/profile.svg" alt="" class="menu-icon" />
                   Profile
                 </a>
@@ -289,6 +287,36 @@
           </div>
         </div>
 
+        <!-- Profile -->
+        <div id="profile-view" class="website-content-card hidden">
+          <div class="content-header">
+            <h3 class="content-title">Profile</h3>
+          </div>
+
+          <div class="profile-section">
+            <div class="profile-row">
+              <span class="profile-label">Name</span>
+              <span class="profile-value" id="profile-name">—</span>
+            </div>
+
+            <div class="profile-row">
+              <span class="profile-label">Email</span>
+              <span class="profile-value" id="profile-email">—</span>
+            </div>
+          </div>
+
+          <div class="profile-section">
+            <div class="profile-row">
+              <span class="profile-label">Plan</span>
+              <span class="profile-value">Free</span>
+            </div>
+
+            <div class="profile-row">
+              <span class="profile-label">Usage limit</span>
+              <span class="profile-value">100 / month</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 

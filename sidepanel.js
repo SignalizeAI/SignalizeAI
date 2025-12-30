@@ -19,8 +19,6 @@ const DEFAULT_SETTINGS = {
 
 const loginView = document.getElementById('login-view');
 const welcomeView = document.getElementById('welcome-view');
-const userNameSpan = document.getElementById('user-name');
-const userEmailSpan = document.getElementById('user-email');
 const userInitialSpan = document.getElementById('user-initial');
 const signInBtn = document.getElementById('google-signin');
 const signOutBtn = document.getElementById('sign-out');
@@ -219,12 +217,12 @@ function updateUI(session) {
     welcomeView.classList.remove('hidden');
 
     const user = session.user;
-    const fullName = user.user_metadata.full_name || user.email;
-    if (userNameSpan) userNameSpan.textContent = fullName;
-    if (userEmailSpan) {
-      userEmailSpan.textContent = user.email || 'user@signalize.ai';
-    }
-    if (userInitialSpan && fullName && fullName.length > 0) {
+    const fullName =
+      user?.user_metadata?.full_name ||
+      user?.email ||
+      "";
+
+    if (userInitialSpan && fullName) {
       userInitialSpan.textContent = fullName.charAt(0).toUpperCase();
     }
     statusMsg.textContent = "";
@@ -927,9 +925,9 @@ supabase.auth.getSession().then(({ data }) => {
   updateUI(data.session);
 });
 
-const profileMenu = document.getElementById("menu-saved-analyses");
+const dropdownMenu = document.getElementById("menu-saved-analyses");
 
-profileMenu?.addEventListener("click", (e) => {
+dropdownMenu?.addEventListener("click", (e) => {
   e.preventDefault();
 
   document.querySelector(".dropdown-card")?.classList.remove("expanded");
@@ -1113,4 +1111,26 @@ clearCacheBtn?.addEventListener("click", async () => {
     clearCacheBtn.textContent = originalText;
     clearCacheBtn.classList.remove("cleared");
   }, 1200);
+});
+
+const profileMenuItem = document.getElementById("menu-profile");
+const profileView = document.getElementById("profile-view");
+
+profileMenuItem?.addEventListener("click", async (e) => {
+  e.preventDefault();
+
+  document.querySelector(".dropdown-card")?.classList.remove("expanded");
+  hideAllMainViews();
+  profileView?.classList.remove("hidden");
+
+  const { data } = await supabase.auth.getSession();
+  const user = data?.session?.user;
+
+  if (user) {
+    document.getElementById("profile-name").textContent =
+      user.user_metadata?.full_name || "—";
+
+    document.getElementById("profile-email").textContent =
+      user.email || "—";
+  }
 });
