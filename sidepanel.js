@@ -314,17 +314,6 @@ async function shouldAutoAnalyze() {
   return settings.autoReanalysis;
 }
 
-async function ensureContentExtractor(tabId) {
-  try {
-    await chrome.tabs.sendMessage(tabId, { type: "__PING__" });
-  } catch (err) {
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ["content-extractor.js"]
-    });
-  }
-}
-
 async function extractWebsiteContent() {
   if (currentView !== "analysis") return;
   const contentCard = document.getElementById('website-content');
@@ -348,7 +337,6 @@ async function extractWebsiteContent() {
       if (contentError) contentError.classList.remove('hidden');
       return;
     }
-    await ensureContentExtractor(tab.id);
 
     if (
       tab.url.startsWith("chrome://") ||
@@ -528,7 +516,6 @@ async function analyzeSpecificUrl(url) {
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) return;
-  await ensureContentExtractor(tab.id);
 
   chrome.tabs.sendMessage(
     tab.id,
