@@ -1,6 +1,6 @@
 export async function analyzeWebsiteContent(extracted) {
   const response = await fetch(
-    "https://signalize-backend.signalizeaiorg.workers.dev",
+    "https://api.signalizeai.org",
     {
       method: "POST",
       headers: {
