@@ -101,6 +101,11 @@
   }
 
   chrome.runtime.onMessage.addListener((msg, _, sendResponse) => {
+    if (msg?.type === "__PING__") {
+      sendResponse({ ok: true });
+      return false;
+    }
+
     if (msg?.type !== "EXTRACT_WEBSITE_CONTENT") return;
 
     try {
@@ -134,21 +139,22 @@
           reason: "RESTRICTED",
           details: restriction
         });
-        return;
+        return false;
       }
 
       const content = extractContent(document, window.location.href);
 
       if (isThinContent(content)) {
         sendResponse({ ok: false, reason: "THIN_CONTENT" });
-        return;
+        return false;
       }
 
       sendResponse({ ok: true, content });
+      return false;
+
     } catch (err) {
       sendResponse({ ok: false, error: err.message });
+      return false;
     }
-
-    return true;
   });
 })();
