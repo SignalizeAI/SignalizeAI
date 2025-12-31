@@ -10,7 +10,8 @@
     "identity"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "https://accounts.google.com/*",
+    "https://*.supabase.co/*"
   ],
   "icons": {
     "16": "icons/16.png",
