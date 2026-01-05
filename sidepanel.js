@@ -1,5 +1,5 @@
 import { analyzeWebsiteContent } from "./src/ai-analyze.js";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs/dist/exceljs.min.js";
 
 if (!window.supabase) {
   throw new Error('Supabase client not initialized. Make sure extension/supabase.bundle.js is loaded.');
@@ -768,36 +768,53 @@ function exportToCSV(rows) {
 
   const a = document.createElement("a");
   a.href = url;
-  a.download = "signalize_saved_analyses.csv";
+  a.download = "signalizeai_saved_analyses.csv";
   a.click();
 
   URL.revokeObjectURL(url);
 }
 
-function exportToExcel(rows) {
+async function exportToExcel(rows) {
   if (!rows.length) return;
 
-  const formatted = rows.map(item => ({
-    Title: item.title,
-    Domain: item.domain,
-    URL: item.url,
-    Description: item.description,
-    "Sales Readiness": item.sales_readiness_score,
-    "What They Do": item.what_they_do,
-    "Target Customer": item.target_customer,
-    "Value Proposition": item.value_proposition,
-    "Best Sales Persona": item.best_sales_persona,
-    "Persona Reason": item.best_sales_persona_reason,
-    "Sales Angle": item.sales_angle,
-    "Saved At": item.created_at
-  }));
+  const { default: ExcelJS } = await import(
+    "exceljs/dist/exceljs.min.js"
+  );
 
-  const worksheet = XLSX.utils.json_to_sheet(formatted);
-  const workbook = XLSX.utils.book_new();
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Saved Analyses");
 
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Saved Analyses");
+  sheet.columns = [
+    { header: "Title", key: "title", width: 30 },
+    { header: "Domain", key: "domain", width: 22 },
+    { header: "URL", key: "url", width: 35 },
+    { header: "Description", key: "description", width: 40 },
+    { header: "Sales Readiness", key: "sales_readiness_score", width: 18 },
+    { header: "What They Do", key: "what_they_do", width: 35 },
+    { header: "Target Customer", key: "target_customer", width: 30 },
+    { header: "Value Proposition", key: "value_proposition", width: 35 },
+    { header: "Best Sales Persona", key: "best_sales_persona", width: 22 },
+    { header: "Persona Reason", key: "best_sales_persona_reason", width: 30 },
+    { header: "Sales Angle", key: "sales_angle", width: 35 },
+    { header: "Saved At", key: "created_at", width: 22 }
+  ];
 
-  XLSX.writeFile(workbook, "signalize_saved_analyses.xlsx");
+  rows.forEach(item => sheet.addRow(item));
+
+  sheet.getRow(1).font = { bold: true };
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  });
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "signalizeai_saved_analyses.xlsx";
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 async function loadSavedAnalyses() {
