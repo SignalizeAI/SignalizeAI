@@ -11,6 +11,7 @@ let lastAnalyzedDomain = null;
 let forceRefresh = false;
 let currentView = "analysis";
 let selectionMode = false;
+let lastSelectedIndex = null;
 let selectedSavedIds = new Set();
 let activeFilters = {
   minScore: 0,
@@ -243,6 +244,16 @@ function showContentBlocked(message, options = {}) {
 }
 
 function applySavedFilters() {
+  lastSelectedIndex = null;
+
+  if (selectionMode) {
+    selectedSavedIds.clear();
+    document
+      .querySelectorAll(".saved-item.selected")
+      .forEach(el => el.classList.remove("selected"));
+    updateDeleteState();
+  }
+
   const items = document.querySelectorAll("#saved-list .saved-item");
 
   items.forEach(item => {
@@ -255,8 +266,7 @@ function applySavedFilters() {
     }
 
     if (visible && activeFilters.persona) {
-      visible =
-        item.dataset.persona === activeFilters.persona;
+      visible = item.dataset.persona === activeFilters.persona;
     }
 
     item.style.display = visible ? "" : "none";
@@ -735,8 +745,39 @@ function renderSavedItem(item) {
   header.addEventListener("click", (e) => {
     if (selectionMode) {
       if (e.target === checkbox) return;
-      checkbox.checked = !checkbox.checked;
-      checkbox.dispatchEvent(new Event("change"));
+
+      const items = Array.from(
+        document.querySelectorAll("#saved-list .saved-item")
+      );
+
+      const currentIndex = items.indexOf(wrapper);
+
+      if (e.shiftKey && lastSelectedIndex !== null) {
+        const [start, end] = [
+          Math.min(lastSelectedIndex, currentIndex),
+          Math.max(lastSelectedIndex, currentIndex)
+        ];
+
+        const shouldSelect = checkbox.checked;
+
+        items.slice(start, end + 1).forEach(itemEl => {
+          if (itemEl.style.display === "none") return;
+
+          const cb = itemEl.querySelector(".saved-select-checkbox");
+          if (!cb) return;
+
+          if (cb.checked !== shouldSelect) {
+            cb.checked = shouldSelect;
+            cb.dispatchEvent(new Event("change"));
+          }
+        });
+      }
+      else {
+        checkbox.checked = !checkbox.checked;
+        checkbox.dispatchEvent(new Event("change"));
+      }
+
+      lastSelectedIndex = currentIndex;
       return;
     }
 
@@ -1189,6 +1230,7 @@ ${item.best_sales_persona_reason ? `(${item.best_sales_persona_reason})` : ""}
 function exitSelectionMode() {
   selectionMode = false;
   selectedSavedIds.clear();
+  lastSelectedIndex = null;
 
   document.querySelectorAll(".saved-item.selected")
     .forEach(el => el.classList.remove("selected"));
@@ -1401,7 +1443,7 @@ document.addEventListener("click", (e) => {
 });
 
 multiSelectToggle?.addEventListener("click", async () => {
-  if (selectionMode && selectedSavedIds.size === 0) return;
+  if (multiSelectToggle.classList.contains("disabled")) return;
 
   if (!selectionMode) {
     selectionMode = true;
@@ -1411,14 +1453,12 @@ multiSelectToggle?.addEventListener("click", async () => {
     return;
   }
 
-  if (selectedSavedIds.size === 0) {
-    return;
-  }
+  if (selectedSavedIds.size === 0) return;
 
   const ids = Array.from(selectedSavedIds);
 
-  const { data: sessionData } = await supabase.auth.getSession();
-  const user = sessionData?.session?.user;
+  const { data } = await supabase.auth.getSession();
+  const user = data?.session?.user;
   if (!user) return;
 
   const { error } = await supabase
@@ -1443,6 +1483,7 @@ multiSelectToggle?.addEventListener("click", async () => {
   updateSavedEmptyState();
   applySavedFilters();
 });
+
 
 const filterApplyBtn = document.querySelector(".filter-apply");
 

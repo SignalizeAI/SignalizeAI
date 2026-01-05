@@ -1086,6 +1086,7 @@ body:has(#welcome-view:not(.hidden)) {
 }
 
 .secondary-btn.disabled {
-  opacity: 0.4;
+  opacity: 0.45;
   pointer-events: none;
+  cursor: not-allowed;
 }
