@@ -182,25 +182,6 @@ body:has(#welcome-view:not(.hidden)) {
   box-shadow: 0 0 0 2px #333333;
 }
 
-.dropdown-chevron {
-  width: 20px;
-  height: 20px;
-  color: #7a7a7a;
-  transition: transform 0.3s ease, filter 0.2s ease;
-  flex-shrink: 0;
-  display: block;
-  filter: brightness(0) invert(0.53);
-  margin-left: 6px;
-}
-
-.dropdown-header:hover .dropdown-chevron {
-  filter: brightness(0) invert(1);
-}
-
-.dropdown-card.expanded .dropdown-chevron {
-  transform: rotate(180deg);
-}
-
 .dropdown-content {
   position: absolute;
   top: 100%;
