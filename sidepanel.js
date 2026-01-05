@@ -18,6 +18,38 @@ let activeFilters = {
   persona: ""
 };
 
+const SELECT_ALL_ICON = `
+<svg
+  width="18"
+  height="18"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+  <path d="M7 12l3 3 7-7"></path>
+</svg>
+`;
+
+const DESELECT_ALL_ICON = `
+<svg
+  width="18"
+  height="18"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+  <line x1="7" y1="12" x2="17" y2="12"></line>
+</svg>
+`;
+
 const DEFAULT_SETTINGS = {
   autoReanalysis: true,
   reanalysisMode: "content-change", 
@@ -36,6 +68,7 @@ const settingsMenu = document.querySelector('.menu-item img[src*="settings"]')?.
 const settingsView = document.getElementById("settings-view");
 const multiSelectToggle = document.getElementById("multi-select-toggle");
 const selectionBackBtn = document.getElementById("selection-back-btn");
+const selectAllBtn = document.getElementById("select-all-btn");
 
 async function signInWithGoogle() {
   try {
@@ -271,6 +304,7 @@ function applySavedFilters() {
 
     item.style.display = visible ? "" : "none";
   });
+  updateSelectAllIcon();
 }
 
 function cleanTitle(title = "") {
@@ -740,6 +774,7 @@ function renderSavedItem(item) {
     }
 
     updateDeleteState();
+    updateSelectAllIcon();
   });
 
   header.addEventListener("click", (e) => {
@@ -815,6 +850,58 @@ function renderSavedItem(item) {
   });
 
   return wrapper;
+}
+
+function toggleSelectAllVisible() {
+  const items = Array.from(
+    document.querySelectorAll("#saved-list .saved-item")
+  ).filter(item => item.style.display !== "none");
+
+  if (!items.length) return;
+
+  const allSelected = items.every(item => {
+    const cb = item.querySelector(".saved-select-checkbox");
+    return cb?.checked;
+  });
+
+  items.forEach(item => {
+    const cb = item.querySelector(".saved-select-checkbox");
+    if (!cb) return;
+
+    if (cb.checked === !allSelected) return;
+
+    cb.checked = !allSelected;
+    cb.dispatchEvent(new Event("change"));
+  });
+
+  updateDeleteState();
+  updateSelectAllIcon();
+}
+
+function updateSelectAllIcon() {
+  if (!selectAllBtn || !selectionMode) return;
+
+  const items = Array.from(
+    document.querySelectorAll("#saved-list .saved-item")
+  ).filter(item => item.style.display !== "none");
+
+  if (!items.length) {
+    selectAllBtn.innerHTML = SELECT_ALL_ICON;
+    return;
+  }
+
+  const allSelected = items.every(item => {
+    const cb = item.querySelector(".saved-select-checkbox");
+    return cb?.checked;
+  });
+
+  selectAllBtn.innerHTML = allSelected
+    ? DESELECT_ALL_ICON
+    : SELECT_ALL_ICON;
+
+  selectAllBtn.title = allSelected
+    ? "Deselect all"
+    : "Select all";
 }
 
 function exportToCSV(rows) {
@@ -1231,6 +1318,10 @@ function exitSelectionMode() {
   selectionMode = false;
   selectedSavedIds.clear();
   lastSelectedIndex = null;
+  if (selectAllBtn) {
+    selectAllBtn.innerHTML = SELECT_ALL_ICON;
+    selectAllBtn.title = "Select all";
+  }
 
   document.querySelectorAll(".saved-item.selected")
     .forEach(el => el.classList.remove("selected"));
@@ -1254,6 +1345,14 @@ function updateSelectionUI() {
 
   if (selectionBackBtn) {
     selectionBackBtn.classList.toggle("hidden", !selectionMode);
+  }
+
+  if (selectAllBtn) {
+    selectAllBtn.classList.toggle("hidden", !selectionMode);
+
+    if (selectionMode) {
+      selectAllBtn.innerHTML = SELECT_ALL_ICON;
+    }
   }
 
   if (!multiSelectToggle) return;
@@ -1534,4 +1633,22 @@ scoreSlider?.addEventListener("input", () => {
 
 selectionBackBtn?.addEventListener("click", () => {
   exitSelectionMode();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (!selectionMode) return;
+
+  const isMac = navigator.platform.toUpperCase().includes("MAC");
+  const selectAllKey = isMac ? e.metaKey : e.ctrlKey;
+
+  if (selectAllKey && e.key.toLowerCase() === "a") {
+    e.preventDefault();
+    toggleSelectAllVisible();
+  }
+});
+
+
+selectAllBtn?.addEventListener("click", () => {
+  if (!selectionMode) return;
+  toggleSelectAllVisible();
 });
