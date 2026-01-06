@@ -13,6 +13,7 @@ let currentView = "analysis";
 let selectionMode = false;
 let lastSelectedIndex = null;
 let selectedSavedIds = new Set();
+let isRangeSelecting = false;
 let activeFilters = {
   minScore: 0,
   persona: ""
@@ -773,6 +774,13 @@ function renderSavedItem(item) {
       selectedSavedIds.delete(id);
     }
 
+    if (!isRangeSelecting) {
+      const items = Array.from(
+        document.querySelectorAll("#saved-list .saved-item")
+      );
+      lastSelectedIndex = items.indexOf(wrapper);
+    }
+
     updateDeleteState();
     updateSelectAllIcon();
   });
@@ -793,7 +801,9 @@ function renderSavedItem(item) {
           Math.max(lastSelectedIndex, currentIndex)
         ];
 
-        const shouldSelect = checkbox.checked;
+        const shouldSelect = !checkbox.checked;
+
+        isRangeSelecting = true;
 
         items.slice(start, end + 1).forEach(itemEl => {
           if (itemEl.style.display === "none") return;
@@ -806,13 +816,15 @@ function renderSavedItem(item) {
             cb.dispatchEvent(new Event("change"));
           }
         });
+
+        isRangeSelecting = false;
       }
       else {
         checkbox.checked = !checkbox.checked;
         checkbox.dispatchEvent(new Event("change"));
+        lastSelectedIndex = currentIndex;
       }
 
-      lastSelectedIndex = currentIndex;
       return;
     }
 
