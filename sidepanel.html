@@ -181,6 +181,48 @@
             <h3 class="content-title">Saved Analyses</h3>
             <div class="header-actions-right">
               <button
+                id="selection-back-btn"
+                class="secondary-btn hidden"
+                title="Back"
+                aria-label="Back"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M10 19l-7-7 7-7"></path>
+                  <path d="M3 12h18"></path>
+                </svg>
+              </button>
+              <button
+                id="multi-select-toggle"
+                class="secondary-btn"
+                title="Select multiple"
+                aria-label="Select multiple analyses"
+              >
+                <svg
+                  class="multi-select-icon"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+                  <path d="M9 12l2 2 4-4"></path>
+                </svg>
+              </button>
+              <button
                 id="filter-toggle"
                 class="secondary-btn"
                 title="Filter saved analyses"
@@ -198,6 +240,26 @@
                   stroke-linejoin="round"
                 >
                   <polygon points="3 4 21 4 14 12 14 19 10 21 10 12 3 4"></polygon>
+                </svg>
+              </button>
+              <button
+                id="select-all-btn"
+                class="secondary-btn hidden"
+                title="Select all"
+                aria-label="Select all analyses"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+                  <path d="M7 12l3 3 7-7"></path>
                 </svg>
               </button>
 

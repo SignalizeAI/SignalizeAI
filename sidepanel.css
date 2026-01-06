@@ -1067,3 +1067,26 @@ body:has(#welcome-view:not(.hidden)) {
 .user-email-text:hover {
   opacity: 1;
 }
+
+.saved-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+}
+
+.saved-item-header:not(.selection-mode) {
+  cursor: pointer;
+}
+
+.saved-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.secondary-btn.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  cursor: not-allowed;
+}
