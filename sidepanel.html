@@ -180,6 +180,13 @@
           <div class="content-header">
             <h3 class="content-title">Saved Analyses</h3>
             <div class="header-actions-right">
+              <button id="search-toggle" class="secondary-btn" title="Search analyses">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </button>
+
               <button
                 id="selection-back-btn"
                 class="secondary-btn hidden"
@@ -362,6 +369,29 @@
             </div>
           </div>
 
+          <div id="search-bar-container" class="search-bar-container hidden">
+            <div class="search-input-wrapper">
+              <div class="input-relative">
+                <svg class="search-icon-inner" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input 
+                  type="text" 
+                  id="saved-search-input" 
+                  placeholder="Search saved analyses..."
+                  autocomplete="off"
+                />
+                <button id="clear-search-btn" class="clear-search-btn hidden" title="Clear text">&times;</button>
+              </div>
+              <button id="search-close-btn" class="search-close-link" title="Close search">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
 
           <div id="saved-loading" class="content-loading hidden">
             <p>Loading saved companies…</p>
@@ -392,9 +422,9 @@
                 </svg>
               </div>
               <p class="empty-title">No matches found</p>
-              <p class="empty-subtitle">Try adjusting your filters to find what you're looking for.</p>
+              <p class="empty-subtitle">Try adjusting your search or filters to find what you're looking for.</p>
               <button id="no-results-reset" class="reset-button-ui">
-                Clear all filters
+                Clear search & filters
               </button>
             </div>
           </div>
