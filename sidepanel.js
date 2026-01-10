@@ -747,9 +747,6 @@ function renderSavedItem(item) {
 
   const copySavedBtn = wrapper.querySelector(".copy-saved-btn");
 
-  checkbox?.addEventListener("click", (e) => {
-    e.stopPropagation();
-  });
   copySavedBtn.addEventListener("click", async (e) => {
     e.stopPropagation();
 
@@ -760,71 +757,44 @@ function renderSavedItem(item) {
     copyAnalysisText(text, copySavedBtn, formatLabel);
   });
 
-  checkbox?.addEventListener("change", (e) => {
-    const checkboxEl = e.currentTarget;
-    const id = checkboxEl.dataset.id;
+  const handleSelection = (isShift, forceState = null) => {
+    const items = Array.from(document.querySelectorAll("#saved-list .saved-item")).filter(i => i.style.display !== "none");
+    const currentIndex = items.indexOf(wrapper);
+    const shouldSelect = forceState !== null ? forceState : checkbox.checked;
 
-    if (!id) return;
-
-    wrapper.classList.toggle("selected", checkboxEl.checked);
-
-    if (checkboxEl.checked) {
-      selectedSavedIds.add(id);
+    if (selectionMode && isShift && lastSelectedIndex !== null) {
+      const [start, end] = [Math.min(lastSelectedIndex, currentIndex), Math.max(lastSelectedIndex, currentIndex)];
+      isRangeSelecting = true;
+      items.slice(start, end + 1).forEach(itemEl => {
+        const cb = itemEl.querySelector(".saved-select-checkbox");
+        if (cb) {
+          cb.checked = shouldSelect;
+          itemEl.classList.toggle("selected", shouldSelect);
+          if (shouldSelect) selectedSavedIds.add(cb.dataset.id);
+          else selectedSavedIds.delete(cb.dataset.id);
+        }
+      });
+      isRangeSelecting = false;
     } else {
-      selectedSavedIds.delete(id);
+      checkbox.checked = shouldSelect;
+      wrapper.classList.toggle("selected", shouldSelect);
+      if (shouldSelect) selectedSavedIds.add(checkbox.dataset.id);
+      else selectedSavedIds.delete(checkbox.dataset.id);
     }
-
-    if (!isRangeSelecting) {
-      const items = Array.from(
-        document.querySelectorAll("#saved-list .saved-item")
-      );
-      lastSelectedIndex = items.indexOf(wrapper);
-    }
-
+    lastSelectedIndex = currentIndex;
     updateDeleteState();
     updateSelectAllIcon();
+  };
+
+  checkbox?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    handleSelection(e.shiftKey);
   });
 
   header.addEventListener("click", (e) => {
     if (selectionMode) {
       if (e.target === checkbox) return;
-
-      const items = Array.from(
-        document.querySelectorAll("#saved-list .saved-item")
-      );
-
-      const currentIndex = items.indexOf(wrapper);
-
-      if (e.shiftKey && lastSelectedIndex !== null) {
-        const [start, end] = [
-          Math.min(lastSelectedIndex, currentIndex),
-          Math.max(lastSelectedIndex, currentIndex)
-        ];
-
-        const shouldSelect = !checkbox.checked;
-
-        isRangeSelecting = true;
-
-        items.slice(start, end + 1).forEach(itemEl => {
-          if (itemEl.style.display === "none") return;
-
-          const cb = itemEl.querySelector(".saved-select-checkbox");
-          if (!cb) return;
-
-          if (cb.checked !== shouldSelect) {
-            cb.checked = shouldSelect;
-            cb.dispatchEvent(new Event("change"));
-          }
-        });
-
-        isRangeSelecting = false;
-      }
-      else {
-        checkbox.checked = !checkbox.checked;
-        checkbox.dispatchEvent(new Event("change"));
-        lastSelectedIndex = currentIndex;
-      }
-
+      handleSelection(e.shiftKey, !checkbox.checked);
       return;
     }
 
@@ -1008,6 +978,7 @@ async function exportToExcel(rows) {
 
 async function loadSavedAnalyses() {
   exitSelectionMode();
+  lastSelectedIndex = null;
   document.getElementById("saved-analyses")?.classList.remove("hidden");
   const listEl = document.getElementById("saved-list");
   const loadingEl = document.getElementById("saved-loading");
