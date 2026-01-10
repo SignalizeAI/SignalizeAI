@@ -149,9 +149,22 @@ async function signInWithGoogle() {
 function updateDeleteState() {
   if (!multiSelectToggle) return;
 
-  const shouldDisable =
-    selectionMode && selectedSavedIds.size === 0;
+  const countIndicator = document.getElementById("selection-count-indicator");
+  const count = selectedSavedIds.size;
+  
+  const totalVisible = Array.from(document.querySelectorAll("#saved-list .saved-item"))
+    .filter(item => item.style.display !== "none").length;
 
+  if (countIndicator) {
+    if (selectionMode && count > 0) {
+      countIndicator.textContent = (count === totalVisible) ? `All (${count})` : `(${count})`;
+      countIndicator.classList.remove("hidden");
+    } else {
+      countIndicator.classList.add("hidden");
+    }
+  }
+
+  const shouldDisable = selectionMode && count === 0;
   multiSelectToggle.classList.toggle("disabled", shouldDisable);
   multiSelectToggle.setAttribute(
     "aria-disabled",
@@ -1360,7 +1373,17 @@ function updateSelectionUI() {
     selectAllBtn.classList.toggle("hidden", !selectionMode);
 
     if (selectionMode) {
-      selectAllBtn.innerHTML = SELECT_ALL_ICON;
+      updateSelectAllIcon();
+    }
+  }
+
+  const countIndicator = document.getElementById("selection-count-indicator");
+
+  if (countIndicator) {
+    if (!selectionMode) {
+      countIndicator.classList.add("hidden");
+    } else {
+      updateDeleteState();
     }
   }
 
