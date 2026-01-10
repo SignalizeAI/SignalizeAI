@@ -35,7 +35,7 @@ const SELECT_ALL_ICON = `
 </svg>
 `;
 
-const DESELECT_ALL_ICON = `
+const INDETERMINATE_ICON = `
 <svg
   width="18"
   height="18"
@@ -48,6 +48,23 @@ const DESELECT_ALL_ICON = `
 >
   <rect x="3" y="3" width="18" height="18" rx="3"></rect>
   <line x1="7" y1="12" x2="17" y2="12"></line>
+</svg>
+`;
+
+const DESELECT_ALL_ICON = `
+<svg 
+  width="18"
+  height="18"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+  <line x1="9" y1="9" x2="15" y2="15"></line>
+  <line x1="15" y1="9" x2="9" y2="15"></line>
 </svg>
 `;
 
@@ -841,19 +858,21 @@ function toggleSelectAllVisible() {
 
   if (!items.length) return;
 
-  const allSelected = items.every(item => {
-    const cb = item.querySelector(".saved-select-checkbox");
-    return cb?.checked;
-  });
+  const selectedCount = items.filter(item => item.querySelector(".saved-select-checkbox")?.checked).length;
+  
+  const shouldSelectAll = selectedCount < items.length;
 
   items.forEach(item => {
     const cb = item.querySelector(".saved-select-checkbox");
     if (!cb) return;
 
-    if (cb.checked === !allSelected) return;
-
-    cb.checked = !allSelected;
-    cb.dispatchEvent(new Event("change"));
+    if (cb.checked !== shouldSelectAll) {
+      cb.checked = shouldSelectAll;
+      const wrapper = item.closest('.saved-item');
+      wrapper.classList.toggle("selected", shouldSelectAll);
+      if (shouldSelectAll) selectedSavedIds.add(cb.dataset.id);
+      else selectedSavedIds.delete(cb.dataset.id);
+    }
   });
 
   updateDeleteState();
@@ -872,18 +891,25 @@ function updateSelectAllIcon() {
     return;
   }
 
-  const allSelected = items.every(item => {
+  const selectedCount = items.filter(item => {
     const cb = item.querySelector(".saved-select-checkbox");
     return cb?.checked;
-  });
+  }).length;
 
-  selectAllBtn.innerHTML = allSelected
-    ? DESELECT_ALL_ICON
-    : SELECT_ALL_ICON;
+  const allSelected = selectedCount === items.length;
+  const noneSelected = selectedCount === 0;
+  const isIndeterminate = selectedCount > 0 && selectedCount < items.length;
 
-  selectAllBtn.title = allSelected
-    ? "Deselect all"
-    : "Select all";
+  if (allSelected) {
+    selectAllBtn.innerHTML = DESELECT_ALL_ICON;
+    selectAllBtn.title = "Deselect all";
+  } else if (isIndeterminate) {
+    selectAllBtn.innerHTML = INDETERMINATE_ICON;
+    selectAllBtn.title = "Select all";
+  } else {
+    selectAllBtn.innerHTML = SELECT_ALL_ICON;
+    selectAllBtn.title = "Select all";
+  }
 }
 
 function exportToCSV(rows) {
