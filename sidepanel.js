@@ -821,28 +821,6 @@ function renderSavedItem(item) {
     handleSelection(e.shiftKey);
   });
 
-  header.addEventListener("click", (e) => {
-    if (selectionMode) {
-      if (e.target === checkbox) return;
-      handleSelection(e.shiftKey, !checkbox.checked);
-      return;
-    }
-
-    if (
-      e.target.closest(".delete-saved-btn") ||
-      e.target.closest(".copy-saved-btn")
-    ) return;
-
-    const container = wrapper.parentElement;
-    if (container) {
-      container.querySelectorAll(".saved-item-body").forEach((other) => {
-        if (other !== body) other.classList.add("hidden");
-      });
-    }
-
-    body.classList.toggle("hidden");
-  });
-
   wrapper.querySelector(".delete-saved-btn").addEventListener("click", async (e) => {
     if (selectionMode) return;
     e.stopPropagation();
@@ -862,9 +840,12 @@ function renderSavedItem(item) {
   });
 
   let pressTimer;
+  let preventNextClick = false;
 
   const startPress = (e) => {
     if (selectionMode || (e.type === "mousedown" && e.button !== 0)) return;
+    
+    preventNextClick = false;
 
     pressTimer = setTimeout(() => {
       enterSelectionModeFromItem();
@@ -877,6 +858,7 @@ function renderSavedItem(item) {
 
   const enterSelectionModeFromItem = () => {
     selectionMode = true;
+    preventNextClick = true;
     updateSelectionUI();
     handleSelection(false, true); 
   };
@@ -888,7 +870,36 @@ function renderSavedItem(item) {
   header.addEventListener("touchstart", startPress, { passive: true });
   header.addEventListener("touchend", cancelPress);
   header.addEventListener("touchcancel", cancelPress);
-    
+
+  header.addEventListener("click", (e) => {
+    if (preventNextClick) {
+      e.preventDefault();
+      e.stopPropagation();
+      preventNextClick = false;
+      return;
+    }
+
+    if (selectionMode) {
+      if (e.target === checkbox) return;
+      handleSelection(e.shiftKey, !checkbox.checked);
+      return;
+    }
+
+    if (
+      e.target.closest(".delete-saved-btn") ||
+      e.target.closest(".copy-saved-btn")
+    ) return;
+
+    const container = wrapper.parentElement;
+    if (container) {
+      container.querySelectorAll(".saved-item-body").forEach((other) => {
+        if (other !== body) other.classList.add("hidden");
+      });
+    }
+
+    body.classList.toggle("hidden");
+  }, true);
+
   return wrapper;
 }
 

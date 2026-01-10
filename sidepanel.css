@@ -1104,5 +1104,5 @@ body:has(#welcome-view:not(.hidden)) {
   font-size: 15px;
   font-weight: 600;
   white-space: nowrap;
-  margin: 4px 4px;
+  padding: 6px;
 }
