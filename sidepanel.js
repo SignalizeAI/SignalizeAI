@@ -17,7 +17,8 @@ let isRangeSelecting = false;
 let activeFilters = {
   minScore: 0,
   maxScore: 100,
-  persona: ""
+  persona: "",
+  searchQuery: ""
 };
 
 const SELECT_ALL_ICON = `
@@ -329,6 +330,7 @@ function applySavedFilters() {
     }
 
     let visible = true;
+    const query = (activeFilters.searchQuery || "").trim().toLowerCase();
     const itemScore = Number(item.dataset.salesScore || 0);
 
     if (itemScore < activeFilters.minScore || itemScore > activeFilters.maxScore) {
@@ -339,12 +341,42 @@ function applySavedFilters() {
       visible = item.dataset.persona === activeFilters.persona;
     }
 
+    if (visible && query) {
+      const title = item.querySelector("strong")?.textContent.toLowerCase() || "";
+      const domain = item.querySelector(".header-info div")?.textContent.toLowerCase() || "";
+      const bodyText = item.querySelector(".saved-item-body")?.textContent.toLowerCase() || "";
+      
+      if (!title.includes(query) && !domain.includes(query) && !bodyText.includes(query)) {
+        visible = false;
+      }
+    }
+
+    const titleEl = item.querySelector("strong");
+    const domainEl = item.querySelector(".header-info div");
+
+    if (visible && query) {
+      if (titleEl) titleEl.innerHTML = highlightText(titleEl.textContent, query);
+      if (domainEl) domainEl.innerHTML = highlightText(domainEl.textContent, query);
+    } else {
+      if (titleEl) titleEl.innerHTML = titleEl.textContent;
+      if (domainEl) domainEl.innerHTML = domainEl.textContent;
+    }
+
     item.style.display = visible ? "" : "none";  
     if (visible) visibleCount++;
   });
   
   updateSavedEmptyState(visibleCount);
   updateSelectAllIcon();
+}
+
+function highlightText(text, query) {
+  if (!query || !text) return text;
+  
+  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escapedQuery})`, 'gi');
+  
+  return text.replace(regex, '<mark>$1</mark>');
 }
 
 function cleanTitle(title = "") {
@@ -402,10 +434,15 @@ function updateSavedActionsVisibility(count) {
   const filterToggle = document.getElementById("filter-toggle");
   const exportToggle = document.getElementById("export-menu-toggle");
   const multiSelectToggle = document.getElementById("multi-select-toggle");
+  const searchToggleBtn = document.getElementById("search-toggle");
 
   const showBasicActions = count > 0 ? "" : "none";
   if (filterToggle) filterToggle.style.display = showBasicActions;
   if (exportToggle) exportToggle.style.display = showBasicActions;
+
+  if (searchToggleBtn) {
+    searchToggleBtn.style.display = count > 1 ? "" : "none";
+  }
 
   if (multiSelectToggle) {
     multiSelectToggle.style.display = count > 1 ? "" : "none";
@@ -427,11 +464,16 @@ function updateSavedEmptyState(visibleCountOverride = null) {
   
   const countToUse = (visibleCountOverride !== null) ? visibleCountOverride : actualItemsInList;
 
+  const isFiltering = activeFilters.searchQuery !== "" || 
+                      activeFilters.minScore > 0 || 
+                      activeFilters.maxScore < 100 || 
+                      activeFilters.persona !== "";
+
   if (actualItemsInList === 0) {
     emptyEl.classList.remove("hidden");
     filterEmptyEl.classList.add("hidden");
   } 
-  else if (countToUse === 0) {
+  else if (countToUse === 0 && isFiltering) {
     emptyEl.classList.add("hidden");
     filterEmptyEl.classList.remove("hidden");
   } 
@@ -448,10 +490,19 @@ document.getElementById("start-analysis-btn")?.addEventListener("click", () => {
 });
 
 document.getElementById("no-results-reset")?.addEventListener("click", () => {
+  const searchInput = document.getElementById("saved-search-input");
+  if (searchInput) {
+    searchInput.value = "";
+    document.getElementById("clear-search-btn")?.classList.add("hidden");
+  }
+  activeFilters.searchQuery = "";
+  
   const resetBtn = document.querySelector(".filter-reset");
   if (resetBtn) {
-    resetBtn.click();
+    resetBtn.click(); 
   }
+  applySavedFilters(); 
+  updateSavedEmptyState(); 
 });
 
 async function shouldAutoAnalyze() {
@@ -1860,3 +1911,61 @@ function showUndoToast(message, onUndo, onFinalize) {
     onFinalize();
   }, 5000);
 }
+
+const searchToggle = document.getElementById("search-toggle");
+const searchContainer = document.getElementById("search-bar-container");
+const searchInput = document.getElementById("saved-search-input");
+const searchCloseBtn = document.getElementById("search-close-btn");
+
+function toggleSearchMode(active) {
+  const filterBtn = document.getElementById("filter-toggle");
+  const exportBtn = document.getElementById("export-menu-toggle");
+  const multiBtn = document.getElementById("multi-select-toggle");
+  const searchToggleButton = document.getElementById("search-toggle");
+
+  if (active) {
+    searchContainer.classList.remove("hidden");
+    
+    searchToggleButton?.classList.add("hidden"); 
+    
+    filterBtn?.classList.add("hidden");
+    exportBtn?.classList.add("hidden");
+    multiBtn?.classList.add("hidden");
+    searchInput.focus();
+  } else {
+    searchContainer.classList.add("hidden");
+    
+    searchToggleButton?.classList.remove("hidden"); 
+    
+    filterBtn?.classList.remove("hidden");
+    exportBtn?.classList.remove("hidden");
+    updateSavedEmptyState(); 
+    
+    searchInput.value = "";
+    activeFilters.searchQuery = "";
+    applySavedFilters();
+  }
+}
+
+searchToggle?.addEventListener("click", () => toggleSearchMode(true));
+searchCloseBtn?.addEventListener("click", () => toggleSearchMode(false));
+
+searchInput?.addEventListener("input", (e) => {
+  const val = e.target.value.toLowerCase().trim();
+  
+  activeFilters.searchQuery = val;
+  
+  const clearBtn = document.getElementById("clear-search-btn");
+  if (clearBtn) {
+    clearBtn.classList.toggle("hidden", val === "");
+  }
+  
+  applySavedFilters();
+});
+
+document.getElementById("clear-search-btn")?.addEventListener("click", () => {
+  searchInput.value = "";
+  activeFilters.searchQuery = "";
+  searchInput.focus();
+  applySavedFilters();
+});
