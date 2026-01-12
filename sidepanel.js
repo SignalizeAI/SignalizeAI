@@ -15,6 +15,8 @@ let lastSelectedIndex = null;
 let selectedSavedIds = new Set();
 let isRangeSelecting = false;
 let isFinalizingDeletes = false;
+let isUndoToastActive = false;
+let totalFilteredCount = 0;
 let currentPage = 1;
 const PAGE_SIZE = 10;
 let activeFilters = {
@@ -158,7 +160,7 @@ function updateDeleteState() {
   const count = selectedSavedIds.size;
   
   const totalVisible = Array.from(document.querySelectorAll("#saved-list .saved-item"))
-    .filter(item => item.style.display !== "none").length;
+    .filter(item => !item.classList.contains("pending-delete")).length;
 
   if (countIndicator) {
     if (selectionMode && count > 0) {
@@ -312,67 +314,6 @@ function showContentBlocked(message, options = {}) {
   forceRefresh = false;
 }
 
-function applySavedFilters() {
-  currentPage = 1;
-  lastSelectedIndex = null;
-
-  if (selectionMode) {
-    selectedSavedIds.clear();
-    document
-      .querySelectorAll(".saved-item.selected")
-      .forEach(el => el.classList.remove("selected"));
-    updateDeleteState();
-  }
-
-  const items = document.querySelectorAll("#saved-list .saved-item");
-  let visibleCount = 0;
-
-  items.forEach(item => {
-    if (item.dataset.isPendingDelete === "true") {
-      item.style.display = "none";
-      return; 
-    }
-
-    let visible = true;
-    const query = (activeFilters.searchQuery || "").trim().toLowerCase();
-    const itemScore = Number(item.dataset.salesScore || 0);
-
-    if (itemScore < activeFilters.minScore || itemScore > activeFilters.maxScore) {
-      visible = false;
-    }
-
-    if (visible && activeFilters.persona) {
-      visible = item.dataset.persona === activeFilters.persona;
-    }
-
-    if (visible && query) {
-      const title = item.querySelector("strong")?.textContent.toLowerCase() || "";
-      const domain = item.querySelector(".header-info div")?.textContent.toLowerCase() || "";
-      
-      if (!title.includes(query) && !domain.includes(query)) {
-        visible = false;
-      }
-    }
-
-    const titleEl = item.querySelector("strong");
-    const domainEl = item.querySelector(".header-info div");
-
-    if (visible && query) {
-      if (titleEl) titleEl.innerHTML = highlightText(titleEl.textContent, query);
-      if (domainEl) domainEl.innerHTML = highlightText(domainEl.textContent, query);
-    } else {
-      if (titleEl) titleEl.innerHTML = titleEl.textContent;
-      if (domainEl) domainEl.innerHTML = domainEl.textContent;
-    }
-
-    item.dataset._passesFilter = visible ? "true" : "false";
-    item.style.display = visible ? "" : "none";
-  });
-  
-  applyPagination();
-  updateSelectAllIcon();
-  updateFilterBanner();
-}
 
 function highlightText(text, query) {
   if (!query || !text) return text;
@@ -453,41 +394,26 @@ function updateSavedActionsVisibility(count) {
   }
 }
 
-function updateSavedEmptyState(visibleCountOverride = null) {
-  const listEl = document.getElementById("saved-list");
+function updateSavedEmptyState(visibleCount) {
   const emptyEl = document.getElementById("saved-empty");
   const filterEmptyEl = document.getElementById("filter-empty");
 
-  if (!listEl || !emptyEl || !filterEmptyEl) return;
+  const isFiltering = areFiltersActive();
 
-  const allItems = listEl.querySelectorAll(".saved-item");
-  
-  const actualItemsInList = Array.from(allItems).filter(item => 
-    item.dataset.isPendingDelete !== "true"
-  ).length;
-  
-  const countToUse = (visibleCountOverride !== null) ? visibleCountOverride : actualItemsInList;
-
-  const isFiltering = 
-    activeFilters.minScore > 0 || 
-    activeFilters.maxScore < 100 || 
-    activeFilters.persona !== "" || 
-    activeFilters.searchQuery !== "";
-
-  if (actualItemsInList === 0) {
+  if (totalFilteredCount === 0 && !isFiltering) {
     emptyEl.classList.remove("hidden");
     filterEmptyEl.classList.add("hidden");
-  } 
-  else if (countToUse === 0 && isFiltering) {
+  }
+  else if (totalFilteredCount === 0 && isFiltering) {
     emptyEl.classList.add("hidden");
     filterEmptyEl.classList.remove("hidden");
-  } 
+  }
   else {
     emptyEl.classList.add("hidden");
     filterEmptyEl.classList.add("hidden");
   }
 
-  updateSavedActionsVisibility(countToUse);
+  updateSavedActionsVisibility(visibleCount);
 }
 
 document.getElementById("start-analysis-btn")?.addEventListener("click", () => {
@@ -506,7 +432,6 @@ document.getElementById("no-results-reset")?.addEventListener("click", () => {
   if (resetBtn) {
     resetBtn.click(); 
   }
-  applySavedFilters(); 
   updateSavedEmptyState(); 
 });
 
@@ -894,7 +819,8 @@ function renderSavedItem(item) {
   });
 
   const handleSelection = (isShift, forceState = null) => {
-    const items = Array.from(document.querySelectorAll("#saved-list .saved-item")).filter(i => i.style.display !== "none");
+    const items = Array.from(document.querySelectorAll("#saved-list .saved-item")).filter(i => !i.classList.contains("pending-delete"));
+
     const currentIndex = items.indexOf(wrapper);
     const shouldSelect = forceState !== null ? forceState : checkbox.checked;
 
@@ -928,15 +854,13 @@ function renderSavedItem(item) {
   });
 
   wrapper.querySelector(".delete-saved-btn").addEventListener("click", (e) => {
-    if (selectionMode) return;
+    if (selectionMode || isUndoToastActive) return;
     e.stopPropagation();
 
     const itemId = item.id;
     
     wrapper.dataset.isPendingDelete = "true";
-    wrapper.style.display = "none";
-    
-    applySavedFilters(); 
+    wrapper.classList.add("pending-delete");
 
     pendingDeleteMap.set(itemId, {
       element: wrapper,
@@ -964,7 +888,7 @@ function renderSavedItem(item) {
     if (selectionMode || (e.type === "mousedown" && e.button !== 0)) return;
 
     const visibleItems = Array.from(document.querySelectorAll("#saved-list .saved-item"))
-      .filter(item => item.style.display !== "none" && item.dataset.isPendingDelete !== "true");
+      .filter(item => !item.classList.contains("pending-delete") && item.dataset.isPendingDelete !== "true");
 
     if (visibleItems.length <= 1) return;
 
@@ -1029,7 +953,7 @@ function renderSavedItem(item) {
 function toggleSelectAllVisible() {
   const items = Array.from(
     document.querySelectorAll("#saved-list .saved-item")
-  ).filter(item => item.style.display !== "none");
+  ).filter(item => !item.classList.contains("pending-delete"));
 
   if (!items.length) return;
 
@@ -1059,7 +983,7 @@ function updateSelectAllIcon() {
 
   const items = Array.from(
     document.querySelectorAll("#saved-list .saved-item")
-  ).filter(item => item.style.display !== "none");
+  ).filter(item => !item.classList.contains("pending-delete"));
 
   if (!items.length) {
     selectAllBtn.innerHTML = SELECT_ALL_ICON;
@@ -1181,7 +1105,7 @@ async function loadSavedAnalyses() {
   currentPage = 1;
   exitSelectionMode();
   lastSelectedIndex = null;
-  document.getElementById("saved-analyses")?.classList.remove("hidden");
+
   const listEl = document.getElementById("saved-list");
   const loadingEl = document.getElementById("saved-loading");
   const emptyEl = document.getElementById("saved-empty");
@@ -1190,28 +1114,116 @@ async function loadSavedAnalyses() {
   loadingEl.classList.remove("hidden");
   emptyEl.classList.add("hidden");
 
+  await fetchAndRenderPage();
+}
+
+async function fetchAndRenderPage() {
+  const listEl = document.getElementById("saved-list");
+  const loadingEl = document.getElementById("saved-loading");
+
   const { data: sessionData } = await supabase.auth.getSession();
   const user = sessionData?.session?.user;
   if (!user) return;
 
-  const { data, error } = await supabase
+  loadingEl.classList.remove("hidden");
+  listEl.innerHTML = "";
+
+  let query = supabase
     .from("saved_analyses")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .select("*", { count: "exact" })
+    .eq("user_id", user.id);
+
+  if (activeFilters.minScore > 0) {
+    query = query.gte("sales_readiness_score", activeFilters.minScore);
+  }
+  if (activeFilters.maxScore < 100) {
+    query = query.lte("sales_readiness_score", activeFilters.maxScore);
+  }
+  if (activeFilters.persona) {
+    query = query.eq("best_sales_persona", activeFilters.persona);
+  }
+  if (activeFilters.searchQuery) {
+    const q = `%${activeFilters.searchQuery}%`;
+    query = query.or(`title.ilike.${q},domain.ilike.${q}`);
+  }
+
+  const from = (currentPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  const { data, count, error } = await query
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   loadingEl.classList.add("hidden");
 
-  if (error || !data || data.length === 0) {
-    emptyEl.classList.remove("hidden");
+  if (error) {
+    console.error(error);
     return;
   }
 
-  data.forEach(item => {
-    listEl.appendChild(renderSavedItem(item));
+  totalFilteredCount = count || 0;
+
+  if (!data || data.length === 0) {
+    updateSavedEmptyState(0);
+    renderPagination(0);
+    return;
+  }
+
+  data.forEach(row => {
+    listEl.appendChild(renderSavedItem(row));
   });
-  applySavedFilters();
+
+  updateSavedEmptyState(data.length);
+  renderPagination(Math.ceil(totalFilteredCount / PAGE_SIZE));
   updateFilterBanner();
+
+  const shownSoFar = Math.min(
+    currentPage * PAGE_SIZE,
+    totalFilteredCount
+  );
+}
+
+function renderPagination(totalPages) {
+  const bar = document.getElementById("pagination-bar");
+  const container = document.getElementById("page-numbers");
+
+  if (!bar || !container) return;
+
+  container.innerHTML = "";
+
+  if (totalPages <= 1) {
+    bar.classList.add("hidden");
+    return;
+  }
+
+  bar.classList.remove("hidden");
+
+  const maxVisible = 5;
+
+  let start = Math.max(1, currentPage - 2);
+  let end = Math.min(totalPages, currentPage + 2);
+
+  if (end - start < maxVisible - 1) {
+    if (start === 1) {
+      end = Math.min(totalPages, start + maxVisible - 1);
+    } else if (end === totalPages) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+  }
+
+  if (start > 1) {
+    container.appendChild(makePageBtn(1));
+    if (start > 2) container.appendChild(makeEllipsis());
+  }
+
+  for (let i = start; i <= end; i++) {
+    container.appendChild(makePageBtn(i));
+  }
+
+  if (end < totalPages) {
+    if (end < totalPages - 1) container.appendChild(makeEllipsis());
+    container.appendChild(makePageBtn(totalPages));
+  }
 }
 
 async function fetchSavedAnalysesData() {
@@ -1229,123 +1241,33 @@ async function fetchSavedAnalysesData() {
   return data;
 }
 
-function getVisibleItems() {
-  return Array.from(document.querySelectorAll("#saved-list .saved-item"))
-    .filter(item => item.style.display !== "none");
-}
-
-function getAllFilteredItems() {
-  return Array.from(document.querySelectorAll("#saved-list .saved-item"))
-    .filter(item => item.dataset.isPendingDelete !== "true")
-    .filter(item => item.dataset._passesFilter === "true");
-}
-
-function applyPagination() {
-  if (selectionMode) {
-    selectedSavedIds.clear();
-    document.querySelectorAll(".saved-item.selected")
-      .forEach(el => el.classList.remove("selected"));
-    updateDeleteState();
-  }
-
-  const all = Array.from(document.querySelectorAll("#saved-list .saved-item"))
-    .filter(item => item.dataset.isPendingDelete !== "true")
-    .filter(item => item.dataset._passesFilter === "true");
-
-  const total = all.length;
-
-  if (total === 0) {
-    document.querySelectorAll("#saved-list .saved-item").forEach(el => {
-      el.style.display = "none";
-    });
-
-    renderPagination(0);
-    updateSavedEmptyState(0);
-    return;
-  }
-
-  const totalPages = Math.ceil(total / PAGE_SIZE);
-
-  if (currentPage > totalPages) currentPage = totalPages;
-
-  all.forEach((el, idx) => {
-    const pageIndex = Math.floor(idx / PAGE_SIZE) + 1;
-    el.style.display = (pageIndex === currentPage) ? "" : "none";
-  });
-
-  renderPagination(totalPages);
-  updateSavedEmptyState(total);
-}
-
-function renderPagination(totalPages) {
-  const bar = document.getElementById("pagination-bar");
-  const nums = document.getElementById("page-numbers");
-  const prev = document.getElementById("page-prev");
-  const next = document.getElementById("page-next");
-
-  if (!bar || !nums) return;
-
-  if (totalPages <= 1) {
-    bar.classList.add("hidden");
-    return;
-  }
-
-  bar.classList.remove("hidden");
-  nums.innerHTML = "";
-
-  const maxVisible = 5;
-  const half = Math.floor(maxVisible / 2);
-
-  let start = currentPage - half;
-  let end = currentPage + half;
-
-  if (start < 1) {
-    start = 1;
-    end = maxVisible;
-  }
-
-  if (end > totalPages) {
-    end = totalPages;
-    start = Math.max(1, totalPages - maxVisible + 1);
-  }
-
-  if (start > 1) {
-    nums.appendChild(makePageBtn(1));
-    if (start > 2) nums.appendChild(makeEllipsis());
-  }
-
-  for (let i = start; i <= end; i++) {
-    nums.appendChild(makePageBtn(i));
-  }
-
-  if (end < totalPages) {
-    if (end < totalPages - 1) nums.appendChild(makeEllipsis());
-    nums.appendChild(makePageBtn(totalPages));
-  }
-
-  prev.disabled = currentPage === 1;
-  next.disabled = currentPage === totalPages;
-}
-
 function areFiltersActive() {
   return (
     activeFilters.minScore > 0 ||
     activeFilters.maxScore < 100 ||
-    activeFilters.persona !== ""
+    activeFilters.persona !== "" ||
+    (activeFilters.searchQuery && activeFilters.searchQuery.length > 0)
   );
 }
 
 function updateFilterBanner() {
   const banner = document.getElementById("active-filter-banner");
-  if (!banner) return;
+  const text = document.getElementById("filter-banner-text");
 
-  const filterEmpty = document.getElementById("filter-empty");
-  const isNoResults = filterEmpty && !filterEmpty.classList.contains("hidden");
+  if (!banner || !text) return;
 
-  const visibleCount = getVisibleItems().length;
+  const isFiltering = areFiltersActive();
+  const isNoResults = totalFilteredCount === 0;
+  const searchOpen = !searchContainer.classList.contains("hidden");
 
-  if (areFiltersActive() && !isNoResults && visibleCount > 0) {
+  if (isFiltering && !isNoResults) {
+    const shownSoFar = Math.min(
+      currentPage * PAGE_SIZE,
+      totalFilteredCount
+    );
+
     banner.classList.remove("hidden");
+    text.textContent = formatResultsText(shownSoFar, totalFilteredCount);
   } else {
     banner.classList.add("hidden");
   }
@@ -1355,9 +1277,9 @@ function makePageBtn(page) {
   const btn = document.createElement("button");
   btn.textContent = page;
   btn.className = "page-number" + (page === currentPage ? " active" : "");
-  btn.onclick = () => {
+  btn.onclick = async () => {
     currentPage = page;
-    applyPagination();
+    await fetchAndRenderPage();
   };
   return btn;
 }
@@ -1369,16 +1291,19 @@ function makeEllipsis() {
   return span;
 }
 
-document.getElementById("page-prev")?.addEventListener("click", () => {
+document.getElementById("page-prev")?.addEventListener("click", async () => {
   if (currentPage > 1) {
     currentPage--;
-    applyPagination();
+    await fetchAndRenderPage();
   }
 });
 
-document.getElementById("page-next")?.addEventListener("click", () => {
-  currentPage++;
-  applyPagination();
+document.getElementById("page-next")?.addEventListener("click", async () => {
+  const totalPages = Math.ceil(totalFilteredCount / PAGE_SIZE);
+  if (currentPage < totalPages) {
+    currentPage++;
+    await fetchAndRenderPage();
+  }
 });
 
 if (signInBtn) signInBtn.addEventListener('click', signInWithGoogle);
@@ -1664,7 +1589,7 @@ function exitSelectionMode() {
     .forEach(el => el.classList.remove("selected"));
 
   const visibleCount = Array.from(document.querySelectorAll("#saved-list .saved-item"))
-    .filter(item => item.style.display !== "none").length;
+    .filter(item => !item.classList.contains("pending-delete")).length;
   updateSelectionUI();
   updateDeleteState();
   updateSavedActionsVisibility(visibleCount);
@@ -1892,6 +1817,7 @@ document.addEventListener("click", (e) => {
 });
 
 multiSelectToggle?.addEventListener("click", async () => {
+  if (isUndoToastActive) return;
   if (multiSelectToggle.classList.contains("disabled")) return;
 
   if (!selectionMode) {
@@ -1911,12 +1837,12 @@ multiSelectToggle?.addEventListener("click", async () => {
     const cb = el.querySelector(".saved-select-checkbox");
     if (cb && idsToDelete.includes(cb.dataset.id)) {
       el.dataset.isPendingDelete = "true";
+      el.classList.add("pending-delete");
       elementsToFlag.push(el);
     }
   });
 
   exitSelectionMode();
-  applySavedFilters();
 
   idsToDelete.forEach(id => {
     const el = document.querySelector(`.saved-select-checkbox[data-id="${id}"]`)?.closest(".saved-item");
@@ -1941,7 +1867,7 @@ multiSelectToggle?.addEventListener("click", async () => {
 
 const filterApplyBtn = document.querySelector(".filter-apply");
 
-filterApplyBtn?.addEventListener("click", () => {
+filterApplyBtn?.addEventListener("click", async () => {
   activeFilters.minScore = Number(document.getElementById("filter-min-score")?.value || 0);
   activeFilters.maxScore = Number(document.getElementById("filter-max-score")?.value || 100);
 
@@ -1950,15 +1876,17 @@ filterApplyBtn?.addEventListener("click", () => {
       .toLowerCase()
       .trim();
 
-  applySavedFilters();
-
+  currentPage = 1;
   filterPanel?.classList.add("hidden");
   filterToggle?.setAttribute("aria-expanded", "false");
+
+  await fetchAndRenderPage();
+  updateFilterBanner();
 });
 
 const filterResetBtn = document.querySelector(".filter-reset");
 
-filterResetBtn?.addEventListener("click", () => {
+filterResetBtn?.addEventListener("click", async () => {
   activeFilters.minScore = 0;
   activeFilters.maxScore = 100;
   activeFilters.persona = "";
@@ -1969,9 +1897,11 @@ filterResetBtn?.addEventListener("click", () => {
   if (personaInput) personaInput.value = "";
   if (scoreLabel) scoreLabel.textContent = `0 – 100`;
 
-  applySavedFilters();
   filterPanel?.classList.add("hidden");
   filterToggle?.setAttribute("aria-expanded", "false");
+
+  await fetchAndRenderPage();
+  updateFilterBanner();
 });
 
 const minSlider = document.getElementById("filter-min-score");
@@ -1994,7 +1924,6 @@ function updateScoreFilter() {
   if (scoreLabel) {
     scoreLabel.textContent = `${minVal} – ${maxVal}`;
   }
-  applySavedFilters();
 }
 
 minSlider?.addEventListener("input", updateScoreFilter);
@@ -2025,6 +1954,8 @@ let pendingDeleteMap = new Map();
 let undoTimer = null;
 
 function showUndoToast() {
+  isUndoToastActive = true;
+  document.body.classList.add("undo-active");
   let toast = document.getElementById("undo-toast");
   if (!toast) {
     toast = document.createElement("div");
@@ -2057,15 +1988,17 @@ function showUndoToast() {
   const closeBtn = document.getElementById("close-toast-btn");
 
   undoBtn.onclick = () => {
+    isUndoToastActive = false;
+    document.body.classList.remove("undo-active");
     clearTimeout(undoTimer);
     toast.classList.remove("show");
 
     pendingDeleteMap.forEach(({ element }) => {
       delete element.dataset.isPendingDelete;
+      element.classList.remove("pending-delete");
     });
 
     pendingDeleteMap.clear();
-    applySavedFilters();
     updateSavedEmptyState();
   };
 
@@ -2073,6 +2006,21 @@ function showUndoToast() {
 
   clearTimeout(undoTimer);
   undoTimer = setTimeout(finalizePendingDeletes, 5000);
+}
+
+function formatResultsText(shown, total) {
+  if (total === 0) return "";
+
+  if (total <= PAGE_SIZE) {
+    return total === 1
+      ? "1 result found"
+      : `${total} results found`;
+  }
+
+  const start = (currentPage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(currentPage * PAGE_SIZE, total);
+
+  return `Showing ${start}–${end} of ${total}`;
 }
 
 async function finalizePendingDeletes() {
@@ -2103,7 +2051,10 @@ async function finalizePendingDeletes() {
   }
 
   isFinalizingDeletes = false;
-  applySavedFilters();
+  isUndoToastActive = false;
+  document.body.classList.remove("undo-active");
+  await fetchAndRenderPage();
+  updateFilterBanner();
 }
 
 const searchToggle = document.getElementById("search-toggle");
@@ -2111,7 +2062,8 @@ const searchContainer = document.getElementById("search-bar-container");
 const searchInput = document.getElementById("saved-search-input");
 const searchCloseBtn = document.getElementById("search-close-btn");
 
-function toggleSearchMode(active) {
+async function toggleSearchMode(active) {
+  if (isUndoToastActive) return;
   const filterBtn = document.getElementById("filter-toggle");
   const exportBtn = document.getElementById("export-menu-toggle");
   const multiBtn = document.getElementById("multi-select-toggle");
@@ -2137,7 +2089,7 @@ function toggleSearchMode(active) {
     
     searchInput.value = "";
     activeFilters.searchQuery = "";
-    applySavedFilters();
+    await fetchAndRenderPage();
     updateFilterBanner();
   }
 }
@@ -2145,7 +2097,7 @@ function toggleSearchMode(active) {
 searchToggle?.addEventListener("click", () => toggleSearchMode(true));
 searchCloseBtn?.addEventListener("click", () => toggleSearchMode(false));
 
-searchInput?.addEventListener("input", (e) => {
+searchInput?.addEventListener("input", async (e) => {
   const val = e.target.value.toLowerCase().trim();
   
   activeFilters.searchQuery = val;
@@ -2154,8 +2106,8 @@ searchInput?.addEventListener("input", (e) => {
   if (clearBtn) {
     clearBtn.classList.toggle("hidden", val === "");
   }
-  
-  applySavedFilters();
+
+  await fetchAndRenderPage();
   updateFilterBanner();
 });
 
@@ -2163,10 +2115,9 @@ document.getElementById("clear-search-btn")?.addEventListener("click", () => {
   searchInput.value = "";
   activeFilters.searchQuery = "";
   searchInput.focus();
-  applySavedFilters();
 });
 
-document.getElementById("reset-filters-link")?.addEventListener("click", () => {
+document.getElementById("reset-filters-link")?.addEventListener("click", async () => {
   activeFilters.minScore = 0;
   activeFilters.maxScore = 100;
   activeFilters.persona = "";
@@ -2177,9 +2128,9 @@ document.getElementById("reset-filters-link")?.addEventListener("click", () => {
   if (personaInput) personaInput.value = "";
   if (scoreLabel) scoreLabel.textContent = "0 – 100";
 
-  const searchInput = document.getElementById("saved-search-input");
   if (searchInput) searchInput.value = "";
 
-  applySavedFilters();
-  updateSavedEmptyState();
+  currentPage = 1;
+  await fetchAndRenderPage();
+  updateFilterBanner();
 });
