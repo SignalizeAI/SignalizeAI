@@ -26,7 +26,7 @@ export async function analyzeWebsiteContent(extracted) {
 }
 
 function normalizeAnalysis(raw) {
-  const PERSONA_MAP = [
+  const BUYER_PERSONAS = [
     "Founder / CEO",
     "Enterprise Account Executive",
     "Mid-Market AE",
@@ -35,20 +35,32 @@ function normalizeAnalysis(raw) {
     "Partnerships / Alliances"
   ];
 
+  const OUTREACH_PERSONAS = [
+    "SDR",
+    "Account Executive",
+    "Enterprise AE",
+    "Partnerships Manager",
+    "Founder"
+  ];
+
   const cleanText = (v, max = 240) =>
     typeof v === "string"
       ? v.replace(/\s+/g, " ").trim().slice(0, max)
       : "";
 
-  const normalizePersona = (p) =>
-    PERSONA_MAP.find(x => x.toLowerCase() === String(p).toLowerCase())
+  const normalizeBuyerPersona = p =>
+    BUYER_PERSONAS.find(x => x.toLowerCase() === String(p).toLowerCase())
     || "Mid-Market AE";
+
+  const normalizeOutreachPersona = p =>
+    OUTREACH_PERSONAS.find(x => x.toLowerCase() === String(p).toLowerCase())
+    || "Account Executive";
 
   return {
     whatTheyDo: cleanText(raw.whatTheyDo, 200),
     targetCustomer: cleanText(raw.targetCustomer, 180),
     valueProposition: cleanText(raw.valueProposition, 220),
-    salesAngle: cleanText(raw.salesAngle, 360),
+    salesAngle: cleanText(raw.salesAngle, 500),
 
     salesReadinessScore: Math.max(
       0,
@@ -56,8 +68,15 @@ function normalizeAnalysis(raw) {
     ),
 
     bestSalesPersona: {
-      persona: normalizePersona(raw.bestSalesPersona?.persona),
+      persona: normalizeBuyerPersona(raw.bestSalesPersona?.persona),
       reason: cleanText(raw.bestSalesPersona?.reason, 160)
+    },
+
+    recommendedOutreach: {
+      persona: normalizeOutreachPersona(raw.recommendedOutreach?.persona),
+      goal: cleanText(raw.recommendedOutreach?.goal, 160),
+      angle: cleanText(raw.recommendedOutreach?.angle, 220),
+      message: cleanText(raw.recommendedOutreach?.message, 420)
     }
   };
 }
