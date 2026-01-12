@@ -551,6 +551,12 @@ async function extractWebsiteContent() {
                 bestSalesPersona: {
                   persona: existing.best_sales_persona,
                   reason: existing.best_sales_persona_reason
+                },
+                recommendedOutreach: {
+                  persona: existing?.recommended_outreach_persona || "",
+                  goal: existing?.recommended_outreach_goal || "",
+                  angle: existing?.recommended_outreach_angle || "",
+                  message: existing?.recommended_outreach_message || ""
                 }
               };
 
@@ -591,7 +597,11 @@ async function extractWebsiteContent() {
                     sales_angle: analysis.salesAngle,
                     sales_readiness_score: analysis.salesReadinessScore,
                     best_sales_persona: analysis.bestSalesPersona?.persona,
-                    best_sales_persona_reason: analysis.bestSalesPersona?.reason
+                    best_sales_persona_reason: analysis.bestSalesPersona?.reason,
+                    recommended_outreach_persona: analysis.recommendedOutreach?.persona,
+                    recommended_outreach_goal: analysis.recommendedOutreach?.goal,
+                    recommended_outreach_angle: analysis.recommendedOutreach?.angle,
+                    recommended_outreach_message: analysis.recommendedOutreach?.message
                   })
                   .eq("id", existing.id);
               }
@@ -708,6 +718,10 @@ function displayAIAnalysis(analysis) {
   const scoreEl = document.getElementById('ai-sales-score');
   const personaEl = document.getElementById('ai-sales-persona');
   const personaReasonEl = document.getElementById('ai-sales-persona-reason');
+  const outreachPersonaEl = document.getElementById("ai-outreach-persona");
+  const outreachGoalEl = document.getElementById("ai-outreach-goal");
+  const outreachAngleEl = document.getElementById("ai-outreach-angle");
+  const outreachMessageEl = document.getElementById("ai-outreach-message");
 
   if (whatEl) whatEl.textContent = analysis.whatTheyDo || '—';
   if (targetEl) targetEl.textContent = analysis.targetCustomer || '—';
@@ -720,6 +734,10 @@ function displayAIAnalysis(analysis) {
     const reason = analysis.bestSalesPersona?.reason || '';
     personaReasonEl.textContent = reason ? `(${reason})` : '—';
   }
+  if (outreachPersonaEl) outreachPersonaEl.textContent = analysis.recommendedOutreach?.persona || "—";
+  if (outreachGoalEl) outreachGoalEl.textContent = analysis.recommendedOutreach?.goal || "—";
+  if (outreachAngleEl) outreachAngleEl.textContent = analysis.recommendedOutreach?.angle || "—";
+  if (outreachMessageEl) outreachMessageEl.textContent = analysis.recommendedOutreach?.message || "—";
 }
 
 function renderSavedItem(item) {
@@ -776,6 +794,30 @@ function renderSavedItem(item) {
       </span>
     </p>
     <p><strong>Sales angle:</strong> ${item.sales_angle || "—"}</p>
+
+    <hr style="margin:10px 0; opacity:0.25" />
+
+    <p><strong>Recommended outreach</strong></p>
+
+    <p>
+      <strong>Who:</strong>
+      ${item.recommended_outreach_persona || "—"}
+    </p>
+
+    <p>
+      <strong>Goal:</strong>
+      ${item.recommended_outreach_goal || "—"}
+    </p>
+
+    <p>
+      <strong>Angle:</strong>
+      ${item.recommended_outreach_angle || "—"}
+    </p>
+
+    <p style="opacity:0.9; font-size:13px">
+      <strong>Message:</strong><br />
+      ${item.recommended_outreach_message || "—"}
+    </p>
 
     <hr style="margin:8px 0; opacity:0.3" />
 
@@ -1027,6 +1069,10 @@ function exportToCSV(rows) {
     "Best Sales Persona",
     "Persona Reason",
     "Sales Angle",
+    "Outreach Persona",
+    "Outreach Goal",
+    "Outreach Angle",
+    "Outreach Message",
     "Saved At"
   ];
 
@@ -1044,6 +1090,10 @@ function exportToCSV(rows) {
       item.best_sales_persona,
       `"${item.best_sales_persona_reason || ""}"`,
       `"${item.sales_angle || ""}"`,
+      item.recommended_outreach_persona,
+      `"${item.recommended_outreach_goal || ""}"`,
+      `"${item.recommended_outreach_angle || ""}"`,
+      `"${item.recommended_outreach_message || ""}"`,
       item.created_at
     ].join(","))
   ];
@@ -1081,6 +1131,10 @@ async function exportToExcel(rows) {
     { header: "Best Sales Persona", key: "best_sales_persona", width: 22 },
     { header: "Persona Reason", key: "best_sales_persona_reason", width: 30 },
     { header: "Sales Angle", key: "sales_angle", width: 35 },
+    { header: "Outreach Persona", key: "recommended_outreach_persona", width: 24 },
+    { header: "Outreach Goal", key: "recommended_outreach_goal", width: 30 },
+    { header: "Outreach Angle", key: "recommended_outreach_angle", width: 35 },
+    { header: "Outreach Message", key: "recommended_outreach_message", width: 45 },
     { header: "Saved At", key: "created_at", width: 22 }
   ];
 
@@ -1131,7 +1185,13 @@ async function fetchAndRenderPage() {
 
   let query = supabase
     .from("saved_analyses")
-    .select("*", { count: "exact" })
+    .select(`
+      *,
+      recommended_outreach_persona,
+      recommended_outreach_goal,
+      recommended_outreach_angle,
+      recommended_outreach_message
+    `, { count: "exact" })
     .eq("user_id", user.id);
 
   if (activeFilters.minScore > 0) {
@@ -1449,6 +1509,10 @@ button?.addEventListener("click", async () => {
       sales_readiness_score: lastAnalysis.salesReadinessScore,
       best_sales_persona: lastAnalysis.bestSalesPersona?.persona,
       best_sales_persona_reason: lastAnalysis.bestSalesPersona?.reason,
+      recommended_outreach_persona: lastAnalysis.recommendedOutreach?.persona,
+      recommended_outreach_goal: lastAnalysis.recommendedOutreach?.goal,
+      recommended_outreach_angle: lastAnalysis.recommendedOutreach?.angle,
+      recommended_outreach_message: lastAnalysis.recommendedOutreach?.message
     });
 
     if (error) {
@@ -1576,6 +1640,13 @@ ${lastAnalysis.salesAngle || "—"}
 Best sales persona:
 ${lastAnalysis.bestSalesPersona?.persona || "—"}
 ${lastAnalysis.bestSalesPersona?.reason ? `(${lastAnalysis.bestSalesPersona.reason})` : ""}
+
+Recommended outreach:
+Who: ${lastAnalysis.recommendedOutreach?.persona || "—"}
+Goal: ${lastAnalysis.recommendedOutreach?.goal || "—"}
+Angle: ${lastAnalysis.recommendedOutreach?.angle || "—"}
+Message:
+${lastAnalysis.recommendedOutreach?.message || "—"}
 `;
   }
 
@@ -1613,6 +1684,13 @@ ${item.sales_angle || "—"}
 Best sales persona:
 ${item.best_sales_persona || "—"}
 ${item.best_sales_persona_reason ? `(${item.best_sales_persona_reason})` : ""}
+
+Recommended outreach:
+Who: ${item.recommended_outreach_persona || "—"}
+Goal: ${item.recommended_outreach_goal || "—"}
+Angle: ${item.recommended_outreach_angle || "—"}
+Message:
+${item.recommended_outreach_message || "—"}
 `;
   }
 
