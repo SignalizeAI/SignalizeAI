@@ -933,20 +933,23 @@ function renderSavedItem(item) {
     
     applySavedFilters(); 
 
-    showUndoToast("Analysis removed", 
-      () => {
-        delete wrapper.dataset.isPendingDelete;
-        applySavedFilters();
-      }, 
-      async () => {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const user = sessionData?.session?.user;
-        if (!user) return;
+    pendingDeleteMap.set(itemId, {
+      element: wrapper,
+      finalize: async () => {
+        const { data } = await supabase.auth.getSession();
+        if (!data?.session?.user) return;
 
-        await supabase.from("saved_analyses").delete().eq("user_id", user.id).eq("id", itemId);
+        await supabase
+          .from("saved_analyses")
+          .delete()
+          .eq("user_id", data.session.user.id)
+          .eq("id", itemId);
+
         wrapper.remove();
       }
-    );
+    });
+
+    showUndoToast();
   });
 
   let pressTimer;
@@ -1756,18 +1759,25 @@ multiSelectToggle?.addEventListener("click", async () => {
   exitSelectionMode();
   applySavedFilters();
 
-  showUndoToast(`${idsToDelete.length} analyses removed`, 
-    () => {
-      elementsToFlag.forEach(el => delete el.dataset.isPendingDelete);
-      applySavedFilters();
-    }, 
-    async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data?.session?.user) return;
-      await supabase.from("saved_analyses").delete().eq("user_id", data.session.user.id).in("id", idsToDelete);
-      elementsToFlag.forEach(el => el.remove());
-    }
-  );
+  idsToDelete.forEach(id => {
+    const el = document.querySelector(`.saved-select-checkbox[data-id="${id}"]`)?.closest(".saved-item");
+    if (!el) return;
+
+    pendingDeleteMap.set(id, {
+      element: el,
+      finalize: async () => {
+        const { data } = await supabase.auth.getSession();
+        if (!data?.session?.user) return;
+        await supabase
+          .from("saved_analyses")
+          .delete()
+          .eq("user_id", data.session.user.id)
+          .eq("id", id);
+        el.remove();
+      }
+    });
+  });
+  showUndoToast(); 
 });
 
 const filterApplyBtn = document.querySelector(".filter-apply");
@@ -1852,13 +1862,10 @@ selectAllBtn?.addEventListener("click", () => {
   toggleSelectAllVisible();
 });
 
-let undoTimeout = null;
+let pendingDeleteMap = new Map();
+let undoTimer = null;
 
-function showUndoToast(message, onUndo, onFinalize) {
-  if (undoTimeout) {
-    clearTimeout(undoTimeout);
-  }
-
+function showUndoToast() {
   let toast = document.getElementById("undo-toast");
   if (!toast) {
     toast = document.createElement("div");
@@ -1870,16 +1877,11 @@ function showUndoToast(message, onUndo, onFinalize) {
   toast.innerHTML = `
     <div class="toast-content">
       <div class="toast-main">
-        <span>${message}</span>
+        <span id="toast-message"></span>
       </div>
       <div class="toast-actions">
         <button id="undo-button">UNDO</button>
-        <button id="close-toast-btn" title="Finalize and Close">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <button id="close-toast-btn">✕</button>
       </div>
     </div>
     <div class="undo-progress-container">
@@ -1887,29 +1889,53 @@ function showUndoToast(message, onUndo, onFinalize) {
     </div>
   `;
 
-  toast.classList.remove("show");
-  void toast.offsetWidth; 
+  document.getElementById("toast-message").textContent =
+    `${pendingDeleteMap.size} item(s) deleted`;
+
   toast.classList.add("show");
 
-  const undoBtn = toast.querySelector("#undo-button");
-  const closeBtn = toast.querySelector("#close-toast-btn");
-  
+  const undoBtn = document.getElementById("undo-button");
+  const closeBtn = document.getElementById("close-toast-btn");
+
   undoBtn.onclick = () => {
-    clearTimeout(undoTimeout);
+    clearTimeout(undoTimer);
     toast.classList.remove("show");
-    onUndo();
+
+    pendingDeleteMap.forEach(({ element }) => {
+      delete element.dataset.isPendingDelete;
+    });
+
+    pendingDeleteMap.clear();
+    applySavedFilters();
   };
 
-  closeBtn.onclick = () => {
-    clearTimeout(undoTimeout);
-    toast.classList.remove("show");
-    onFinalize();
-  };
+  closeBtn.onclick = finalizePendingDeletes;
 
-  undoTimeout = setTimeout(() => {
-    toast.classList.remove("show");
-    onFinalize();
-  }, 5000);
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(finalizePendingDeletes, 5000);
+}
+
+async function finalizePendingDeletes() {
+  if (pendingDeleteMap.size === 0) return;
+
+  clearTimeout(undoTimer);
+  const toast = document.getElementById("undo-toast");
+  toast?.classList.remove("show");
+
+  const { data } = await supabase.auth.getSession();
+  if (!data?.session?.user) return;
+
+  const itemsToProcess = Array.from(pendingDeleteMap.entries());
+  
+  pendingDeleteMap.clear();
+
+  for (const [id, item] of itemsToProcess) {
+    try {
+      await item.finalize();
+    } catch (err) {
+      console.error(`Failed to finalize deletion for ${id}:`, err);
+    }
+  }
 }
 
 const searchToggle = document.getElementById("search-toggle");
