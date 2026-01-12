@@ -14,6 +14,9 @@ let selectionMode = false;
 let lastSelectedIndex = null;
 let selectedSavedIds = new Set();
 let isRangeSelecting = false;
+let isFinalizingDeletes = false;
+let currentPage = 1;
+const PAGE_SIZE = 10;
 let activeFilters = {
   minScore: 0,
   maxScore: 100,
@@ -310,6 +313,7 @@ function showContentBlocked(message, options = {}) {
 }
 
 function applySavedFilters() {
+  currentPage = 1;
   lastSelectedIndex = null;
 
   if (selectionMode) {
@@ -344,9 +348,8 @@ function applySavedFilters() {
     if (visible && query) {
       const title = item.querySelector("strong")?.textContent.toLowerCase() || "";
       const domain = item.querySelector(".header-info div")?.textContent.toLowerCase() || "";
-      const bodyText = item.querySelector(".saved-item-body")?.textContent.toLowerCase() || "";
       
-      if (!title.includes(query) && !domain.includes(query) && !bodyText.includes(query)) {
+      if (!title.includes(query) && !domain.includes(query)) {
         visible = false;
       }
     }
@@ -362,11 +365,11 @@ function applySavedFilters() {
       if (domainEl) domainEl.innerHTML = domainEl.textContent;
     }
 
-    item.style.display = visible ? "" : "none";  
-    if (visible) visibleCount++;
+    item.dataset._passesFilter = visible ? "true" : "false";
+    item.style.display = visible ? "" : "none";
   });
   
-  updateSavedEmptyState(visibleCount);
+  applyPagination();
   updateSelectAllIcon();
 }
 
@@ -1173,6 +1176,7 @@ async function exportToExcel(rows) {
 }
 
 async function loadSavedAnalyses() {
+  currentPage = 1;
   exitSelectionMode();
   lastSelectedIndex = null;
   document.getElementById("saved-analyses")?.classList.remove("hidden");
@@ -1221,6 +1225,135 @@ async function fetchSavedAnalysesData() {
   if (error || !data) return [];
   return data;
 }
+
+function getVisibleItems() {
+  return Array.from(document.querySelectorAll("#saved-list .saved-item"))
+    .filter(item => item.style.display !== "none");
+}
+
+function getAllFilteredItems() {
+  return Array.from(document.querySelectorAll("#saved-list .saved-item"))
+    .filter(item => item.dataset.isPendingDelete !== "true")
+    .filter(item => item.dataset._passesFilter === "true");
+}
+
+function applyPagination() {
+  if (selectionMode) {
+    selectedSavedIds.clear();
+    document.querySelectorAll(".saved-item.selected")
+      .forEach(el => el.classList.remove("selected"));
+    updateDeleteState();
+  }
+
+  const all = Array.from(document.querySelectorAll("#saved-list .saved-item"))
+    .filter(item => item.dataset.isPendingDelete !== "true")
+    .filter(item => item.dataset._passesFilter === "true");
+
+  const total = all.length;
+
+  if (total === 0) {
+    document.querySelectorAll("#saved-list .saved-item").forEach(el => {
+      el.style.display = "none";
+    });
+
+    renderPagination(0);
+    updateSavedEmptyState(0);
+    return;
+  }
+
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  if (currentPage > totalPages) currentPage = totalPages;
+
+  all.forEach((el, idx) => {
+    const pageIndex = Math.floor(idx / PAGE_SIZE) + 1;
+    el.style.display = (pageIndex === currentPage) ? "" : "none";
+  });
+
+  renderPagination(totalPages);
+  updateSavedEmptyState(total);
+}
+
+
+function renderPagination(totalPages) {
+  const bar = document.getElementById("pagination-bar");
+  const nums = document.getElementById("page-numbers");
+  const prev = document.getElementById("page-prev");
+  const next = document.getElementById("page-next");
+
+  if (!bar || !nums) return;
+
+  if (totalPages <= 1) {
+    bar.classList.add("hidden");
+    return;
+  }
+
+  bar.classList.remove("hidden");
+  nums.innerHTML = "";
+
+  const maxVisible = 5;
+  const half = Math.floor(maxVisible / 2);
+
+  let start = currentPage - half;
+  let end = currentPage + half;
+
+  if (start < 1) {
+    start = 1;
+    end = maxVisible;
+  }
+
+  if (end > totalPages) {
+    end = totalPages;
+    start = Math.max(1, totalPages - maxVisible + 1);
+  }
+
+  if (start > 1) {
+    nums.appendChild(makePageBtn(1));
+    if (start > 2) nums.appendChild(makeEllipsis());
+  }
+
+  for (let i = start; i <= end; i++) {
+    nums.appendChild(makePageBtn(i));
+  }
+
+  if (end < totalPages) {
+    if (end < totalPages - 1) nums.appendChild(makeEllipsis());
+    nums.appendChild(makePageBtn(totalPages));
+  }
+
+  prev.disabled = currentPage === 1;
+  next.disabled = currentPage === totalPages;
+}
+
+function makePageBtn(page) {
+  const btn = document.createElement("button");
+  btn.textContent = page;
+  btn.className = "page-number" + (page === currentPage ? " active" : "");
+  btn.onclick = () => {
+    currentPage = page;
+    applyPagination();
+  };
+  return btn;
+}
+
+function makeEllipsis() {
+  const span = document.createElement("span");
+  span.textContent = "…";
+  span.className = "page-ellipsis";
+  return span;
+}
+
+document.getElementById("page-prev")?.addEventListener("click", () => {
+  if (currentPage > 1) {
+    currentPage--;
+    applyPagination();
+  }
+});
+
+document.getElementById("page-next")?.addEventListener("click", () => {
+  currentPage++;
+  applyPagination();
+});
 
 if (signInBtn) signInBtn.addEventListener('click', signInWithGoogle);
 if (signOutBtn) signOutBtn.addEventListener('click', signOut);
@@ -1802,16 +1935,15 @@ const filterResetBtn = document.querySelector(".filter-reset");
 filterResetBtn?.addEventListener("click", () => {
   activeFilters.minScore = 0;
   activeFilters.maxScore = 100;
+  activeFilters.persona = "";
+  activeFilters.searchQuery = "";
 
   if (minSlider) minSlider.value = 0;
   if (maxSlider) maxSlider.value = 100;
   if (personaInput) personaInput.value = "";
   if (scoreLabel) scoreLabel.textContent = `0 – 100`;
 
-  const items = document.querySelectorAll("#saved-list .saved-item");
-  items.forEach(item => item.style.display = "");
-  
-  updateSavedEmptyState(items.length);
+  applySavedFilters();
   filterPanel?.classList.add("hidden");
   filterToggle?.setAttribute("aria-expanded", "false");
 });
@@ -1916,26 +2048,34 @@ function showUndoToast() {
 }
 
 async function finalizePendingDeletes() {
-  if (pendingDeleteMap.size === 0) return;
+  if (isFinalizingDeletes) return;
+  isFinalizingDeletes = true;
 
   clearTimeout(undoTimer);
   const toast = document.getElementById("undo-toast");
   toast?.classList.remove("show");
 
   const { data } = await supabase.auth.getSession();
-  if (!data?.session?.user) return;
+  if (!data?.session?.user) {
+    isFinalizingDeletes = false;
+    return;
+  }
 
-  const itemsToProcess = Array.from(pendingDeleteMap.entries());
-  
-  pendingDeleteMap.clear();
+  while (pendingDeleteMap.size > 0) {
+    const batch = Array.from(pendingDeleteMap.values());
+    pendingDeleteMap.clear();
 
-  for (const [id, item] of itemsToProcess) {
-    try {
-      await item.finalize();
-    } catch (err) {
-      console.error(`Failed to finalize deletion for ${id}:`, err);
+    for (const item of batch) {
+      try {
+        await item.finalize();
+      } catch (err) {
+        console.error("Delete failed:", err);
+      }
     }
   }
+
+  isFinalizingDeletes = false;
+  applySavedFilters();
 }
 
 const searchToggle = document.getElementById("search-toggle");
