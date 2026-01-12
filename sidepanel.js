@@ -1176,6 +1176,11 @@ async function fetchAndRenderPage() {
   updateSavedEmptyState(data.length);
   renderPagination(Math.ceil(totalFilteredCount / PAGE_SIZE));
   updateFilterBanner();
+
+  const shownSoFar = Math.min(
+    currentPage * PAGE_SIZE,
+    totalFilteredCount
+  );
 }
 
 function renderPagination(totalPages) {
@@ -1247,16 +1252,22 @@ function areFiltersActive() {
 
 function updateFilterBanner() {
   const banner = document.getElementById("active-filter-banner");
-  if (!banner) return;
+  const text = document.getElementById("filter-banner-text");
 
-  const filterEmpty = document.getElementById("filter-empty");
-  const isNoResults = filterEmpty && !filterEmpty.classList.contains("hidden");
+  if (!banner || !text) return;
 
-  const visibleCount = totalFilteredCount;
+  const isFiltering = areFiltersActive();
+  const isNoResults = totalFilteredCount === 0;
   const searchOpen = !searchContainer.classList.contains("hidden");
 
-  if (areFiltersActive() && !isNoResults && visibleCount > 0 && !searchOpen) {
+  if (isFiltering && !isNoResults) {
+    const shownSoFar = Math.min(
+      currentPage * PAGE_SIZE,
+      totalFilteredCount
+    );
+
     banner.classList.remove("hidden");
+    text.textContent = formatResultsText(shownSoFar, totalFilteredCount);
   } else {
     banner.classList.add("hidden");
   }
@@ -1997,6 +2008,21 @@ function showUndoToast() {
   undoTimer = setTimeout(finalizePendingDeletes, 5000);
 }
 
+function formatResultsText(shown, total) {
+  if (total === 0) return "";
+
+  if (total <= PAGE_SIZE) {
+    return total === 1
+      ? "1 result found"
+      : `${total} results found`;
+  }
+
+  const start = (currentPage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(currentPage * PAGE_SIZE, total);
+
+  return `Showing ${start}–${end} of ${total}`;
+}
+
 async function finalizePendingDeletes() {
   if (isFinalizingDeletes) return;
   isFinalizingDeletes = true;
@@ -2027,6 +2053,8 @@ async function finalizePendingDeletes() {
   isFinalizingDeletes = false;
   isUndoToastActive = false;
   document.body.classList.remove("undo-active");
+  await fetchAndRenderPage();
+  updateFilterBanner();
 }
 
 const searchToggle = document.getElementById("search-toggle");
