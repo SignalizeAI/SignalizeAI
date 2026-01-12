@@ -23,7 +23,8 @@ let activeFilters = {
   minScore: 0,
   maxScore: 100,
   persona: "",
-  searchQuery: ""
+  searchQuery: "",
+  sort: "created_at_desc"
 };
 
 const SELECT_ALL_ICON = `
@@ -1140,7 +1141,7 @@ async function fetchAndRenderPage() {
     query = query.lte("sales_readiness_score", activeFilters.maxScore);
   }
   if (activeFilters.persona) {
-    query = query.eq("best_sales_persona", activeFilters.persona);
+    query = query.ilike("best_sales_persona", activeFilters.persona);
   }
   if (activeFilters.searchQuery) {
     const q = `%${activeFilters.searchQuery}%`;
@@ -1150,9 +1151,50 @@ async function fetchAndRenderPage() {
   const from = (currentPage - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
+  let sortColumn = "created_at";
+  let sortAsc = false;
+
+  switch (activeFilters.sort) {
+    case "created_at_asc":
+      sortColumn = "created_at";
+      sortAsc = true;
+      break;
+
+    case "created_at_desc":
+      sortColumn = "created_at";
+      sortAsc = false;
+      break;
+
+    case "last_analyzed_at_desc":
+      sortColumn = "last_analyzed_at";
+      sortAsc = false;
+      break;
+
+    case "sales_readiness_score_desc":
+      sortColumn = "sales_readiness_score";
+      sortAsc = false;
+      break;
+
+    case "sales_readiness_score_asc":
+      sortColumn = "sales_readiness_score";
+      sortAsc = true;
+      break;
+
+    case "domain_asc":
+      sortColumn = "domain";
+      sortAsc = true;
+      break;
+
+    case "domain_desc":
+      sortColumn = "domain";
+      sortAsc = false;
+      break;
+  }
+
   const { data, count, error } = await query
-    .order("created_at", { ascending: false })
+    .order(sortColumn, { ascending: sortAsc })
     .range(from, to);
+
 
   loadingEl.classList.add("hidden");
 
@@ -1246,7 +1288,8 @@ function areFiltersActive() {
     activeFilters.minScore > 0 ||
     activeFilters.maxScore < 100 ||
     activeFilters.persona !== "" ||
-    (activeFilters.searchQuery && activeFilters.searchQuery.length > 0)
+    (activeFilters.searchQuery && activeFilters.searchQuery.length > 0) ||
+    activeFilters.sort !== "created_at_desc"
   );
 }
 
@@ -1876,6 +1919,11 @@ filterApplyBtn?.addEventListener("click", async () => {
       .toLowerCase()
       .trim();
 
+  const sortValue = document.querySelector('input[name="sort"]:checked')?.value;
+  if (sortValue) {
+    activeFilters.sort = sortValue;
+  }
+
   currentPage = 1;
   filterPanel?.classList.add("hidden");
   filterToggle?.setAttribute("aria-expanded", "false");
@@ -1891,11 +1939,14 @@ filterResetBtn?.addEventListener("click", async () => {
   activeFilters.maxScore = 100;
   activeFilters.persona = "";
   activeFilters.searchQuery = "";
+  activeFilters.sort = "created_at_desc";
 
   if (minSlider) minSlider.value = 0;
   if (maxSlider) maxSlider.value = 100;
   if (personaInput) personaInput.value = "";
   if (scoreLabel) scoreLabel.textContent = `0 – 100`;
+
+  document.querySelector('input[name="sort"][value="created_at_desc"]')?.click();
 
   filterPanel?.classList.add("hidden");
   filterToggle?.setAttribute("aria-expanded", "false");
@@ -2122,6 +2173,7 @@ document.getElementById("reset-filters-link")?.addEventListener("click", async (
   activeFilters.maxScore = 100;
   activeFilters.persona = "";
   activeFilters.searchQuery = "";
+  activeFilters.sort = "created_at_desc";
 
   if (minSlider) minSlider.value = 0;
   if (maxSlider) maxSlider.value = 100;
@@ -2129,6 +2181,8 @@ document.getElementById("reset-filters-link")?.addEventListener("click", async (
   if (scoreLabel) scoreLabel.textContent = "0 – 100";
 
   if (searchInput) searchInput.value = "";
+
+  document.querySelector('input[name="sort"][value="created_at_desc"]')?.click();
 
   currentPage = 1;
   await fetchAndRenderPage();

@@ -282,7 +282,7 @@
                   <span class="filter-reset">Reset</span>
                 </div>
 
-                <div class="filter-group">
+                <div class="filter-group slider-group">
                   <div class="filter-label-row">
                     <span class="filter-label">Score readiness</span>
                     <span class="filter-value" id="filter-score-value">0 – 100</span>
@@ -321,6 +321,52 @@
                   </select>
                 </div>
 
+                <div class="filter-group">
+                  <div class="filter-label">Sort by</div>
+
+                  <div class="filter-sort-group">
+
+                    <label class="filter-sort-option">
+                      <input type="radio" name="sort" value="created_at_desc" checked />
+                      <span class="filter-sort-label">Most recent</span>
+                    </label>
+
+                    <label class="filter-sort-option">
+                      <input type="radio" name="sort" value="created_at_asc" />
+                      <span class="filter-sort-label">Oldest first</span>
+                    </label>
+
+                    <label class="filter-sort-option">
+                      <input type="radio" name="sort" value="last_analyzed_at_desc" />
+                      <span class="filter-sort-label">Recently analyzed</span>
+                    </label>
+
+                    <div class="filter-divider"></div>
+
+                    <label class="filter-sort-option">
+                      <input type="radio" name="sort" value="sales_readiness_score_desc" />
+                      <span class="filter-sort-label">Highest sales score</span>
+                    </label>
+
+                    <label class="filter-sort-option">
+                      <input type="radio" name="sort" value="sales_readiness_score_asc" />
+                      <span class="filter-sort-label">Lowest sales score</span>
+                    </label>
+
+                    <div class="filter-divider"></div>
+
+                    <label class="filter-sort-option">
+                      <input type="radio" name="sort" value="domain_asc" />
+                      <span class="filter-sort-label">A → Z</span>
+                    </label>
+
+                    <label class="filter-sort-option">
+                      <input type="radio" name="sort" value="domain_desc" />
+                      <span class="filter-sort-label">Z → A</span>
+                    </label>
+
+                  </div>
+                </div>
                 <button class="filter-apply">Apply</button>
               </div>
 
