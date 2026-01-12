@@ -508,7 +508,7 @@ body:has(#welcome-view:not(.hidden)) {
   background-color: #1a1a1a;
   border: 1px solid #333;
   border-radius: 14px;
-  padding: 14px;
+  padding: 20px;
 
   box-shadow: 0 12px 30px rgba(0,0,0,0.65);
   z-index: 1200;
@@ -545,6 +545,10 @@ body:has(#welcome-view:not(.hidden)) {
   font-size: 12px;
   color: #9ca3af;
   margin-bottom: 6px;
+  margin-top: 6px;
+}
+
+.filter-group + .filter-group {
   margin-top: 6px;
 }
 
@@ -607,6 +611,7 @@ body:has(#welcome-view:not(.hidden)) {
   font-size: 12px;
   cursor: pointer;
   margin-top: 6px;
+  margin-bottom: 6px;
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -1158,9 +1163,16 @@ body:has(#welcome-view:not(.hidden)) {
 }
 
 .filter-group {
-  position: relative;
   display: flex;
   flex-direction: column;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.filter-group:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
 }
 
 #filter-min-score, #filter-max-score {
@@ -1550,4 +1562,77 @@ body.undo-active #multi-select-toggle:hover {
 .saved-item.pending-delete {
   opacity: 0.3;
   pointer-events: none;
+}
+
+.filter-sort-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.filter-sort-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.filter-sort-option:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.filter-sort-option input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.4);
+  position: relative;
+  cursor: pointer;
+}
+
+.filter-sort-option input[type="radio"]:checked {
+  border-color: #3b82f6;
+}
+
+.filter-sort-option input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  background: #3b82f6;
+  border-radius: 50%;
+}
+
+.filter-sort-label {
+  font-size: 12.5px;
+  color: #e5e7eb;
+  user-select: none;
+}
+
+.filter-sort-option input:checked + .filter-sort-label {
+  color: #ffffff;
+}
+
+.filter-sort-option input:checked {
+  accent-color: #3b82f6;
+}
+
+.filter-sort-option:has(input:checked) {
+  background: linear-gradient(
+    90deg,
+    rgba(59,130,246,0.18),
+    rgba(59,130,246,0.05)
+  );
+  border-color: rgba(59,130,246,0.4);
+}
+
+.filter-group.slider-group {
+  position: relative;
+  padding-bottom: 10px;
 }
