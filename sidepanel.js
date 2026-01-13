@@ -313,6 +313,33 @@ function navigateTo(view) {
 
   if (view === "profile") {
     document.getElementById("profile-view")?.classList.remove("hidden");
+    
+    const usageLimitEl = document.getElementById("profile-usage-limit");
+    const storageLimitEl = document.getElementById("profile-storage-limit");
+    const planNameEl = document.querySelector("#profile-view .profile-value");
+
+    let dailyLimit = 5;
+    let saveLimit = 3;
+
+    if (currentPlan === "pro") {
+      dailyLimit = 50;
+      saveLimit = 200;
+    } else if (currentPlan === "team") {
+      dailyLimit = 500;
+      saveLimit = 5000;
+    }
+
+    if (usageLimitEl) usageLimitEl.textContent = `${dailyLimit} / day`;
+    if (storageLimitEl) storageLimitEl.textContent = `${saveLimit.toLocaleString()} items`;
+    
+    const profileRows = document.querySelectorAll("#profile-view .profile-row");
+    profileRows.forEach(row => {
+      const label = row.querySelector(".profile-label")?.textContent;
+      const value = row.querySelector(".profile-value");
+      if (label === "Plan" && value) {
+        value.textContent = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1);
+      }
+    });
   }
 
   if (view === "settings") {
