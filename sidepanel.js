@@ -19,6 +19,8 @@ let isUndoToastActive = false;
 let totalFilteredCount = 0;
 let currentPage = 1;
 const PAGE_SIZE = 10;
+let currentPlan = "free";
+let remainingToday = 0;
 let activeFilters = {
   minScore: 0,
   maxScore: 100,
@@ -151,6 +153,87 @@ async function signInWithGoogle() {
   } catch (err) {
     console.error("Login failed:", err);
     statusMsg.textContent = "Login failed. Please try again.";
+  }
+}
+
+async function loadQuotaFromAPI() {
+  const { data } = await supabase.auth.getSession();
+  if (!data?.session) return;
+
+  const jwt = data.session.access_token;
+
+  try {
+    const res = await fetch("https://api.signalizeai.org/quota", {
+      headers: { Authorization: `Bearer ${jwt}` }
+    });
+
+    if (!res.ok) {
+      console.warn("Quota fetch failed:", res.status);
+      currentPlan = "free";
+      remainingToday = 0;
+      renderQuotaBanner();
+      return;
+    }
+
+    const dataJson = await res.json();
+
+    if (dataJson.plan) {
+      currentPlan = dataJson.plan;
+      remainingToday = dataJson.remaining_today;
+      renderQuotaBanner();
+    }
+  } catch (e) {
+    console.warn("Quota fetch failed", e);
+  }
+}
+
+function renderQuotaBanner() {
+  const banner = document.getElementById("quota-banner");
+  const text = document.getElementById("quota-text");
+  const btn = document.getElementById("upgrade-btn");
+  const badge = document.getElementById("plan-badge");
+  const progressBar = document.getElementById("quota-progress-fill");
+
+  if (badge) {
+    badge.textContent = currentPlan.toUpperCase();
+    badge.className = "badge";
+    badge.classList.add(`badge-${currentPlan.toLowerCase()}`);
+  }
+
+  if (!banner || !text || !btn) return;
+
+  banner.classList.remove("hidden");
+
+  let totalLimit = 5;
+  if (currentPlan === "pro") totalLimit = 50;
+  if (currentPlan === "team") totalLimit = 500;
+
+  const used = Math.max(0, totalLimit - remainingToday);
+  const percentage = Math.min(100, (used / totalLimit) * 100);
+
+  if (progressBar) {
+    progressBar.style.width = `${percentage}%`;
+
+    if (remainingToday <= 0) {
+      progressBar.classList.add("danger");
+    } else {
+      progressBar.classList.remove("danger");
+    }
+  }
+
+  if (remainingToday > 0) {
+    text.textContent = `${used} / ${totalLimit} analyses used today`;
+    
+    if (currentPlan === "team") {
+      btn.classList.add("hidden");
+    } else {
+      btn.classList.remove("hidden");
+      btn.textContent = "Upgrade";
+    }
+  } else {
+    text.textContent = "Daily limit reached";
+    btn.classList.remove("hidden");
+    btn.textContent = "Upgrade to continue";
   }
 }
 
@@ -315,7 +398,6 @@ function showContentBlocked(message, options = {}) {
   forceRefresh = false;
 }
 
-
 function highlightText(text, query) {
   if (!query || !text) return text;
   
@@ -370,6 +452,8 @@ function updateUI(session) {
     loadSettings().then(settings => {
       applySettingsToUI(settings);
     });
+
+    loadQuotaFromAPI();
   } else {
     loginView.classList.remove('hidden');
     welcomeView.classList.add('hidden');
@@ -442,6 +526,13 @@ async function shouldAutoAnalyze() {
 }
 
 async function extractWebsiteContent() {
+
+  await loadQuotaFromAPI();
+
+  if (currentPlan === "free" && remainingToday <= 0) {
+    showContentBlocked("Daily limit reached. Upgrade to continue.");
+    return;
+  }
   if (currentView !== "analysis") return;
   const contentCard = document.getElementById('website-content');
   const contentLoading = document.getElementById('content-loading');
@@ -645,6 +736,14 @@ async function extractWebsiteContent() {
 }
 
 async function analyzeSpecificUrl(url) {
+
+  await loadQuotaFromAPI();
+
+  if (currentPlan === "free" && remainingToday <= 0) {
+    showContentBlocked("Daily limit reached. Upgrade to continue.");
+    return;
+  }
+
   const contentLoading = document.getElementById('content-loading');
   const contentError = document.getElementById('content-error');
 
@@ -738,6 +837,8 @@ function displayAIAnalysis(analysis) {
   if (outreachGoalEl) outreachGoalEl.textContent = analysis.recommendedOutreach?.goal || "—";
   if (outreachAngleEl) outreachAngleEl.textContent = analysis.recommendedOutreach?.angle || "—";
   if (outreachMessageEl) outreachMessageEl.textContent = analysis.recommendedOutreach?.message || "—";
+
+  loadQuotaFromAPI();
 }
 
 function renderSavedItem(item) {
@@ -2265,4 +2366,19 @@ document.getElementById("reset-filters-link")?.addEventListener("click", async (
   currentPage = 1;
   await fetchAndRenderPage();
   updateFilterBanner();
+});
+
+document.getElementById("upgrade-btn")?.addEventListener("click", async () => {
+  const { data } = await supabase.auth.getSession();
+  if (!data?.session?.user) return;
+
+  const email = data.session.user.email;
+  const userId = data.session.user.id;
+
+  const checkoutUrl =
+    "https://signalizeaipay.lemonsqueezy.com/checkout/buy/a124318b-c077-4f54-b714-cc77811af78b" +
+    `?checkout[email]=${encodeURIComponent(email)}` +
+    `&checkout[custom][user_id]=${encodeURIComponent(userId)}`;
+
+  chrome.tabs.create({ url: checkoutUrl });
 });

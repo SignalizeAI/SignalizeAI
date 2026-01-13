@@ -58,7 +58,7 @@
                 <a href="#" class="menu-item">
                   <img src="icons/subscription.svg" alt="" class="menu-icon" />
                   Subscription
-                  <span class="badge badge-pro">PRO</span>
+                  <span id="plan-badge" class="badge">FREE</span>
                 </a>
               </li>
               <li>
@@ -91,6 +91,19 @@
                 </button>
               </li>
             </ul>
+          </div>
+        </div>
+
+        <!-- Usage Quota Banner -->
+        <div id="quota-banner" class="quota-banner hidden">
+          <div class="quota-left">
+            <span id="quota-text">0 / 3 analyses used today</span>
+            <div class="quota-progress-bar">
+              <div id="quota-progress-fill" class="quota-progress-fill"></div>
+            </div>
+          </div>
+          <div class="quota-right">
+            <button id="upgrade-btn" class="upgrade-btn">Upgrade</button>
           </div>
         </div>
 
