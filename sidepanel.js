@@ -716,12 +716,13 @@ async function extractWebsiteContent() {
               remainingToday = result.quota.remaining_today;
               dailyLimitFromAPI = result.quota.daily_limit;
               maxSavedLimit = result.quota.max_saved;
-
+              totalSavedCount = result.quota.total_saved;
               renderQuotaBanner();
             }
 
-            lastAnalysis = result.analysis;
-            displayAIAnalysis(result.analysis);
+              const analysis = result.analysis;
+              lastAnalysis = analysis;
+              displayAIAnalysis(analysis);
 
               if (existing) {
                 await supabase
@@ -1332,7 +1333,36 @@ async function fetchAndRenderPage() {
   loadingEl.classList.remove("hidden");
   listEl.innerHTML = "";
 
-  let query = supabase
+  let countQuery = supabase
+    .from("saved_analyses")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  if (activeFilters.minScore > 0)
+    countQuery = countQuery.gte("sales_readiness_score", activeFilters.minScore);
+
+  if (activeFilters.maxScore < 100)
+    countQuery = countQuery.lte("sales_readiness_score", activeFilters.maxScore);
+
+  if (activeFilters.persona)
+    countQuery = countQuery.ilike("best_sales_persona", activeFilters.persona);
+
+  if (activeFilters.searchQuery) {
+    const q = `%${activeFilters.searchQuery}%`;
+    countQuery = countQuery.or(`title.ilike.${q},domain.ilike.${q}`);
+  }
+
+  const { count, error: countError } = await countQuery;
+
+  if (countError) {
+    console.error(countError);
+    loadingEl.classList.add("hidden");
+    return;
+  }
+
+  totalFilteredCount = count || 0;
+
+  let dataQuery = supabase
     .from("saved_analyses")
     .select(`
       *,
@@ -1340,21 +1370,18 @@ async function fetchAndRenderPage() {
       recommended_outreach_goal,
       recommended_outreach_angle,
       recommended_outreach_message
-    `, { count: "exact" })
+    `)
     .eq("user_id", user.id);
 
-  if (activeFilters.minScore > 0) {
-    query = query.gte("sales_readiness_score", activeFilters.minScore);
-  }
-  if (activeFilters.maxScore < 100) {
-    query = query.lte("sales_readiness_score", activeFilters.maxScore);
-  }
-  if (activeFilters.persona) {
-    query = query.ilike("best_sales_persona", activeFilters.persona);
-  }
+  if (activeFilters.minScore > 0)
+    dataQuery = dataQuery.gte("sales_readiness_score", activeFilters.minScore);
+  if (activeFilters.maxScore < 100)
+    dataQuery = dataQuery.lte("sales_readiness_score", activeFilters.maxScore);
+  if (activeFilters.persona)
+    dataQuery = dataQuery.ilike("best_sales_persona", activeFilters.persona);
   if (activeFilters.searchQuery) {
     const q = `%${activeFilters.searchQuery}%`;
-    query = query.or(`title.ilike.${q},domain.ilike.${q}`);
+    dataQuery = dataQuery.or(`title.ilike.${q},domain.ilike.${q}`);
   }
 
   const from = (currentPage - 1) * PAGE_SIZE;
@@ -1400,10 +1427,9 @@ async function fetchAndRenderPage() {
       break;
   }
 
-  const { data, count, error } = await query
+  const { data, error } = await dataQuery
     .order(sortColumn, { ascending: sortAsc })
     .range(from, to);
-
 
   loadingEl.classList.add("hidden");
 
@@ -1411,8 +1437,6 @@ async function fetchAndRenderPage() {
     console.error(error);
     return;
   }
-
-  totalFilteredCount = count || 0;
 
   if (!data || data.length === 0) {
     updateSavedEmptyState(0);
@@ -1427,11 +1451,6 @@ async function fetchAndRenderPage() {
   updateSavedEmptyState(data.length);
   renderPagination(Math.ceil(totalFilteredCount / PAGE_SIZE));
   updateFilterBanner();
-
-  const shownSoFar = Math.min(
-    currentPage * PAGE_SIZE,
-    totalFilteredCount
-  );
 }
 
 function renderPagination(totalPages) {
