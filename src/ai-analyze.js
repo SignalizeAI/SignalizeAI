@@ -36,11 +36,30 @@ export async function analyzeWebsiteContent(extracted) {
     throw new Error(data?.error || "Backend error");
   }
 
+  if (typeof data.used_today === "number") {
+    window.usedToday = data.used_today;
+    window.remainingToday = data.remaining_today;
+    window.dailyLimitFromAPI = data.daily_limit;
+    window.maxSavedLimit = data.max_saved;
+    window.currentPlan = data.plan;
+
+    if (typeof window.renderQuotaBanner === "function") {
+      window.renderQuotaBanner();
+    }
+  }
+
   return {
     blocked: false,
-    plan: data.plan,
-    remaining_today: data.remaining_today,
-    ...normalizeAnalysis(data)
+
+    quota: {
+      plan: data.plan,
+      used_today: data.used_today,
+      remaining_today: data.remaining_today,
+      daily_limit: data.daily_limit,
+      max_saved: data.max_saved
+    },
+
+    analysis: normalizeAnalysis(data)
   };
 }
 
