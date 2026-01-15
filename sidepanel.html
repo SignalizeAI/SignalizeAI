@@ -58,7 +58,7 @@
                 <a href="#" class="menu-item">
                   <img src="icons/subscription.svg" alt="" class="menu-icon" />
                   Subscription
-                  <span class="badge badge-pro">PRO</span>
+                  <span id="plan-badge" class="badge">FREE</span>
                 </a>
               </li>
               <li>
@@ -91,6 +91,19 @@
                 </button>
               </li>
             </ul>
+          </div>
+        </div>
+
+        <!-- Usage Quota Banner -->
+        <div id="quota-banner" class="quota-banner hidden">
+          <div class="quota-left">
+            <span id="quota-text">0 / 3 analyses used today</span>
+            <div class="quota-progress-bar">
+              <div id="quota-progress-fill" class="quota-progress-fill"></div>
+            </div>
+          </div>
+          <div class="quota-right">
+            <button id="upgrade-btn" class="upgrade-btn">Upgrade</button>
           </div>
         </div>
 
@@ -613,7 +626,11 @@
 
             <div class="profile-row">
               <span class="profile-label">Usage limit</span>
-              <span class="profile-value">100 / month</span>
+              <span id="profile-usage-limit" class="profile-value">5 / day</span>
+            </div>
+            <div class="profile-row">
+              <span class="profile-label">Storage limit</span>
+              <span id="profile-storage-limit" class="profile-value">3 items</span>
             </div>
           </div>
         </div>
@@ -622,5 +639,27 @@
 
     <script src="extension/supabase.bundle.js"></script>
     <script type="module" src="extension/sidepanel.js"></script>
+    <div id="limit-modal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="limit-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </div>
+          <h3>Limit Reached</h3>
+        </div>
+        <div class="modal-body">
+          <p id="limit-modal-message">Your current plan allows saving up to 5 items. Upgrade to continue building your lead list.</p>
+        </div>
+        <div class="modal-footer">
+          <button id="modal-upgrade-pro-btn" class="primary-btn">Upgrade to Pro</button>
+          <button id="modal-upgrade-team-btn" class="team-btn">Upgrade to Team</button>
+          <button id="modal-close-btn" class="secondary-btn">Maybe Later</button>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

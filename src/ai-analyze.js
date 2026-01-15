@@ -1,28 +1,61 @@
-export async function analyzeWebsiteContent(extracted) {
-  const response = await fetch(
-    "https://api.signalizeai.org",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ extracted })
-    }
-  );
+async function getAccessToken() {
+  const { data, error } = await window.supabase.auth.getSession();
+  if (error || !data.session) return null;
+  return data.session.access_token;
+}
 
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Backend error ${response.status}: ${errText}`);
-  }
+export async function analyzeWebsiteContent(extracted) {
+
+  const token = await getAccessToken();
+
+  const res = await fetch("https://api.signalizeai.org/analyze", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify({ extracted })
+  });
 
   let data;
   try {
-    data = await response.json();
+    data = await res.json();
   } catch {
     throw new Error("Invalid JSON from backend");
   }
 
-  return normalizeAnalysis(data);
+  if (data?.upgrade_required || data?.error === "limit_reached") {
+    return {
+      blocked: true,
+      plan: data.plan || "free",
+      remaining_today: 0
+    };
+  }
+
+  if (!res.ok) {
+    throw new Error(data?.error || "Backend error");
+  }
+
+  return {
+    blocked: false,
+    plan: data.plan,
+    remaining_today: data.remaining_today,
+    ...normalizeAnalysis(data)
+  };
+}
+
+export async function fetchQuota() {
+  const token = await getAccessToken();
+  if (!token) return null;
+
+  const res = await fetch("https://api.signalizeai.org/quota", {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  if (!res.ok) return null;
+  return await res.json();
 }
 
 function normalizeAnalysis(raw) {

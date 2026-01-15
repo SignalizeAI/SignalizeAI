@@ -19,6 +19,10 @@ let isUndoToastActive = false;
 let totalFilteredCount = 0;
 let currentPage = 1;
 const PAGE_SIZE = 10;
+let currentPlan = "free";
+let remainingToday = 0;
+let maxSavedLimit = 0;
+let totalSavedCount = 0;
 let activeFilters = {
   minScore: 0,
   maxScore: 100,
@@ -154,6 +158,91 @@ async function signInWithGoogle() {
   }
 }
 
+async function loadQuotaFromAPI() {
+  const { data } = await supabase.auth.getSession();
+  if (!data?.session) return;
+
+  const jwt = data.session.access_token;
+
+  try {
+    const res = await fetch("https://api.signalizeai.org/quota", {
+      headers: { Authorization: `Bearer ${jwt}` }
+    });
+
+    if (!res.ok) {
+      console.warn("Quota fetch failed:", res.status);
+      currentPlan = "free";
+      remainingToday = 0;
+      renderQuotaBanner();
+      return;
+    }
+
+    const dataJson = await res.json();
+
+    if (dataJson.plan) {
+      currentPlan = dataJson.plan;
+      remainingToday = dataJson.remaining_today;
+      
+      maxSavedLimit = dataJson.max_saved || 0;
+      totalSavedCount = dataJson.total_saved || 0;
+      
+      renderQuotaBanner();
+    }
+  } catch (e) {
+    console.warn("Quota fetch failed", e);
+  }
+}
+
+function renderQuotaBanner() {
+  const banner = document.getElementById("quota-banner");
+  const text = document.getElementById("quota-text");
+  const btn = document.getElementById("upgrade-btn");
+  const badge = document.getElementById("plan-badge");
+  const progressBar = document.getElementById("quota-progress-fill");
+
+  if (badge) {
+    badge.textContent = currentPlan.toUpperCase();
+    badge.className = "badge";
+    badge.classList.add(`badge-${currentPlan.toLowerCase()}`);
+  }
+
+  if (!banner || !text || !btn) return;
+
+  banner.classList.remove("hidden");
+
+  let totalLimit = 5; 
+  if (currentPlan === "pro") totalLimit = 50;
+  if (currentPlan === "team") totalLimit = 500;
+
+  const used = Math.max(0, totalLimit - remainingToday);
+  const percentage = Math.min(100, (used / totalLimit) * 100);
+
+  if (progressBar) {
+    progressBar.style.width = `${percentage}%`;
+
+    if (remainingToday <= 0) {
+      progressBar.classList.add("danger");
+    } else {
+      progressBar.classList.remove("danger");
+    }
+  }
+
+  if (remainingToday > 0) {
+    text.textContent = `${used} / ${totalLimit} analyses used today`;
+    
+    if (currentPlan === "team") {
+      btn.classList.add("hidden");
+    } else {
+      btn.classList.remove("hidden");
+      btn.textContent = currentPlan === "pro" ? "Upgrade to Team" : "Upgrade";
+    }
+  } else {
+    text.textContent = "Daily limit reached";
+    btn.classList.remove("hidden");
+    btn.textContent = currentPlan === "pro" ? "Upgrade to Team" : "Upgrade to continue";
+  }
+}
+
 function updateDeleteState() {
   if (!multiSelectToggle) return;
 
@@ -224,6 +313,33 @@ function navigateTo(view) {
 
   if (view === "profile") {
     document.getElementById("profile-view")?.classList.remove("hidden");
+    
+    const usageLimitEl = document.getElementById("profile-usage-limit");
+    const storageLimitEl = document.getElementById("profile-storage-limit");
+    const planNameEl = document.querySelector("#profile-view .profile-value");
+
+    let dailyLimit = 5;
+    let saveLimit = 3;
+
+    if (currentPlan === "pro") {
+      dailyLimit = 50;
+      saveLimit = 200;
+    } else if (currentPlan === "team") {
+      dailyLimit = 500;
+      saveLimit = 5000;
+    }
+
+    if (usageLimitEl) usageLimitEl.textContent = `${dailyLimit} / day`;
+    if (storageLimitEl) storageLimitEl.textContent = `${saveLimit.toLocaleString()} items`;
+    
+    const profileRows = document.querySelectorAll("#profile-view .profile-row");
+    profileRows.forEach(row => {
+      const label = row.querySelector(".profile-label")?.textContent;
+      const value = row.querySelector(".profile-value");
+      if (label === "Plan" && value) {
+        value.textContent = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1);
+      }
+    });
   }
 
   if (view === "settings") {
@@ -315,7 +431,6 @@ function showContentBlocked(message, options = {}) {
   forceRefresh = false;
 }
 
-
 function highlightText(text, query) {
   if (!query || !text) return text;
   
@@ -370,6 +485,8 @@ function updateUI(session) {
     loadSettings().then(settings => {
       applySettingsToUI(settings);
     });
+
+    loadQuotaFromAPI();
   } else {
     loginView.classList.remove('hidden');
     welcomeView.classList.add('hidden');
@@ -442,6 +559,13 @@ async function shouldAutoAnalyze() {
 }
 
 async function extractWebsiteContent() {
+
+  await loadQuotaFromAPI();
+
+  if (remainingToday <= 0) {
+    showLimitModal("analysis");
+    return;
+  }
   if (currentView !== "analysis") return;
   const contentCard = document.getElementById('website-content');
   const contentLoading = document.getElementById('content-loading');
@@ -645,6 +769,14 @@ async function extractWebsiteContent() {
 }
 
 async function analyzeSpecificUrl(url) {
+
+  await loadQuotaFromAPI();
+
+  if (currentPlan === "free" && remainingToday <= 0) {
+    showLimitModal(`You've reached your daily limit. Upgrade to continue.`);
+    return;
+  }
+
   const contentLoading = document.getElementById('content-loading');
   const contentError = document.getElementById('content-error');
 
@@ -738,6 +870,8 @@ function displayAIAnalysis(analysis) {
   if (outreachGoalEl) outreachGoalEl.textContent = analysis.recommendedOutreach?.goal || "—";
   if (outreachAngleEl) outreachAngleEl.textContent = analysis.recommendedOutreach?.angle || "—";
   if (outreachMessageEl) outreachMessageEl.textContent = analysis.recommendedOutreach?.message || "—";
+
+  loadQuotaFromAPI();
 }
 
 function renderSavedItem(item) {
@@ -1472,6 +1606,11 @@ const button = document.getElementById("saveButton");
 button?.addEventListener("click", async () => {
   if (!lastAnalysis || !lastExtractedMeta) return;
 
+  if (!button.classList.contains("active") && totalSavedCount >= maxSavedLimit) {
+    showLimitModal("save");
+    return;
+  }
+
   const { data } = await supabase.auth.getSession();
   const user = data?.session?.user;
   if (!user) return;
@@ -1523,6 +1662,12 @@ button?.addEventListener("click", async () => {
     button.classList.add("active");
     button.title = "Remove";
     loadSavedAnalyses();
+  }
+
+  if (button.classList.contains("active")) {
+      totalSavedCount++;
+  } else {
+      totalSavedCount--;
   }
 });
 
@@ -2265,4 +2410,79 @@ document.getElementById("reset-filters-link")?.addEventListener("click", async (
   currentPage = 1;
   await fetchAndRenderPage();
   updateFilterBanner();
+});
+
+async function openCheckout(variantId) {
+  const { data } = await supabase.auth.getSession();
+  if (!data?.session?.user) return;
+
+  const email = data.session.user.email;
+  const userId = data.session.user.id;
+
+  const checkoutUrl =
+    `https://signalizeaipay.lemonsqueezy.com/checkout/buy/${variantId}` +
+    `?checkout[email]=${encodeURIComponent(email)}` +
+    `&checkout[custom][user_id]=${encodeURIComponent(userId)}` +
+    `&media=0&discount=0`;
+
+  chrome.tabs.create({ url: checkoutUrl });
+}
+
+function showLimitModal(type) {
+  const modal = document.getElementById("limit-modal");
+  const msgEl = document.getElementById("limit-modal-message");
+  const proBtn = document.getElementById("modal-upgrade-pro-btn");
+  const teamBtn = document.getElementById("modal-upgrade-team-btn");
+  
+  if (!modal || !msgEl) return;
+
+  let message = "";
+
+  if (type === "save") {
+    if (currentPlan === "pro") {
+      message = `You've reached your Pro limit of 200 saved items. Upgrade to Team to save up to 5,000 leads.`;
+    } else {
+      message = `Your free plan allows saving up to 3 items. Upgrade to Pro for 200 or Team for 5,000 leads.`;
+    }
+  } else if (type === "analysis") {
+    if (currentPlan === "pro") {
+      message = `You've used all 50 Pro analyses for today. Upgrade to Team for 500 daily analyses.`;
+    } else {
+      message = `You've used all 5 Free analyses for today. Upgrade to Pro for 50 or Team for 500 daily analyses.`;
+    }
+  }
+
+  msgEl.textContent = message;
+  modal.classList.remove("hidden");
+  
+  if (currentPlan === "pro") {
+    if (proBtn) proBtn.classList.add("hidden");
+    if (teamBtn) teamBtn.textContent = "Upgrade to Team";
+  } else {
+    if (proBtn) proBtn.classList.remove("hidden");
+    if (proBtn) proBtn.textContent = "Upgrade to Pro";
+    if (teamBtn) teamBtn.textContent = "Upgrade to Team";
+  }
+}
+
+document.getElementById("modal-close-btn")?.addEventListener("click", () => {
+  document.getElementById("limit-modal").classList.add("hidden");
+});
+
+document.getElementById("modal-upgrade-pro-btn")?.addEventListener("click", () => {
+  document.getElementById("limit-modal").classList.add("hidden");
+  openCheckout("a124318b-c077-4f54-b714-cc77811af78b");
+});
+
+document.getElementById("modal-upgrade-team-btn")?.addEventListener("click", () => {
+  document.getElementById("limit-modal").classList.add("hidden");
+  openCheckout("88e4933d-9fae-4a7a-8c3f-ee72d78018b0");
+});
+
+document.getElementById("upgrade-btn")?.addEventListener("click", () => {
+  const variantId = currentPlan === "pro" 
+    ? "88e4933d-9fae-4a7a-8c3f-ee72d78018b0" 
+    : "a124318b-c077-4f54-b714-cc77811af78b";
+  
+  openCheckout(variantId);
 });
