@@ -106,53 +106,7 @@ async function signInWithGoogle() {
   try {
     statusMsg.textContent = "Logging in...";
 
-    const redirectUrl = chrome.identity.getRedirectURL('supabase-auth');
-
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectUrl,
-        skipBrowserRedirect: true
-      }
-    });
-
-    if (error) throw error;
-
-    chrome.identity.launchWebAuthFlow(
-      {
-        url: data.url,
-        interactive: true
-      },
-      async (redirectUrl) => {
-        if (chrome.runtime.lastError || !redirectUrl) {
-          statusMsg.textContent = "Login cancelled.";
-          return;
-        }
-
-        if (!redirectUrl.includes('access_token')) {
-          statusMsg.textContent = "Authentication failed.";
-          return;
-        }
-
-        const url = new URL(redirectUrl);
-        const params = new URLSearchParams(url.hash.substring(1));
-
-        const accessToken = params.get('access_token');
-        const refreshToken = params.get('refresh_token');
-
-        if (!accessToken) {
-          statusMsg.textContent = "No access token received.";
-          return;
-        }
-
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken
-        });
-
-        if (sessionError) throw sessionError;
-      }
-    );
+    chrome.runtime.sendMessage({ type: "LOGIN_GOOGLE" });
 
   } catch (err) {
     console.error("Login failed:", err);
@@ -351,8 +305,16 @@ function navigateTo(view) {
 }
 
 async function signOut() {
+  currentView = null;
+  forceRefresh = false;
+  selectionMode = false;
+
+  await chrome.storage.local.remove("supabaseSession");
+
   const { error } = await supabase.auth.signOut();
   if (error) console.error("Sign out error:", error);
+
+  updateUI(null);
 }
 
 async function hashContent(content) {
@@ -560,6 +522,8 @@ async function shouldAutoAnalyze() {
 }
 
 async function extractWebsiteContent() {
+  const { data } = await supabase.auth.getSession();
+  if (!data?.session) return;
 
   await loadQuotaFromAPI();
 
@@ -787,6 +751,8 @@ async function extractWebsiteContent() {
 }
 
 async function analyzeSpecificUrl(url) {
+  const { data } = await supabase.auth.getSession();
+  if (!data?.session) return;
 
   await loadQuotaFromAPI();
 
@@ -2510,3 +2476,41 @@ document.getElementById("upgrade-btn")?.addEventListener("click", () => {
   
   openCheckout(variantId);
 });
+
+chrome.runtime.onMessage.addListener(async (msg) => {
+  if (msg.type === "SESSION_UPDATED") {
+    await restoreSessionFromStorage();
+
+    const { data } = await supabase.auth.getSession();
+    if (!data?.session) return;
+
+    updateUI(data.session);
+  }
+});
+
+async function restoreSessionFromStorage() {
+  const { supabaseSession } = await chrome.storage.local.get("supabaseSession");
+
+  if (!supabaseSession?.access_token || !supabaseSession?.refresh_token) {
+    console.log("No stored Supabase session");
+    return;
+  }
+
+  const { error } = await supabase.auth.setSession({
+    access_token: supabaseSession.access_token,
+    refresh_token: supabaseSession.refresh_token
+  });
+
+  if (error) {
+    console.error("Failed to restore session", error);
+  } else {
+    console.log("Supabase session restored in extension");
+  }
+}
+
+(async () => {
+  await restoreSessionFromStorage();
+
+  const { data } = await supabase.auth.getSession();
+  updateUI(data.session);
+})();
