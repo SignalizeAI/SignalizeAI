@@ -311,8 +311,14 @@ async function signOut() {
 
   await chrome.storage.local.remove("supabaseSession");
 
-  const { error } = await supabase.auth.signOut();
-  if (error) console.error("Sign out error:", error);
+  const { data } = await supabase.auth.getSession();
+
+  if (data?.session) {
+    const { error } = await supabase.auth.signOut();
+    if (error && error.name !== "AuthSessionMissingError") {
+      console.error("Sign out error:", error);
+    }
+  }
 
   updateUI(null);
 }
