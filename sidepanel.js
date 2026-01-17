@@ -20,9 +20,9 @@ let totalFilteredCount = 0;
 let currentPage = 1;
 const PAGE_SIZE = 10;
 let currentPlan = "free";
-let remainingToday = 0;
-let usedToday = 0;
-let maxSavedLimit = 0;
+let remainingToday = null;
+let usedToday = null;
+let maxSavedLimit = 5;
 let totalSavedCount = 0;
 let dailyLimitFromAPI = 0;
 let activeFilters = {
@@ -309,6 +309,11 @@ async function signOut() {
   forceRefresh = false;
   selectionMode = false;
 
+  remainingToday = null;
+  usedToday = null;
+  totalSavedCount = 0;
+  currentPlan = null;
+
   await chrome.storage.local.remove("supabaseSession");
 
   const { data } = await supabase.auth.getSession();
@@ -442,21 +447,19 @@ async function updateUI(session) {
     welcomeView.classList.remove('hidden');
 
     const user = session.user;
-    const fullName =
-      user?.user_metadata?.full_name ||
-      user?.email ||
-      "";
+    const fullName = user?.user_metadata?.full_name || user?.email || "";
 
     if (userInitialSpan && fullName) {
       userInitialSpan.textContent = fullName.charAt(0).toUpperCase();
     }
     statusMsg.textContent = "";
-    await loadQuotaFromAPI();
+    await loadQuotaFromAPI(); 
     navigateTo("analysis");
 
     const settings = await loadSettings();
     applySettingsToUI(settings);
   } else {
+    document.getElementById("limit-modal")?.classList.add("hidden");
     loginView.classList.remove('hidden');
     welcomeView.classList.add('hidden');
   }
@@ -533,7 +536,11 @@ async function extractWebsiteContent() {
 
   await loadQuotaFromAPI();
 
-if (remainingToday <= 0 && currentPlan === "free") {
+  if (
+    remainingToday !== null && 
+    remainingToday <= 0 && 
+    currentPlan === "free"
+  ) {
     showLimitModal("analysis");
     return;
   }
