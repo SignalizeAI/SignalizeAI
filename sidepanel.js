@@ -533,7 +533,7 @@ async function extractWebsiteContent() {
 
   await loadQuotaFromAPI();
 
-  if (remainingToday <= 0) {
+if (remainingToday <= 0 && currentPlan === "free") {
     showLimitModal("analysis");
     return;
   }
