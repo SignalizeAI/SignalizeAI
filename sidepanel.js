@@ -25,6 +25,9 @@ let usedToday = null;
 let maxSavedLimit = 5;
 let totalSavedCount = 0;
 let dailyLimitFromAPI = 0;
+let isUserInteracting = false;
+let dropdownOpenedAt = 0;
+let isAnalysisLoading = false;
 let activeFilters = {
   minScore: 0,
   maxScore: 100,
@@ -235,12 +238,20 @@ function updateDeleteState() {
 }
 
 function navigateTo(view) {
+  const prevView = currentView;
 
   if (view !== "saved" && selectionMode) {
     exitSelectionMode();
   }
+  if (prevView === view && !welcomeView.classList.contains('hidden')) {
+    return;
+  }
   currentView = view;
 
+  if (prevView !== view && !isAnalysisLoading) {
+    document.querySelector(".dropdown-card")?.classList.remove("expanded");
+    isUserInteracting = false;
+  }
   document.getElementById("ai-analysis")?.classList.add("hidden");
   document.getElementById("saved-analyses")?.classList.add("hidden");
   document.getElementById("profile-view")?.classList.add("hidden");
@@ -248,8 +259,6 @@ function navigateTo(view) {
 
   document.getElementById("ai-loading")?.classList.add("hidden");
   document.getElementById("filter-panel")?.classList.add("hidden");
-
-  document.querySelector(".dropdown-card")?.classList.remove("expanded");
 
   if (headerSubtitle) {
     if (view === "analysis") {
@@ -443,6 +452,8 @@ function updateReanalysisUI(settings) {
 
 async function updateUI(session) {
   if (session) {
+    const isAlreadyLoggedIn = !welcomeView.classList.contains('hidden');
+
     loginView.classList.add('hidden');
     welcomeView.classList.remove('hidden');
 
@@ -454,7 +465,14 @@ async function updateUI(session) {
     }
     statusMsg.textContent = "";
     await loadQuotaFromAPI(); 
-    navigateTo("analysis");
+
+    const isMenuOpen = document
+      .querySelector(".dropdown-card")
+      ?.classList.contains("expanded");
+
+    if (!isAlreadyLoggedIn && !isMenuOpen) {
+      navigateTo("analysis");
+    }
 
     const settings = await loadSettings();
     applySettingsToUI(settings);
@@ -530,7 +548,12 @@ async function shouldAutoAnalyze() {
   return settings.autoReanalysis;
 }
 
+function endAnalysisLoading() {
+  isAnalysisLoading = false;
+}
+
 async function extractWebsiteContent() {
+  if (isUserInteracting) return;
   const { data } = await supabase.auth.getSession();
   if (!data?.session) return;
 
@@ -549,6 +572,11 @@ async function extractWebsiteContent() {
   const contentLoading = document.getElementById('content-loading');
   const contentError = document.getElementById('content-error');
   const contentData = document.getElementById('content-data');
+
+  if (contentLoading && !contentLoading.classList.contains("hidden")) {
+    return;
+  }
+
   const settings = await loadSettings();
 
   // Show loading state
@@ -556,12 +584,14 @@ async function extractWebsiteContent() {
   if (contentLoading) contentLoading.classList.remove('hidden');
   if (contentError) contentError.classList.add('hidden');
   if (contentData) contentData.classList.add('hidden');
+  isAnalysisLoading = true;
 
   try {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     const tab = tabs[0];
 
     if (!tab?.id || !tab.url) {
+      endAnalysisLoading();
       if (contentLoading) contentLoading.classList.add('hidden');
       if (contentError) contentError.classList.remove('hidden');
       return;
@@ -590,7 +620,7 @@ async function extractWebsiteContent() {
         }
 
         if (response?.ok && response.content) {
-          console.log("📄 Extracted website content:", response.content);
+          console.log("Extracted website content:", response.content);
 
           lastExtractedMeta = {
             title: cleanTitle(response.content.title),
@@ -731,6 +761,7 @@ async function extractWebsiteContent() {
 
         }
         else if (response?.reason === "THIN_CONTENT") {
+          endAnalysisLoading();
           showContentBlocked(
             "This page has limited public content.",
             {
@@ -1565,6 +1596,14 @@ const dropdownCard = document.querySelector('.dropdown-card');
 if (dropdownHeader && dropdownCard) {
   dropdownHeader.addEventListener('click', (e) => {
     e.stopPropagation();
+
+    const isOpening = !dropdownCard.classList.contains("expanded");
+
+    if (isOpening) {
+      dropdownOpenedAt = Date.now();
+      isUserInteracting = true;
+    }
+
     dropdownCard.classList.toggle('expanded');
   });
 }
@@ -1580,14 +1619,22 @@ homeTitle?.addEventListener("click", (e) => {
 
 document.addEventListener("click", (e) => {
   if (!dropdownCard) return;
+  if (isAnalysisLoading) return;
 
-  if (!dropdownCard.contains(e.target)) {
+  if (Date.now() - dropdownOpenedAt < 150) return;
+
+  if (
+    dropdownCard.classList.contains("expanded") &&
+    !dropdownCard.contains(e.target)
+  ) {
     dropdownCard.classList.remove("expanded");
+    isUserInteracting = false;
   }
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "TAB_CHANGED") {
+    if (isUserInteracting || isMenuOpen()) return;
     shouldAutoAnalyze().then(enabled => {
       if (!enabled) return;
 
@@ -1601,6 +1648,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 document.addEventListener('visibilitychange', () => {
+  if (isUserInteracting || isMenuOpen()) return;
   if (!document.hidden) {
     shouldAutoAnalyze().then(enabled => {
       if (!enabled) return;
@@ -1613,6 +1661,10 @@ document.addEventListener('visibilitychange', () => {
     });
   }
 });
+
+function isMenuOpen() {
+  return document.querySelector(".dropdown-card")?.classList.contains("expanded");
+}
 
 const button = document.getElementById("saveButton");
 
