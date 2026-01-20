@@ -2494,19 +2494,25 @@ async function openCheckout(variantId) {
 function showLimitModal(type) {
   const modal = document.getElementById("limit-modal");
   const msgEl = document.getElementById("limit-modal-message");
+  const headerEl = modal?.querySelector(".modal-header h3");
   const proBtn = document.getElementById("modal-upgrade-pro-btn");
   const teamBtn = document.getElementById("modal-upgrade-team-btn");
   
   if (!modal || !msgEl) return;
 
   let message = "";
+  let title = "Limit Reached";
 
   if (type === "save") {
     message = `You've reached your limit of ${maxSavedLimit} saved items. Upgrade to increase it.`;
-  } else {
+  } else if (type === "analysis") {
     message = `You've used all ${dailyLimitFromAPI} analyses for today. Upgrade to increase your limit.`;
+  } else {
+    title = "Upgrade Plan";
+    message = "Unlock higher limits and advanced features by upgrading your plan.";
   }
 
+  if (headerEl) headerEl.textContent = title;
   msgEl.textContent = message;
   modal.classList.remove("hidden");
   
@@ -2535,11 +2541,9 @@ document.getElementById("modal-upgrade-team-btn")?.addEventListener("click", () 
 });
 
 document.getElementById("upgrade-btn")?.addEventListener("click", () => {
-  const variantId = currentPlan === "pro" 
-    ? "88e4933d-9fae-4a7a-8c3f-ee72d78018b0" 
-    : "a124318b-c077-4f54-b714-cc77811af78b";
+  showLimitModal("upgrade");
   
-  openCheckout(variantId);
+  
 });
 
 chrome.runtime.onMessage.addListener(async (msg) => {
