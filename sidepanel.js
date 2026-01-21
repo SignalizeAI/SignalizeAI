@@ -180,23 +180,25 @@ function renderQuotaBanner() {
   if (!banner || !text || !btn) return;
 
   banner.classList.remove("hidden");
-  const used = usedToday;
-  const totalLimit = Math.max(1, dailyLimitFromAPI);
+  const used = Number(usedToday ?? 0);
+  const totalLimit = Math.max(1, Number(dailyLimitFromAPI ?? 0));
   const percentage = Math.min(100, (used / totalLimit) * 100);
 
 
   if (progressBar) {
     progressBar.style.width = `${percentage}%`;
 
-    if (remainingToday <= 0) {
+    if (Number(remainingToday ?? 0) <= 0) {
       progressBar.classList.add("danger");
     } else {
       progressBar.classList.remove("danger");
     }
   }
 
-  if (remainingToday > 0) {
-    text.textContent = `${used} / ${totalLimit} analyses used today`;
+  const savedText = `${Number(totalSavedCount ?? 0)} / ${Number(maxSavedLimit ?? 0)} saved`;
+
+  if (Number(remainingToday ?? 0) > 0) {
+    text.textContent = `${used} / ${totalLimit} analyses, ${savedText}`;
     
     if (currentPlan === "team") {
       btn.classList.add("hidden");
@@ -205,7 +207,7 @@ function renderQuotaBanner() {
       btn.textContent = currentPlan === "pro" ? "Upgrade to Team" : "Upgrade";
     }
   } else {
-    text.textContent = "Daily limit reached";
+    text.textContent = `Daily limit reached, ${savedText}`;
     btn.classList.remove("hidden");
     btn.textContent = currentPlan === "pro" ? "Upgrade to Team" : "Upgrade to continue";
   }
