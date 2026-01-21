@@ -24,23 +24,32 @@ export async function analyzeWebsiteContent(extracted) {
     throw new Error("Invalid JSON from backend");
   }
 
-  if (data?.upgrade_required || data?.error === "limit_reached") {
+  if (!res.ok || data?.upgrade_required || data?.error === "limit_reached") {
     return {
       blocked: true,
-      plan: data.plan || "free",
-      remaining_today: 0
+      quota: {
+        plan: data.plan || "free",
+        used_today: data.used_today ?? 0,
+        daily_limit: data.daily_limit ?? 0,
+        remaining_today: data.remaining_today ?? 0,
+        max_saved: data.max_saved ?? 0,
+        total_saved: data.total_saved ?? 0
+      }
     };
-  }
-
-  if (!res.ok) {
-    throw new Error(data?.error || "Backend error");
   }
 
   return {
     blocked: false,
-    plan: data.plan,
-    remaining_today: data.remaining_today,
-    ...normalizeAnalysis(data)
+
+    quota: {
+      plan: data.plan,
+      used_today: data.used_today,
+      daily_limit: data.daily_limit,
+      remaining_today: data.remaining_today,
+      max_saved: data.max_saved,
+      total_saved: data.total_saved
+    },
+    analysis: normalizeAnalysis(data)
   };
 }
 

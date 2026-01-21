@@ -20,9 +20,14 @@ let totalFilteredCount = 0;
 let currentPage = 1;
 const PAGE_SIZE = 10;
 let currentPlan = "free";
-let remainingToday = 0;
-let maxSavedLimit = 0;
+let remainingToday = null;
+let usedToday = null;
+let maxSavedLimit = 5;
 let totalSavedCount = 0;
+let dailyLimitFromAPI = 0;
+let isUserInteracting = false;
+let dropdownOpenedAt = 0;
+let isAnalysisLoading = false;
 let activeFilters = {
   minScore: 0,
   maxScore: 100,
@@ -104,53 +109,7 @@ async function signInWithGoogle() {
   try {
     statusMsg.textContent = "Logging in...";
 
-    const redirectUrl = chrome.identity.getRedirectURL('supabase-auth');
-
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectUrl,
-        skipBrowserRedirect: true
-      }
-    });
-
-    if (error) throw error;
-
-    chrome.identity.launchWebAuthFlow(
-      {
-        url: data.url,
-        interactive: true
-      },
-      async (redirectUrl) => {
-        if (chrome.runtime.lastError || !redirectUrl) {
-          statusMsg.textContent = "Login cancelled.";
-          return;
-        }
-
-        if (!redirectUrl.includes('access_token')) {
-          statusMsg.textContent = "Authentication failed.";
-          return;
-        }
-
-        const url = new URL(redirectUrl);
-        const params = new URLSearchParams(url.hash.substring(1));
-
-        const accessToken = params.get('access_token');
-        const refreshToken = params.get('refresh_token');
-
-        if (!accessToken) {
-          statusMsg.textContent = "No access token received.";
-          return;
-        }
-
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken
-        });
-
-        if (sessionError) throw sessionError;
-      }
-    );
+    chrome.runtime.sendMessage({ type: "LOGIN_GOOGLE" });
 
   } catch (err) {
     console.error("Login failed:", err);
@@ -173,6 +132,10 @@ async function loadQuotaFromAPI() {
       console.warn("Quota fetch failed:", res.status);
       currentPlan = "free";
       remainingToday = 0;
+      usedToday = 0;
+      dailyLimitFromAPI = 5;
+      maxSavedLimit = 3;
+      totalSavedCount = 0;
       renderQuotaBanner();
       return;
     }
@@ -182,7 +145,8 @@ async function loadQuotaFromAPI() {
     if (dataJson.plan) {
       currentPlan = dataJson.plan;
       remainingToday = dataJson.remaining_today;
-      
+      usedToday = dataJson.used_today;
+      dailyLimitFromAPI = dataJson.daily_limit;
       maxSavedLimit = dataJson.max_saved || 0;
       totalSavedCount = dataJson.total_saved || 0;
       
@@ -190,6 +154,13 @@ async function loadQuotaFromAPI() {
     }
   } catch (e) {
     console.warn("Quota fetch failed", e);
+    currentPlan = "free";
+    remainingToday = 0;
+    usedToday = 0;
+    dailyLimitFromAPI = 5;
+    maxSavedLimit = 3;
+    totalSavedCount = 0;
+    renderQuotaBanner();
   }
 }
 
@@ -209,26 +180,25 @@ function renderQuotaBanner() {
   if (!banner || !text || !btn) return;
 
   banner.classList.remove("hidden");
-
-  let totalLimit = 5; 
-  if (currentPlan === "pro") totalLimit = 50;
-  if (currentPlan === "team") totalLimit = 500;
-
-  const used = Math.max(0, totalLimit - remainingToday);
+  const used = Number(usedToday ?? 0);
+  const totalLimit = Math.max(1, Number(dailyLimitFromAPI ?? 0));
   const percentage = Math.min(100, (used / totalLimit) * 100);
+
 
   if (progressBar) {
     progressBar.style.width = `${percentage}%`;
 
-    if (remainingToday <= 0) {
+    if (Number(remainingToday ?? 0) <= 0) {
       progressBar.classList.add("danger");
     } else {
       progressBar.classList.remove("danger");
     }
   }
 
-  if (remainingToday > 0) {
-    text.textContent = `${used} / ${totalLimit} analyses used today`;
+  const savedText = `${Number(totalSavedCount ?? 0)} / ${Number(maxSavedLimit ?? 0)} saved`;
+
+  if (Number(remainingToday ?? 0) > 0) {
+    text.textContent = `${used} / ${totalLimit} analyses, ${savedText}`;
     
     if (currentPlan === "team") {
       btn.classList.add("hidden");
@@ -237,7 +207,7 @@ function renderQuotaBanner() {
       btn.textContent = currentPlan === "pro" ? "Upgrade to Team" : "Upgrade";
     }
   } else {
-    text.textContent = "Daily limit reached";
+    text.textContent = `Daily limit reached, ${savedText}`;
     btn.classList.remove("hidden");
     btn.textContent = currentPlan === "pro" ? "Upgrade to Team" : "Upgrade to continue";
   }
@@ -270,12 +240,20 @@ function updateDeleteState() {
 }
 
 function navigateTo(view) {
+  const prevView = currentView;
 
   if (view !== "saved" && selectionMode) {
     exitSelectionMode();
   }
+  if (prevView === view && !welcomeView.classList.contains('hidden')) {
+    return;
+  }
   currentView = view;
 
+  if (prevView !== view && !isAnalysisLoading) {
+    document.querySelector(".dropdown-card")?.classList.remove("expanded");
+    isUserInteracting = false;
+  }
   document.getElementById("ai-analysis")?.classList.add("hidden");
   document.getElementById("saved-analyses")?.classList.add("hidden");
   document.getElementById("profile-view")?.classList.add("hidden");
@@ -283,8 +261,6 @@ function navigateTo(view) {
 
   document.getElementById("ai-loading")?.classList.add("hidden");
   document.getElementById("filter-panel")?.classList.add("hidden");
-
-  document.querySelector(".dropdown-card")?.classList.remove("expanded");
 
   if (headerSubtitle) {
     if (view === "analysis") {
@@ -318,16 +294,8 @@ function navigateTo(view) {
     const storageLimitEl = document.getElementById("profile-storage-limit");
     const planNameEl = document.querySelector("#profile-view .profile-value");
 
-    let dailyLimit = 5;
-    let saveLimit = 3;
-
-    if (currentPlan === "pro") {
-      dailyLimit = 50;
-      saveLimit = 200;
-    } else if (currentPlan === "team") {
-      dailyLimit = 500;
-      saveLimit = 5000;
-    }
+    let dailyLimit = dailyLimitFromAPI;
+    let saveLimit = maxSavedLimit;
 
     if (usageLimitEl) usageLimitEl.textContent = `${dailyLimit} / day`;
     if (storageLimitEl) storageLimitEl.textContent = `${saveLimit.toLocaleString()} items`;
@@ -348,8 +316,27 @@ function navigateTo(view) {
 }
 
 async function signOut() {
-  const { error } = await supabase.auth.signOut();
-  if (error) console.error("Sign out error:", error);
+  currentView = null;
+  forceRefresh = false;
+  selectionMode = false;
+
+  remainingToday = null;
+  usedToday = null;
+  totalSavedCount = 0;
+  currentPlan = null;
+
+  await chrome.storage.local.remove("supabaseSession");
+
+  const { data } = await supabase.auth.getSession();
+
+  if (data?.session) {
+    const { error } = await supabase.auth.signOut();
+    if (error && error.name !== "AuthSessionMissingError") {
+      console.error("Sign out error:", error);
+    }
+  }
+
+  updateUI(null);
 }
 
 async function hashContent(content) {
@@ -465,29 +452,34 @@ function updateReanalysisUI(settings) {
   }
 }
 
-function updateUI(session) {
+async function updateUI(session) {
   if (session) {
+    const isAlreadyLoggedIn = !welcomeView.classList.contains('hidden');
+
     loginView.classList.add('hidden');
     welcomeView.classList.remove('hidden');
 
     const user = session.user;
-    const fullName =
-      user?.user_metadata?.full_name ||
-      user?.email ||
-      "";
+    const fullName = user?.user_metadata?.full_name || user?.email || "";
 
     if (userInitialSpan && fullName) {
       userInitialSpan.textContent = fullName.charAt(0).toUpperCase();
     }
     statusMsg.textContent = "";
-    navigateTo("analysis");
+    await loadQuotaFromAPI(); 
 
-    loadSettings().then(settings => {
-      applySettingsToUI(settings);
-    });
+    const isMenuOpen = document
+      .querySelector(".dropdown-card")
+      ?.classList.contains("expanded");
 
-    loadQuotaFromAPI();
+    if (!isAlreadyLoggedIn && !isMenuOpen) {
+      navigateTo("analysis");
+    }
+
+    const settings = await loadSettings();
+    applySettingsToUI(settings);
   } else {
+    document.getElementById("limit-modal")?.classList.add("hidden");
     loginView.classList.remove('hidden');
     welcomeView.classList.add('hidden');
   }
@@ -558,11 +550,22 @@ async function shouldAutoAnalyze() {
   return settings.autoReanalysis;
 }
 
+function endAnalysisLoading() {
+  isAnalysisLoading = false;
+}
+
 async function extractWebsiteContent() {
+  if (isUserInteracting) return;
+  const { data } = await supabase.auth.getSession();
+  if (!data?.session) return;
 
   await loadQuotaFromAPI();
 
-  if (remainingToday <= 0) {
+  if (
+    remainingToday !== null && 
+    remainingToday <= 0 && 
+    currentPlan === "free"
+  ) {
     showLimitModal("analysis");
     return;
   }
@@ -571,6 +574,11 @@ async function extractWebsiteContent() {
   const contentLoading = document.getElementById('content-loading');
   const contentError = document.getElementById('content-error');
   const contentData = document.getElementById('content-data');
+
+  if (contentLoading && !contentLoading.classList.contains("hidden")) {
+    return;
+  }
+
   const settings = await loadSettings();
 
   // Show loading state
@@ -578,12 +586,14 @@ async function extractWebsiteContent() {
   if (contentLoading) contentLoading.classList.remove('hidden');
   if (contentError) contentError.classList.add('hidden');
   if (contentData) contentData.classList.add('hidden');
+  isAnalysisLoading = true;
 
   try {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     const tab = tabs[0];
 
     if (!tab?.id || !tab.url) {
+      endAnalysisLoading();
       if (contentLoading) contentLoading.classList.add('hidden');
       if (contentError) contentError.classList.remove('hidden');
       return;
@@ -612,7 +622,7 @@ async function extractWebsiteContent() {
         }
 
         if (response?.ok && response.content) {
-          console.log("📄 Extracted website content:", response.content);
+          console.log("Extracted website content:", response.content);
 
           lastExtractedMeta = {
             title: cleanTitle(response.content.title),
@@ -702,7 +712,24 @@ async function extractWebsiteContent() {
                 return;
               }
 
-              const analysis = await analyzeWebsiteContent(response.content);
+            const result = await analyzeWebsiteContent(response.content);
+
+            if (result.blocked) {
+              showLimitModal("analysis");
+              return;
+            }
+
+            if (result.quota) {
+              currentPlan = result.quota.plan;
+              usedToday = result.quota.used_today;
+              remainingToday = result.quota.remaining_today;
+              dailyLimitFromAPI = result.quota.daily_limit;
+              maxSavedLimit = result.quota.max_saved;
+              totalSavedCount = result.quota.total_saved;
+              renderQuotaBanner();
+            }
+
+              const analysis = result.analysis;
               lastAnalysis = analysis;
               displayAIAnalysis(analysis);
 
@@ -736,6 +763,7 @@ async function extractWebsiteContent() {
 
         }
         else if (response?.reason === "THIN_CONTENT") {
+          endAnalysisLoading();
           showContentBlocked(
             "This page has limited public content.",
             {
@@ -769,11 +797,13 @@ async function extractWebsiteContent() {
 }
 
 async function analyzeSpecificUrl(url) {
+  const { data } = await supabase.auth.getSession();
+  if (!data?.session) return;
 
   await loadQuotaFromAPI();
 
   if (currentPlan === "free" && remainingToday <= 0) {
-    showLimitModal(`You've reached your daily limit. Upgrade to continue.`);
+    showLimitModal("analysis");
     return;
   }
 
@@ -870,8 +900,6 @@ function displayAIAnalysis(analysis) {
   if (outreachGoalEl) outreachGoalEl.textContent = analysis.recommendedOutreach?.goal || "—";
   if (outreachAngleEl) outreachAngleEl.textContent = analysis.recommendedOutreach?.angle || "—";
   if (outreachMessageEl) outreachMessageEl.textContent = analysis.recommendedOutreach?.message || "—";
-
-  loadQuotaFromAPI();
 }
 
 function renderSavedItem(item) {
@@ -1317,7 +1345,36 @@ async function fetchAndRenderPage() {
   loadingEl.classList.remove("hidden");
   listEl.innerHTML = "";
 
-  let query = supabase
+  let countQuery = supabase
+    .from("saved_analyses")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  if (activeFilters.minScore > 0)
+    countQuery = countQuery.gte("sales_readiness_score", activeFilters.minScore);
+
+  if (activeFilters.maxScore < 100)
+    countQuery = countQuery.lte("sales_readiness_score", activeFilters.maxScore);
+
+  if (activeFilters.persona)
+    countQuery = countQuery.ilike("best_sales_persona", activeFilters.persona);
+
+  if (activeFilters.searchQuery) {
+    const q = `%${activeFilters.searchQuery}%`;
+    countQuery = countQuery.or(`title.ilike.${q},domain.ilike.${q}`);
+  }
+
+  const { count, error: countError } = await countQuery;
+
+  if (countError) {
+    console.error(countError);
+    loadingEl.classList.add("hidden");
+    return;
+  }
+
+  totalFilteredCount = count || 0;
+
+  let dataQuery = supabase
     .from("saved_analyses")
     .select(`
       *,
@@ -1325,21 +1382,18 @@ async function fetchAndRenderPage() {
       recommended_outreach_goal,
       recommended_outreach_angle,
       recommended_outreach_message
-    `, { count: "exact" })
+    `)
     .eq("user_id", user.id);
 
-  if (activeFilters.minScore > 0) {
-    query = query.gte("sales_readiness_score", activeFilters.minScore);
-  }
-  if (activeFilters.maxScore < 100) {
-    query = query.lte("sales_readiness_score", activeFilters.maxScore);
-  }
-  if (activeFilters.persona) {
-    query = query.ilike("best_sales_persona", activeFilters.persona);
-  }
+  if (activeFilters.minScore > 0)
+    dataQuery = dataQuery.gte("sales_readiness_score", activeFilters.minScore);
+  if (activeFilters.maxScore < 100)
+    dataQuery = dataQuery.lte("sales_readiness_score", activeFilters.maxScore);
+  if (activeFilters.persona)
+    dataQuery = dataQuery.ilike("best_sales_persona", activeFilters.persona);
   if (activeFilters.searchQuery) {
     const q = `%${activeFilters.searchQuery}%`;
-    query = query.or(`title.ilike.${q},domain.ilike.${q}`);
+    dataQuery = dataQuery.or(`title.ilike.${q},domain.ilike.${q}`);
   }
 
   const from = (currentPage - 1) * PAGE_SIZE;
@@ -1385,10 +1439,9 @@ async function fetchAndRenderPage() {
       break;
   }
 
-  const { data, count, error } = await query
+  const { data, error } = await dataQuery
     .order(sortColumn, { ascending: sortAsc })
     .range(from, to);
-
 
   loadingEl.classList.add("hidden");
 
@@ -1396,8 +1449,6 @@ async function fetchAndRenderPage() {
     console.error(error);
     return;
   }
-
-  totalFilteredCount = count || 0;
 
   if (!data || data.length === 0) {
     updateSavedEmptyState(0);
@@ -1412,11 +1463,6 @@ async function fetchAndRenderPage() {
   updateSavedEmptyState(data.length);
   renderPagination(Math.ceil(totalFilteredCount / PAGE_SIZE));
   updateFilterBanner();
-
-  const shownSoFar = Math.min(
-    currentPage * PAGE_SIZE,
-    totalFilteredCount
-  );
 }
 
 function renderPagination(totalPages) {
@@ -1552,6 +1598,14 @@ const dropdownCard = document.querySelector('.dropdown-card');
 if (dropdownHeader && dropdownCard) {
   dropdownHeader.addEventListener('click', (e) => {
     e.stopPropagation();
+
+    const isOpening = !dropdownCard.classList.contains("expanded");
+
+    if (isOpening) {
+      dropdownOpenedAt = Date.now();
+      isUserInteracting = true;
+    }
+
     dropdownCard.classList.toggle('expanded');
   });
 }
@@ -1567,14 +1621,22 @@ homeTitle?.addEventListener("click", (e) => {
 
 document.addEventListener("click", (e) => {
   if (!dropdownCard) return;
+  if (isAnalysisLoading) return;
 
-  if (!dropdownCard.contains(e.target)) {
+  if (Date.now() - dropdownOpenedAt < 150) return;
+
+  if (
+    dropdownCard.classList.contains("expanded") &&
+    !dropdownCard.contains(e.target)
+  ) {
     dropdownCard.classList.remove("expanded");
+    isUserInteracting = false;
   }
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "TAB_CHANGED") {
+    if (isUserInteracting || isMenuOpen()) return;
     shouldAutoAnalyze().then(enabled => {
       if (!enabled) return;
 
@@ -1588,6 +1650,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 document.addEventListener('visibilitychange', () => {
+  if (isUserInteracting || isMenuOpen()) return;
   if (!document.hidden) {
     shouldAutoAnalyze().then(enabled => {
       if (!enabled) return;
@@ -1601,10 +1664,15 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+function isMenuOpen() {
+  return document.querySelector(".dropdown-card")?.classList.contains("expanded");
+}
+
 const button = document.getElementById("saveButton");
 
 button?.addEventListener("click", async () => {
   if (!lastAnalysis || !lastExtractedMeta) return;
+  await loadQuotaFromAPI();
 
   if (!button.classList.contains("active") && totalSavedCount >= maxSavedLimit) {
     showLimitModal("save");
@@ -1632,6 +1700,7 @@ button?.addEventListener("click", async () => {
     button.classList.remove("active");
     button.title = "Save";
     loadSavedAnalyses();
+    await loadQuotaFromAPI();
   } else {
     const { error } = await supabase.from("saved_analyses").insert({
       user_id: user.id,
@@ -1662,12 +1731,7 @@ button?.addEventListener("click", async () => {
     button.classList.add("active");
     button.title = "Remove";
     loadSavedAnalyses();
-  }
-
-  if (button.classList.contains("active")) {
-      totalSavedCount++;
-  } else {
-      totalSavedCount--;
+    await loadQuotaFromAPI();
   }
 });
 
@@ -2329,6 +2393,7 @@ async function finalizePendingDeletes() {
   document.body.classList.remove("undo-active");
   await fetchAndRenderPage();
   updateFilterBanner();
+  await loadQuotaFromAPI();
 }
 
 const searchToggle = document.getElementById("search-toggle");
@@ -2431,27 +2496,25 @@ async function openCheckout(variantId) {
 function showLimitModal(type) {
   const modal = document.getElementById("limit-modal");
   const msgEl = document.getElementById("limit-modal-message");
+  const headerEl = modal?.querySelector(".modal-header h3");
   const proBtn = document.getElementById("modal-upgrade-pro-btn");
   const teamBtn = document.getElementById("modal-upgrade-team-btn");
   
   if (!modal || !msgEl) return;
 
   let message = "";
+  let title = "Limit Reached";
 
   if (type === "save") {
-    if (currentPlan === "pro") {
-      message = `You've reached your Pro limit of 200 saved items. Upgrade to Team to save up to 5,000 leads.`;
-    } else {
-      message = `Your free plan allows saving up to 3 items. Upgrade to Pro for 200 or Team for 5,000 leads.`;
-    }
+    message = `You've reached your limit of ${maxSavedLimit} saved items. Upgrade to increase it.`;
   } else if (type === "analysis") {
-    if (currentPlan === "pro") {
-      message = `You've used all 50 Pro analyses for today. Upgrade to Team for 500 daily analyses.`;
-    } else {
-      message = `You've used all 5 Free analyses for today. Upgrade to Pro for 50 or Team for 500 daily analyses.`;
-    }
+    message = `You've used all ${dailyLimitFromAPI} analyses for today. Upgrade to increase your limit.`;
+  } else {
+    title = "Upgrade Plan";
+    message = "Unlock higher limits and advanced features by upgrading your plan.";
   }
 
+  if (headerEl) headerEl.textContent = title;
   msgEl.textContent = message;
   modal.classList.remove("hidden");
   
@@ -2480,9 +2543,45 @@ document.getElementById("modal-upgrade-team-btn")?.addEventListener("click", () 
 });
 
 document.getElementById("upgrade-btn")?.addEventListener("click", () => {
-  const variantId = currentPlan === "pro" 
-    ? "88e4933d-9fae-4a7a-8c3f-ee72d78018b0" 
-    : "a124318b-c077-4f54-b714-cc77811af78b";
+  showLimitModal("upgrade");
   
-  openCheckout(variantId);
+  
 });
+
+chrome.runtime.onMessage.addListener(async (msg) => {
+  if (msg.type === "SESSION_UPDATED") {
+    await restoreSessionFromStorage();
+
+    const { data } = await supabase.auth.getSession();
+    if (!data?.session) return;
+
+    updateUI(data.session);
+  }
+});
+
+async function restoreSessionFromStorage() {
+  const { supabaseSession } = await chrome.storage.local.get("supabaseSession");
+
+  if (!supabaseSession?.access_token || !supabaseSession?.refresh_token) {
+    console.log("No stored Supabase session");
+    return;
+  }
+
+  const { error } = await supabase.auth.setSession({
+    access_token: supabaseSession.access_token,
+    refresh_token: supabaseSession.refresh_token
+  });
+
+  if (error) {
+    console.error("Failed to restore session", error);
+  } else {
+    console.log("Supabase session restored in extension");
+  }
+}
+
+(async () => {
+  await restoreSessionFromStorage();
+
+  const { data } = await supabase.auth.getSession();
+  updateUI(data.session);
+})();
