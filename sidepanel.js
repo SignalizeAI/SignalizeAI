@@ -367,13 +367,14 @@ function saveSettings(partial) {
 }
 
 function showContentBlocked(message, options = {}) {
-  const contentCard = document.getElementById("website-content");
-  const contentLoading = document.getElementById("content-loading");
-  const contentError = document.getElementById("content-error");
+  endAnalysisLoading();
+  
   const aiCard = document.getElementById("ai-analysis");
+  const contentLoading = document.getElementById("ai-loading");
+  const contentError = document.getElementById("content-error");
   const saveBtn = document.getElementById("saveButton");
 
-  document.getElementById("content-data")?.classList.add("hidden");
+  document.getElementById("ai-data")?.classList.add("hidden");
   if (contentLoading) contentLoading.classList.add("hidden");
 
   if (contentError) {
@@ -570,10 +571,10 @@ async function extractWebsiteContent() {
     return;
   }
   if (currentView !== "analysis") return;
-  const contentCard = document.getElementById('website-content');
-  const contentLoading = document.getElementById('content-loading');
+  const aiCard = document.getElementById('ai-analysis');
+  const contentLoading = document.getElementById('ai-loading');
   const contentError = document.getElementById('content-error');
-  const contentData = document.getElementById('content-data');
+  const contentData = document.getElementById('ai-data');
 
   if (contentLoading && !contentLoading.classList.contains("hidden")) {
     return;
@@ -582,20 +583,38 @@ async function extractWebsiteContent() {
   const settings = await loadSettings();
 
   // Show loading state
-  if (contentCard) contentCard.classList.remove('hidden');
+  if (aiCard) aiCard.classList.remove('hidden');
   if (contentLoading) contentLoading.classList.remove('hidden');
   if (contentError) contentError.classList.add('hidden');
   if (contentData) contentData.classList.add('hidden');
   isAnalysisLoading = true;
 
   try {
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    let tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    if (!tabs.length || !tabs[0]?.url) {
+      tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    }
+    
     const tab = tabs[0];
 
-    if (!tab?.id || !tab.url) {
+    if (!tab?.id) {
       endAnalysisLoading();
       if (contentLoading) contentLoading.classList.add('hidden');
-      if (contentError) contentError.classList.remove('hidden');
+      if (contentError) {
+        contentError.innerHTML = '<div class="blocked-message"><p>Unable to access tab information.</p></div>';
+        contentError.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (!tab.url) {
+      endAnalysisLoading();
+      if (contentLoading) contentLoading.classList.add('hidden');
+      if (contentError) {
+        contentError.innerHTML = '<div class="blocked-message"><p>Please navigate to a website to analyze.</p></div>';
+        contentError.classList.remove('hidden');
+      }
       return;
     }
 
@@ -604,9 +623,13 @@ async function extractWebsiteContent() {
       tab.url.startsWith("about:") ||
       tab.url.startsWith("edge://")
     ) {
-      console.info("Skipping extraction on restricted page:", tab.url);
+      endAnalysisLoading();
       if (contentLoading) contentLoading.classList.add('hidden');
-      if (contentError) contentError.classList.remove('hidden');
+      if (contentError) {
+        contentError.innerHTML = '<div class="blocked-message"><p>Cannot analyze browser system pages.</p></div>';
+        contentError.classList.remove('hidden');
+      }
+      console.info("Skipping extraction on restricted page:", tab.url);
       return;
     }
 
@@ -614,15 +637,19 @@ async function extractWebsiteContent() {
       tab.id,
       { type: "EXTRACT_WEBSITE_CONTENT" },
       async (response) => {
-        if (contentLoading) contentLoading.classList.add('hidden');
-
         if (chrome.runtime.lastError) {
-          if (contentError) contentError.classList.remove('hidden');
+          endAnalysisLoading();
+          showContentBlocked("Failed to extract page content. This page may not be accessible.");
+          return;
+        }
+        
+        if (!response) {
+          endAnalysisLoading();
+          showContentBlocked("No response from content script");
           return;
         }
 
         if (response?.ok && response.content) {
-          console.log("Extracted website content:", response.content);
 
           lastExtractedMeta = {
             title: cleanTitle(response.content.title),
@@ -729,6 +756,11 @@ async function extractWebsiteContent() {
               renderQuotaBanner();
             }
 
+            if (!result.analysis) {
+              showContentBlocked("Failed to generate analysis");
+              return;
+            }
+
               const analysis = result.analysis;
               lastAnalysis = analysis;
               displayAIAnalysis(analysis);
@@ -758,7 +790,7 @@ async function extractWebsiteContent() {
               }
             }
           } catch (err) {
-            console.error("AI analysis failed:", err);
+            showContentBlocked("Failed to analyze page: " + err.message);
           }
 
         }
@@ -784,15 +816,16 @@ async function extractWebsiteContent() {
           return;
         }
         else {
-          console.error("Extraction failed:", response?.error || response);
-          showContentBlocked("Unable to analyze this page.");
+          if (response.error) {
+            showContentBlocked(`Error: ${response.error}`);
+          } else {
+            showContentBlocked("Unable to analyze this page.");
+          }
         }
       }
     );
   } catch (err) {
-    console.error("Error extracting website content:", err);
-    if (contentLoading) contentLoading.classList.add('hidden');
-    if (contentError) contentError.classList.remove('hidden');
+    endAnalysisLoading();
   }
 }
 
@@ -807,7 +840,7 @@ async function analyzeSpecificUrl(url) {
     return;
   }
 
-  const contentLoading = document.getElementById('content-loading');
+  const contentLoading = document.getElementById('ai-loading');
   const contentError = document.getElementById('content-error');
 
   if (contentError) contentError.classList.add("hidden");
@@ -849,6 +882,8 @@ async function analyzeSpecificUrl(url) {
 }
 
 function displayAIAnalysis(analysis) {
+  endAnalysisLoading();
+  
   const aiCard = document.getElementById('ai-analysis');
   const aiLoading = document.getElementById('ai-loading');
   const aiData = document.getElementById('ai-data');
@@ -1760,7 +1795,7 @@ refreshBtn?.addEventListener("click", async () => {
   refreshBtn.disabled = true;
   forceRefresh = true;
 
-  document.getElementById("website-content")?.classList.remove("hidden");
+  document.getElementById("ai-analysis")?.classList.remove("hidden");
   document.getElementById("content-error")?.classList.add("hidden");
   document.getElementById("ai-data")?.classList.add("hidden");
   document.getElementById("ai-loading")?.classList.remove("hidden");

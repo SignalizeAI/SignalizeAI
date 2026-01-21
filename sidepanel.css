@@ -322,6 +322,22 @@ body:has(#welcome-view:not(.hidden)) {
   color: #ff6b6b;
 }
 
+.blocked-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.blocked-message p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.blocked-message .primary-btn {
+  margin-top: 8px;
+}
+
 .content-data {
   display: flex;
   flex-direction: column;
