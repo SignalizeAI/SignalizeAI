@@ -255,6 +255,7 @@ function navigateTo(view) {
     isUserInteracting = false;
   }
   document.getElementById("ai-analysis")?.classList.add("hidden");
+  document.getElementById("empty-tab-view")?.classList.add("hidden");
   document.getElementById("saved-analyses")?.classList.add("hidden");
   document.getElementById("profile-view")?.classList.add("hidden");
   document.getElementById("settings-view")?.classList.add("hidden");
@@ -659,12 +660,9 @@ async function extractWebsiteContent() {
       tab.url.startsWith("edge://")
     ) {
       endAnalysisLoading();
-      if (contentLoading) contentLoading.classList.add('hidden');
-      if (contentError) {
-        contentError.innerHTML = '<div class="blocked-message"><p>Cannot analyze browser system pages.</p></div>';
-        contentError.classList.remove('hidden');
-      }
-      console.info("Skipping extraction on restricted page:", tab.url);
+      document.getElementById("ai-analysis")?.classList.add("hidden");
+      document.getElementById("empty-tab-view")?.classList.remove("hidden");
+      console.info("Empty tab or browser system page:", tab.url);
       return;
     }
 
