@@ -935,7 +935,9 @@ async function analyzeSpecificUrl(url) {
         return;
       }
 
-      const analysis = await analyzeWebsiteContent(response.content);
+      const urlObj = new URL(response.content.url);
+      const isInternal = urlObj.hostname === "signalizeai.org" || urlObj.hostname === "www.signalizeai.org";
+      const analysis = await analyzeWebsiteContent(response.content, isInternal);
       lastAnalysis = analysis;
 
       displayAIAnalysis(analysis);
