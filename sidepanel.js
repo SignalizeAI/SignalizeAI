@@ -596,7 +596,7 @@ async function extractWebsiteContent() {
   const { data } = await supabase.auth.getSession();
   if (!data?.session) return;
 
-  await loadQuotaFromAPI();
+  loadQuotaFromAPI();
 
   if (
     remainingToday !== null && 
@@ -623,6 +623,7 @@ async function extractWebsiteContent() {
   if (contentLoading) contentLoading.classList.remove('hidden');
   if (contentError) contentError.classList.add('hidden');
   if (contentData) contentData.classList.add('hidden');
+  document.getElementById("empty-tab-view")?.classList.add('hidden');
   isAnalysisLoading = true;
 
   try {
@@ -661,6 +662,7 @@ async function extractWebsiteContent() {
     ) {
       endAnalysisLoading();
       document.getElementById("ai-analysis")?.classList.add("hidden");
+      document.getElementById("ai-loading")?.classList.add("hidden");
       document.getElementById("empty-tab-view")?.classList.remove("hidden");
       console.info("Empty tab or browser system page:", tab.url);
       return;
@@ -768,6 +770,7 @@ async function extractWebsiteContent() {
               }
 
               displayAIAnalysis(lastAnalysis);
+              endAnalysisLoading();
 
             } else {
               if (aiLoading) aiLoading.classList.remove("hidden");
@@ -778,7 +781,9 @@ async function extractWebsiteContent() {
                 return;
               }
 
-            const result = await analyzeWebsiteContent(response.content);
+            const urlObj = new URL(response.content.url);
+            const isInternal = urlObj.hostname === "signalizeai.org" || urlObj.hostname === "www.signalizeai.org";
+            const result = await analyzeWebsiteContent(response.content, isInternal);
 
             if (result.blocked) {
               showLimitModal("analysis");
@@ -837,6 +842,7 @@ async function extractWebsiteContent() {
             }
           } catch (err) {
             showContentBlocked("Failed to analyze page: " + err.message);
+            endAnalysisLoading();
           }
 
         }
@@ -1739,7 +1745,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       supabase.auth.getSession().then(({ data }) => {
         if (currentView === "analysis") {
-          setTimeout(extractWebsiteContent, 300);
+          setTimeout(extractWebsiteContent, 100);
         }
       });
     });
@@ -1754,7 +1760,7 @@ document.addEventListener('visibilitychange', () => {
 
       supabase.auth.getSession().then(({ data }) => {
         if (currentView === "analysis") {
-          setTimeout(extractWebsiteContent, 300);
+          setTimeout(extractWebsiteContent, 100);
         }
       });
     });
