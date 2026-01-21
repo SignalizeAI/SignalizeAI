@@ -39,9 +39,9 @@
       "access denied",
       "403 forbidden",
       "401 unauthorized",
-      "enable javascript",
-      "captcha",
-      "cloudflare"
+      "enable javascript to view",
+      "please enable javascript",
+      "captcha verification"
     ];
 
     const matched = HARD_BLOCKERS.find(p => bodyText.includes(p));
@@ -56,8 +56,8 @@
       content.paragraphs.join("").length;
 
     return (
-      totalTextLength < 180 &&
-      content.paragraphs.length < 4 &&
+      totalTextLength < 100 &&
+      content.paragraphs.length < 2 &&
       content.headings.length < 1
     );
   }
