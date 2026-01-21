@@ -366,6 +366,41 @@ function saveSettings(partial) {
   chrome.storage.sync.set(partial);
 }
 
+function makeCacheKey(domain) {
+  return `analysis_cache:${domain}`;
+}
+
+async function getCachedAnalysis(domain) {
+  return new Promise(resolve => {
+    const key = makeCacheKey(domain);
+    chrome.storage.local.get(key, obj => {
+      const cached = obj[key];
+      if (!cached) {
+        resolve(null);
+        return;
+      }
+      const now = Date.now();
+      const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+      if (now - cached.timestamp > CACHE_TTL_MS) {
+        chrome.storage.local.remove(key);
+        resolve(null);
+      } else {
+        resolve(cached);
+      }
+    });
+  });
+}
+
+function setCachedAnalysis(domain, payload) {
+  const key = makeCacheKey(domain);
+  const value = {
+    analysis: payload.analysis,
+    meta: payload.meta,
+    timestamp: Date.now()
+  };
+  chrome.storage.local.set({ [key]: value });
+}
+
 function showContentBlocked(message, options = {}) {
   endAnalysisLoading();
   
@@ -670,6 +705,7 @@ async function extractWebsiteContent() {
           const user = sessionData?.session?.user;
 
           let existing = null;
+          let cached = null;
 
           if (user) {
             const { data } = await supabase
@@ -686,6 +722,7 @@ async function extractWebsiteContent() {
               if (btn) btn.title = "Remove";
             }
           }
+          cached = await getCachedAnalysis(currentDomain);
 
           try {
             const aiCard = document.getElementById('ai-analysis');
@@ -694,39 +731,43 @@ async function extractWebsiteContent() {
 
             if (aiCard) aiCard.classList.remove('hidden');
 
-            const shouldReuse =
-              settings.reanalysisMode === "content-change" &&
-              !forceRefresh &&
-              existing &&
-              existing.content_hash === lastContentHash;
+            const reuseAllowed = settings.reanalysisMode === "content-change" && !forceRefresh;
+            const canReuseExisting = reuseAllowed && existing && existing.content_hash === lastContentHash;
+            const canReuseCached = reuseAllowed && cached; // Reuse cached result by domain
+            const shouldReuse = canReuseExisting || canReuseCached;
 
             if (shouldReuse) {
               if (aiLoading) aiLoading.classList.add("hidden");
               
-              lastAnalysis = {
-                whatTheyDo: existing.what_they_do,
-                targetCustomer: existing.target_customer,
-                valueProposition: existing.value_proposition,
-                salesAngle: existing.sales_angle,
-                salesReadinessScore: existing.sales_readiness_score,
-                bestSalesPersona: {
-                  persona: existing.best_sales_persona,
-                  reason: existing.best_sales_persona_reason
-                },
-                recommendedOutreach: {
-                  persona: existing?.recommended_outreach_persona || "",
-                  goal: existing?.recommended_outreach_goal || "",
-                  angle: existing?.recommended_outreach_angle || "",
-                  message: existing?.recommended_outreach_message || ""
-                }
-              };
+              if (canReuseExisting) {
+                lastAnalysis = {
+                  whatTheyDo: existing.what_they_do,
+                  targetCustomer: existing.target_customer,
+                  valueProposition: existing.value_proposition,
+                  salesAngle: existing.sales_angle,
+                  salesReadinessScore: existing.sales_readiness_score,
+                  bestSalesPersona: {
+                    persona: existing.best_sales_persona,
+                    reason: existing.best_sales_persona_reason
+                  },
+                  recommendedOutreach: {
+                    persona: existing?.recommended_outreach_persona || "",
+                    goal: existing?.recommended_outreach_goal || "",
+                    angle: existing?.recommended_outreach_angle || "",
+                    message: existing?.recommended_outreach_message || ""
+                  }
+                };
 
-              lastExtractedMeta = {
-                title: cleanTitle(existing.title),
-                description: existing.description,
-                url: existing.url,
-                domain: existing.domain
-              };
+                lastExtractedMeta = {
+                  title: cleanTitle(existing.title),
+                  description: existing.description,
+                  url: existing.url,
+                  domain: existing.domain
+                };
+              } else if (canReuseCached) {
+                lastAnalysis = cached.analysis;
+                lastExtractedMeta = cached.meta;
+              }
 
               displayAIAnalysis(lastAnalysis);
 
@@ -764,6 +805,13 @@ async function extractWebsiteContent() {
               const analysis = result.analysis;
               lastAnalysis = analysis;
               displayAIAnalysis(analysis);
+
+              // Store successful analysis in local cache for revisit reuse
+              setCachedAnalysis(currentDomain, {
+                content_hash: lastContentHash,
+                analysis,
+                meta: lastExtractedMeta
+              });
 
               if (existing) {
                 await supabase
@@ -872,11 +920,27 @@ async function analyzeSpecificUrl(url) {
 
       lastContentHash = await hashContent(response.content);
       lastAnalyzedDomain = lastExtractedMeta.domain;
+      const settings = await loadSettings();
+      const reuseAllowed = settings.reanalysisMode === "content-change" && !forceRefresh;
+      const cached = await getCachedAnalysis(lastAnalyzedDomain);
+
+      if (reuseAllowed && cached) {
+        lastAnalysis = cached.analysis;
+        lastExtractedMeta = cached.meta;
+        displayAIAnalysis(lastAnalysis);
+        return;
+      }
 
       const analysis = await analyzeWebsiteContent(response.content);
       lastAnalysis = analysis;
 
       displayAIAnalysis(analysis);
+
+      setCachedAnalysis(lastAnalyzedDomain, {
+        content_hash: lastContentHash,
+        analysis,
+        meta: lastExtractedMeta
+      });
     }
   );
 }
