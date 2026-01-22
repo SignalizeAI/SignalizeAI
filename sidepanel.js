@@ -367,13 +367,13 @@ function saveSettings(partial) {
   chrome.storage.sync.set(partial);
 }
 
-function makeCacheKey(domain) {
-  return `analysis_cache:${domain}`;
+function makeCacheKey(url) {
+  return `analysis_cache:${url}`;
 }
 
-async function getCachedAnalysis(domain) {
+async function getCachedAnalysis(url) {
   return new Promise(resolve => {
-    const key = makeCacheKey(domain);
+    const key = makeCacheKey(url);
     chrome.storage.local.get(key, obj => {
       const cached = obj[key];
       if (!cached) {
@@ -392,8 +392,8 @@ async function getCachedAnalysis(domain) {
   });
 }
 
-function setCachedAnalysis(domain, payload) {
-  const key = makeCacheKey(domain);
+function setCachedAnalysis(url, payload) {
+  const key = makeCacheKey(url);
   const value = {
     analysis: payload.analysis,
     meta: payload.meta,
@@ -596,7 +596,7 @@ async function extractWebsiteContent() {
   const { data } = await supabase.auth.getSession();
   if (!data?.session) return;
 
-  loadQuotaFromAPI();
+  await loadQuotaFromAPI();
 
   if (
     remainingToday !== null && 
@@ -694,6 +694,7 @@ async function extractWebsiteContent() {
           };
 
           const currentDomain = lastExtractedMeta.domain;
+          const currentUrl = lastExtractedMeta.url;
           lastContentHash = await hashContent(response.content);
           lastAnalyzedDomain = currentDomain;
 
@@ -722,7 +723,7 @@ async function extractWebsiteContent() {
               if (btn) btn.title = "Remove";
             }
           }
-          cached = await getCachedAnalysis(currentDomain);
+          cached = await getCachedAnalysis(currentUrl);
 
           try {
             const aiCard = document.getElementById('ai-analysis');
@@ -810,7 +811,7 @@ async function extractWebsiteContent() {
               displayAIAnalysis(analysis);
 
               // Store successful analysis in local cache for revisit reuse
-              setCachedAnalysis(currentDomain, {
+              setCachedAnalysis(currentUrl, {
                 content_hash: lastContentHash,
                 analysis,
                 meta: lastExtractedMeta
@@ -957,10 +958,12 @@ function displayAIAnalysis(analysis) {
   const aiCard = document.getElementById('ai-analysis');
   const aiLoading = document.getElementById('ai-loading');
   const aiData = document.getElementById('ai-data');
+  const refreshBtn = document.getElementById('refreshButton');
 
   if (aiCard) aiCard.classList.remove('hidden');
   if (aiLoading) aiLoading.classList.add('hidden');
   if (aiData) aiData.classList.remove('hidden');
+  if (refreshBtn) refreshBtn.disabled = false;
 
   const aiTitleEl = document.getElementById('ai-title-text');
   if (aiTitleEl && lastExtractedMeta?.title) {
@@ -1857,6 +1860,11 @@ autoReanalysisCheckbox?.addEventListener("change", async (e) => {
 });
 
 const refreshBtn = document.getElementById("refreshButton");
+
+// Initialize refresh button as disabled
+if (refreshBtn) {
+  refreshBtn.disabled = true;
+}
 
 refreshBtn?.addEventListener("click", async () => {
   if (currentView !== "analysis") return;
