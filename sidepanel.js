@@ -255,6 +255,7 @@ function navigateTo(view) {
     isUserInteracting = false;
   }
   document.getElementById("ai-analysis")?.classList.add("hidden");
+  document.getElementById("empty-tab-view")?.classList.add("hidden");
   document.getElementById("saved-analyses")?.classList.add("hidden");
   document.getElementById("profile-view")?.classList.add("hidden");
   document.getElementById("settings-view")?.classList.add("hidden");
@@ -366,13 +367,13 @@ function saveSettings(partial) {
   chrome.storage.sync.set(partial);
 }
 
-function makeCacheKey(domain) {
-  return `analysis_cache:${domain}`;
+function makeCacheKey(url) {
+  return `analysis_cache:${url}`;
 }
 
-async function getCachedAnalysis(domain) {
+async function getCachedAnalysis(url) {
   return new Promise(resolve => {
-    const key = makeCacheKey(domain);
+    const key = makeCacheKey(url);
     chrome.storage.local.get(key, obj => {
       const cached = obj[key];
       if (!cached) {
@@ -391,8 +392,8 @@ async function getCachedAnalysis(domain) {
   });
 }
 
-function setCachedAnalysis(domain, payload) {
-  const key = makeCacheKey(domain);
+function setCachedAnalysis(url, payload) {
+  const key = makeCacheKey(url);
   const value = {
     analysis: payload.analysis,
     meta: payload.meta,
@@ -622,6 +623,7 @@ async function extractWebsiteContent() {
   if (contentLoading) contentLoading.classList.remove('hidden');
   if (contentError) contentError.classList.add('hidden');
   if (contentData) contentData.classList.add('hidden');
+  document.getElementById("empty-tab-view")?.classList.add('hidden');
   isAnalysisLoading = true;
 
   try {
@@ -659,12 +661,10 @@ async function extractWebsiteContent() {
       tab.url.startsWith("edge://")
     ) {
       endAnalysisLoading();
-      if (contentLoading) contentLoading.classList.add('hidden');
-      if (contentError) {
-        contentError.innerHTML = '<div class="blocked-message"><p>Cannot analyze browser system pages.</p></div>';
-        contentError.classList.remove('hidden');
-      }
-      console.info("Skipping extraction on restricted page:", tab.url);
+      document.getElementById("ai-analysis")?.classList.add("hidden");
+      document.getElementById("ai-loading")?.classList.add("hidden");
+      document.getElementById("empty-tab-view")?.classList.remove("hidden");
+      console.info("Empty tab or browser system page:", tab.url);
       return;
     }
 
@@ -694,6 +694,7 @@ async function extractWebsiteContent() {
           };
 
           const currentDomain = lastExtractedMeta.domain;
+          const currentUrl = lastExtractedMeta.url;
           lastContentHash = await hashContent(response.content);
           lastAnalyzedDomain = currentDomain;
 
@@ -722,7 +723,7 @@ async function extractWebsiteContent() {
               if (btn) btn.title = "Remove";
             }
           }
-          cached = await getCachedAnalysis(currentDomain);
+          cached = await getCachedAnalysis(currentUrl);
 
           try {
             const aiCard = document.getElementById('ai-analysis');
@@ -770,6 +771,7 @@ async function extractWebsiteContent() {
               }
 
               displayAIAnalysis(lastAnalysis);
+              endAnalysisLoading();
 
             } else {
               if (aiLoading) aiLoading.classList.remove("hidden");
@@ -780,7 +782,9 @@ async function extractWebsiteContent() {
                 return;
               }
 
-            const result = await analyzeWebsiteContent(response.content);
+            const urlObj = new URL(response.content.url);
+            const isInternal = urlObj.hostname === "signalizeai.org" || urlObj.hostname === "www.signalizeai.org";
+            const result = await analyzeWebsiteContent(response.content, isInternal);
 
             if (result.blocked) {
               showLimitModal("analysis");
@@ -807,7 +811,7 @@ async function extractWebsiteContent() {
               displayAIAnalysis(analysis);
 
               // Store successful analysis in local cache for revisit reuse
-              setCachedAnalysis(currentDomain, {
+              setCachedAnalysis(currentUrl, {
                 content_hash: lastContentHash,
                 analysis,
                 meta: lastExtractedMeta
@@ -839,6 +843,7 @@ async function extractWebsiteContent() {
             }
           } catch (err) {
             showContentBlocked("Failed to analyze page: " + err.message);
+            endAnalysisLoading();
           }
 
         }
@@ -931,7 +936,9 @@ async function analyzeSpecificUrl(url) {
         return;
       }
 
-      const analysis = await analyzeWebsiteContent(response.content);
+      const urlObj = new URL(response.content.url);
+      const isInternal = urlObj.hostname === "signalizeai.org" || urlObj.hostname === "www.signalizeai.org";
+      const analysis = await analyzeWebsiteContent(response.content, isInternal);
       lastAnalysis = analysis;
 
       displayAIAnalysis(analysis);
@@ -951,10 +958,12 @@ function displayAIAnalysis(analysis) {
   const aiCard = document.getElementById('ai-analysis');
   const aiLoading = document.getElementById('ai-loading');
   const aiData = document.getElementById('ai-data');
+  const refreshBtn = document.getElementById('refreshButton');
 
   if (aiCard) aiCard.classList.remove('hidden');
   if (aiLoading) aiLoading.classList.add('hidden');
   if (aiData) aiData.classList.remove('hidden');
+  if (refreshBtn) refreshBtn.disabled = false;
 
   const aiTitleEl = document.getElementById('ai-title-text');
   if (aiTitleEl && lastExtractedMeta?.title) {
@@ -1741,7 +1750,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       supabase.auth.getSession().then(({ data }) => {
         if (currentView === "analysis") {
-          setTimeout(extractWebsiteContent, 300);
+          setTimeout(extractWebsiteContent, 100);
         }
       });
     });
@@ -1756,7 +1765,7 @@ document.addEventListener('visibilitychange', () => {
 
       supabase.auth.getSession().then(({ data }) => {
         if (currentView === "analysis") {
-          setTimeout(extractWebsiteContent, 300);
+          setTimeout(extractWebsiteContent, 100);
         }
       });
     });
@@ -1851,6 +1860,11 @@ autoReanalysisCheckbox?.addEventListener("change", async (e) => {
 });
 
 const refreshBtn = document.getElementById("refreshButton");
+
+// Initialize refresh button as disabled
+if (refreshBtn) {
+  refreshBtn.disabled = true;
+}
 
 refreshBtn?.addEventListener("click", async () => {
   if (currentView !== "analysis") return;
