@@ -1713,12 +1713,12 @@ async function fetchAndRenderPage() {
       break;
 
     case "domain_asc":
-      sortColumn = "domain";
+      sortColumn = "title";
       sortAsc = true;
       break;
 
     case "domain_desc":
-      sortColumn = "domain";
+      sortColumn = "title";
       sortAsc = false;
       break;
   }
