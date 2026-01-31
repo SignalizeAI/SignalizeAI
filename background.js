@@ -8,9 +8,24 @@ chrome.tabs.onActivated.addListener(() => {
   notifySidePanel();
 });
 
-chrome.tabs.onUpdated.addListener((_, changeInfo) => {
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === "complete") {
     notifySidePanel();
+    
+    if (tab.url) {
+      const url = tab.url.toLowerCase();
+      if (
+        url.includes("signalizeai.org/payment-success") ||
+        url.includes("checkout") && url.includes("success") ||
+        url.includes("payment-success")
+      ) {
+        setTimeout(() => {
+          chrome.runtime.sendMessage({ type: "PAYMENT_SUCCESS" }, () => {
+            void chrome.runtime.lastError;
+          });
+        }, 1000);
+      }
+    }
   }
 });
 

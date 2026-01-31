@@ -1713,12 +1713,12 @@ async function fetchAndRenderPage() {
       break;
 
     case "domain_asc":
-      sortColumn = "domain";
+      sortColumn = "title";
       sortAsc = true;
       break;
 
     case "domain_desc":
-      sortColumn = "domain";
+      sortColumn = "title";
       sortAsc = false;
       break;
   }
@@ -2075,6 +2075,13 @@ const dropdownMenu = document.getElementById("menu-saved-analyses");
 dropdownMenu?.addEventListener("click", (e) => {
   e.preventDefault();
   navigateTo("saved");
+});
+
+const subscriptionMenu = document.getElementById("menu-subscription");
+
+subscriptionMenu?.addEventListener("click", (e) => {
+  e.preventDefault();
+  chrome.tabs.create({ url: "https://signalizeai.org/pricing" });
 });
 
 document.getElementById("export-csv")?.addEventListener("click", async () => {
@@ -2845,6 +2852,19 @@ chrome.runtime.onMessage.addListener(async (msg) => {
     if (!data?.session) return;
 
     updateUI(data.session);
+  }
+
+  if (msg.type === "PAYMENT_SUCCESS") {
+    await loadQuotaFromAPI();
+    
+    const banner = document.getElementById("quota-banner");
+    if (banner) {
+      const originalBg = banner.style.backgroundColor;
+      banner.style.backgroundColor = "#10b981"; // Green
+      setTimeout(() => {
+        banner.style.backgroundColor = originalBg;
+      }, 2000);
+    }
   }
 });
 
