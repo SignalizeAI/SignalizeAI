@@ -800,6 +800,7 @@ async function extractWebsiteContent() {
         }
 
         if (response?.ok && response.content) {
+          const previousUrl = lastExtractedMeta?.url || null;
 
           lastExtractedMeta = {
             title: cleanTitle(response.content.title),
@@ -895,9 +896,14 @@ async function extractWebsiteContent() {
               resolve();
 
             } else {
-              const isNewDomain = !lastAnalyzedDomain || lastAnalyzedDomain !== currentDomain;
-              
-              if (!forceRefresh && !isNewDomain) {
+              const rootDomain = extractRootDomain(currentDomain);
+              const lastRootDomain = lastAnalyzedDomain
+                ? extractRootDomain(lastAnalyzedDomain)
+                : null;
+
+              const isNewRootDomain = !lastRootDomain || lastRootDomain !== rootDomain;
+              const isNewUrl = previousUrl !== currentUrl;
+              if (!forceRefresh && !isNewRootDomain && !isNewUrl) {
                 if (aiLoading) aiLoading.classList.add("hidden");
                 if (aiData) aiData.classList.add("hidden");
                 showContentBlocked("Click the refresh button to analyze this page.");
