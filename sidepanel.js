@@ -372,8 +372,58 @@ function saveSettings(partial) {
   chrome.storage.sync.set(partial);
 }
 
+function extractRootDomain(hostname) {
+  if (hostname === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+    return hostname;
+  }
+  
+  const parts = hostname.split(".");
+  
+  if (parts.length <= 2) {
+    return hostname;
+  }
+
+  return parts.slice(-2).join(".");
+}
+
 function makeCacheKey(url) {
   return `analysis_cache:${url}`;
+}
+
+function makeDomainCacheKey(domain) {
+  const rootDomain = extractRootDomain(domain);
+  return `analysis_cache:domain:${rootDomain}`;
+}
+
+function makeDomainAnalyzedTodayKey(domain) {
+  const rootDomain = extractRootDomain(domain);
+  return `domain_analyzed_today:${rootDomain}`;
+}
+
+async function wasDomainAnalyzedToday(domain) {
+  return new Promise(resolve => {
+    const key = makeDomainAnalyzedTodayKey(domain);
+    chrome.storage.local.get(key, obj => {
+      const entry = obj[key];
+      if (!entry) {
+        resolve(false);
+        return;
+      }
+      const now = Date.now();
+      const DAY_MS = 24 * 60 * 60 * 1000;
+      if (now - entry.timestamp < DAY_MS) {
+        resolve(true);
+      } else {
+        chrome.storage.local.remove(key);
+        resolve(false);
+      }
+    });
+  });
+}
+
+function markDomainAnalyzedToday(domain) {
+  const key = makeDomainAnalyzedTodayKey(domain);
+  chrome.storage.local.set({ [key]: { timestamp: Date.now() } });
 }
 
 async function getCachedAnalysis(url) {
@@ -397,8 +447,39 @@ async function getCachedAnalysis(url) {
   });
 }
 
+async function getCachedAnalysisByDomain(domain) {
+  return new Promise(resolve => {
+    const key = makeDomainCacheKey(domain);
+    chrome.storage.local.get(key, obj => {
+      const cached = obj[key];
+      if (!cached) {
+        resolve(null);
+        return;
+      }
+      const now = Date.now();
+      const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+      if (now - cached.timestamp > CACHE_TTL_MS) {
+        chrome.storage.local.remove(key);
+        resolve(null);
+      } else {
+        resolve(cached);
+      }
+    });
+  });
+}
+
 function setCachedAnalysis(url, payload) {
   const key = makeCacheKey(url);
+  const value = {
+    analysis: payload.analysis,
+    meta: payload.meta,
+    timestamp: Date.now()
+  };
+  chrome.storage.local.set({ [key]: value });
+}
+
+function setCachedAnalysisByDomain(domain, payload) {
+  const key = makeDomainCacheKey(domain);
   const value = {
     analysis: payload.analysis,
     meta: payload.meta,
@@ -730,7 +811,6 @@ async function extractWebsiteContent() {
           const currentDomain = lastExtractedMeta.domain;
           const currentUrl = lastExtractedMeta.url;
           lastContentHash = await hashContent(response.content);
-          lastAnalyzedDomain = currentDomain;
 
           const btn = document.getElementById("saveButton");
           btn?.classList.remove("active");
@@ -758,6 +838,7 @@ async function extractWebsiteContent() {
             }
           }
           cached = await getCachedAnalysis(currentUrl);
+          const cachedDomain = !cached ? await getCachedAnalysisByDomain(currentDomain) : null;
 
           try {
             const aiCard = document.getElementById('ai-analysis');
@@ -767,14 +848,17 @@ async function extractWebsiteContent() {
             if (aiCard) aiCard.classList.remove('hidden');
 
             const reuseAllowed = settings.reanalysisMode === "content-change" && !forceRefresh;
-            const canReuseExisting = reuseAllowed && existing && existing.content_hash === lastContentHash;
-            const canReuseCached = reuseAllowed && cached; // Reuse cached result by domain
-            const shouldReuse = canReuseExisting || canReuseCached;
+            const canReuseExisting = reuseAllowed && existing && existing.content_hash === lastContentHash && existing.url === currentUrl;
+            const canReuseCached = reuseAllowed && cached && cached.meta?.url === currentUrl;
+            const canReuseDomainExisting = !canReuseExisting && reuseAllowed && existing;
+            const canReuseDomainCached = !canReuseCached && reuseAllowed && (cached || cachedDomain);
+            
+            const shouldReuse = canReuseExisting || canReuseCached || canReuseDomainExisting || canReuseDomainCached;
 
             if (shouldReuse) {
               if (aiLoading) aiLoading.classList.add("hidden");
               
-              if (canReuseExisting) {
+              if (canReuseExisting || canReuseDomainExisting) {
                 lastAnalysis = {
                   whatTheyDo: existing.what_they_do,
                   targetCustomer: existing.target_customer,
@@ -799,16 +883,30 @@ async function extractWebsiteContent() {
                   url: existing.url,
                   domain: existing.domain
                 };
-              } else if (canReuseCached) {
-                lastAnalysis = cached.analysis;
-                lastExtractedMeta = cached.meta;
+              } else if (canReuseCached || canReuseDomainCached) {
+                const cacheToUse = cached || cachedDomain;
+                lastAnalysis = cacheToUse.analysis;
+                lastExtractedMeta = cacheToUse.meta;
               }
 
               displayAIAnalysis(lastAnalysis);
               endAnalysisLoading();
+              
+              lastAnalyzedDomain = currentDomain;
+              
               resolve();
 
             } else {
+              const isNewDomain = !lastAnalyzedDomain || lastAnalyzedDomain !== currentDomain;
+              
+              if (!forceRefresh && !isNewDomain) {
+                if (aiLoading) aiLoading.classList.add("hidden");
+                if (aiData) aiData.classList.add("hidden");
+                showContentBlocked("Click the refresh button to analyze this page.");
+                resolve();
+                return;
+              }
+
               if (aiLoading) aiLoading.classList.remove("hidden");
               if (aiData) aiData.classList.add("hidden");
 
@@ -820,7 +918,11 @@ async function extractWebsiteContent() {
 
             const urlObj = new URL(response.content.url);
             const isInternal = urlObj.hostname === "signalizeai.org" || urlObj.hostname === "www.signalizeai.org";
-            const result = await analyzeWebsiteContent(response.content, isInternal);
+            
+            // Check if this domain was already analyzed today
+            const domainAnalyzedToday = await wasDomainAnalyzedToday(currentDomain);
+            
+            const result = await analyzeWebsiteContent(response.content, isInternal, domainAnalyzedToday);
 
             if (result.quota) {
               currentPlan = result.quota.plan;
@@ -851,10 +953,15 @@ async function extractWebsiteContent() {
               const analysis = result.analysis;
               lastAnalysis = analysis;
               displayAIAnalysis(analysis);
+              lastAnalyzedDomain = currentDomain;
+              markDomainAnalyzedToday(currentDomain);
 
-              // Store successful analysis in local cache for revisit reuse
               setCachedAnalysis(currentUrl, {
                 content_hash: lastContentHash,
+                analysis,
+                meta: lastExtractedMeta
+              });
+              setCachedAnalysisByDomain(currentDomain, {
                 analysis,
                 meta: lastExtractedMeta
               });

@@ -4,7 +4,7 @@ async function getAccessToken() {
   return data.session.access_token;
 }
 
-export async function analyzeWebsiteContent(extracted, isInternal = false) {
+export async function analyzeWebsiteContent(extracted, isInternal = false, domainAnalyzedToday = false) {
 
   const token = await getAccessToken();
 
@@ -14,7 +14,7 @@ export async function analyzeWebsiteContent(extracted, isInternal = false) {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {})
     },
-    body: JSON.stringify({ extracted, isInternal })
+    body: JSON.stringify({ extracted, isInternal, domainAnalyzedToday })
   });
 
   let data;
