@@ -2896,11 +2896,13 @@ async function openCheckout(variantId) {
 
   const email = data.session.user.email;
   const userId = data.session.user.id;
+  const plan = variantId === "88e4933d-9fae-4a7a-8c3f-ee72d78018b0" ? "team" : "pro";
 
   const checkoutUrl =
     `https://signalizeaipay.lemonsqueezy.com/checkout/buy/${variantId}` +
     `?checkout[email]=${encodeURIComponent(email)}` +
     `&checkout[custom][user_id]=${encodeURIComponent(userId)}` +
+    `&checkout[custom][plan]=${plan}` +
     `&media=0&discount=0`;
 
   chrome.tabs.create({ url: checkoutUrl });
