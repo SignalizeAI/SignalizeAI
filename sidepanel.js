@@ -837,8 +837,8 @@ async function extractWebsiteContent() {
               if (btn) btn.title = "Remove";
             }
           }
+          // Only check URL-level cache (exact same URL)
           cached = await getCachedAnalysis(currentUrl);
-          const cachedDomain = !cached ? await getCachedAnalysisByDomain(currentDomain) : null;
 
           try {
             const aiCard = document.getElementById('ai-analysis');
@@ -848,17 +848,16 @@ async function extractWebsiteContent() {
             if (aiCard) aiCard.classList.remove('hidden');
 
             const reuseAllowed = settings.reanalysisMode === "content-change" && !forceRefresh;
+            // Only reuse if it's the EXACT same URL
             const canReuseExisting = reuseAllowed && existing && existing.content_hash === lastContentHash && existing.url === currentUrl;
             const canReuseCached = reuseAllowed && cached && cached.meta?.url === currentUrl;
-            const canReuseDomainExisting = !canReuseExisting && reuseAllowed && existing;
-            const canReuseDomainCached = !canReuseCached && reuseAllowed && (cached || cachedDomain);
             
-            const shouldReuse = canReuseExisting || canReuseCached || canReuseDomainExisting || canReuseDomainCached;
+            const shouldReuse = canReuseExisting || canReuseCached;
 
             if (shouldReuse) {
               if (aiLoading) aiLoading.classList.add("hidden");
               
-              if (canReuseExisting || canReuseDomainExisting) {
+              if (canReuseExisting) {
                 lastAnalysis = {
                   whatTheyDo: existing.what_they_do,
                   targetCustomer: existing.target_customer,
@@ -883,10 +882,9 @@ async function extractWebsiteContent() {
                   url: existing.url,
                   domain: existing.domain
                 };
-              } else if (canReuseCached || canReuseDomainCached) {
-                const cacheToUse = cached || cachedDomain;
-                lastAnalysis = cacheToUse.analysis;
-                lastExtractedMeta = cacheToUse.meta;
+              } else if (canReuseCached) {
+                lastAnalysis = cached.analysis;
+                lastExtractedMeta = cached.meta;
               }
 
               displayAIAnalysis(lastAnalysis);
