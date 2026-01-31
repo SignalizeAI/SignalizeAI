@@ -130,12 +130,12 @@ async function loadQuotaFromAPI() {
 
     if (!res.ok) {
       console.warn("Quota fetch failed:", res.status);
-      currentPlan = "free";
-      remainingToday = 0;
-      usedToday = 0;
-      dailyLimitFromAPI = 5;
-      maxSavedLimit = 3;
-      totalSavedCount = 0;
+      currentPlan = currentPlan || "free";
+      remainingToday = null;
+      usedToday = null;
+      dailyLimitFromAPI = dailyLimitFromAPI || 5;
+      maxSavedLimit = maxSavedLimit || 3;
+      totalSavedCount = totalSavedCount || 0;
       renderQuotaBanner();
       return;
     }
@@ -154,12 +154,12 @@ async function loadQuotaFromAPI() {
     }
   } catch (e) {
     console.warn("Quota fetch failed", e);
-    currentPlan = "free";
-    remainingToday = 0;
-    usedToday = 0;
-    dailyLimitFromAPI = 5;
-    maxSavedLimit = 3;
-    totalSavedCount = 0;
+    currentPlan = currentPlan || "free";
+    remainingToday = null;
+    usedToday = null;
+    dailyLimitFromAPI = dailyLimitFromAPI || 5;
+    maxSavedLimit = maxSavedLimit || 3;
+    totalSavedCount = totalSavedCount || 0;
     renderQuotaBanner();
   }
 }
@@ -188,7 +188,9 @@ function renderQuotaBanner() {
   if (progressBar) {
     progressBar.style.width = `${percentage}%`;
 
-    if (Number(remainingToday ?? 0) <= 0) {
+    if (remainingToday === null) {
+      progressBar.classList.remove("danger");
+    } else if (Number(remainingToday ?? 0) <= 0) {
       progressBar.classList.add("danger");
     } else {
       progressBar.classList.remove("danger");
@@ -197,7 +199,10 @@ function renderQuotaBanner() {
 
   const savedText = `${Number(totalSavedCount ?? 0)} / ${Number(maxSavedLimit ?? 0)} saved`;
 
-  if (Number(remainingToday ?? 0) > 0) {
+  if (remainingToday === null) {
+    text.textContent = `Usage unavailable, ${savedText}`;
+    btn.classList.add("hidden");
+  } else if (Number(remainingToday ?? 0) > 0) {
     text.textContent = `${used} / ${totalLimit} analyses, ${savedText}`;
     
     if (currentPlan === "team") {
@@ -367,8 +372,58 @@ function saveSettings(partial) {
   chrome.storage.sync.set(partial);
 }
 
+function extractRootDomain(hostname) {
+  if (hostname === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+    return hostname;
+  }
+  
+  const parts = hostname.split(".");
+  
+  if (parts.length <= 2) {
+    return hostname;
+  }
+
+  return parts.slice(-2).join(".");
+}
+
 function makeCacheKey(url) {
   return `analysis_cache:${url}`;
+}
+
+function makeDomainCacheKey(domain) {
+  const rootDomain = extractRootDomain(domain);
+  return `analysis_cache:domain:${rootDomain}`;
+}
+
+function makeDomainAnalyzedTodayKey(domain) {
+  const rootDomain = extractRootDomain(domain);
+  return `domain_analyzed_today:${rootDomain}`;
+}
+
+async function wasDomainAnalyzedToday(domain) {
+  return new Promise(resolve => {
+    const key = makeDomainAnalyzedTodayKey(domain);
+    chrome.storage.local.get(key, obj => {
+      const entry = obj[key];
+      if (!entry) {
+        resolve(false);
+        return;
+      }
+      const now = Date.now();
+      const DAY_MS = 24 * 60 * 60 * 1000;
+      if (now - entry.timestamp < DAY_MS) {
+        resolve(true);
+      } else {
+        chrome.storage.local.remove(key);
+        resolve(false);
+      }
+    });
+  });
+}
+
+function markDomainAnalyzedToday(domain) {
+  const key = makeDomainAnalyzedTodayKey(domain);
+  chrome.storage.local.set({ [key]: { timestamp: Date.now() } });
 }
 
 async function getCachedAnalysis(url) {
@@ -392,8 +447,39 @@ async function getCachedAnalysis(url) {
   });
 }
 
+async function getCachedAnalysisByDomain(domain) {
+  return new Promise(resolve => {
+    const key = makeDomainCacheKey(domain);
+    chrome.storage.local.get(key, obj => {
+      const cached = obj[key];
+      if (!cached) {
+        resolve(null);
+        return;
+      }
+      const now = Date.now();
+      const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+      if (now - cached.timestamp > CACHE_TTL_MS) {
+        chrome.storage.local.remove(key);
+        resolve(null);
+      } else {
+        resolve(cached);
+      }
+    });
+  });
+}
+
 function setCachedAnalysis(url, payload) {
   const key = makeCacheKey(url);
+  const value = {
+    analysis: payload.analysis,
+    meta: payload.meta,
+    timestamp: Date.now()
+  };
+  chrome.storage.local.set({ [key]: value });
+}
+
+function setCachedAnalysisByDomain(domain, payload) {
+  const key = makeDomainCacheKey(domain);
   const value = {
     analysis: payload.analysis,
     meta: payload.meta,
@@ -589,12 +675,24 @@ async function shouldAutoAnalyze() {
 
 function endAnalysisLoading() {
   isAnalysisLoading = false;
+  const refreshBtn = document.getElementById("refreshButton");
+  if (refreshBtn) {
+    refreshBtn.disabled = false;
+  }
 }
 
 async function extractWebsiteContent() {
-  if (isUserInteracting) return;
+  if (isUserInteracting) {
+    document.getElementById("ai-loading")?.classList.add("hidden");
+    endAnalysisLoading();
+    return;
+  }
   const { data } = await supabase.auth.getSession();
-  if (!data?.session) return;
+  if (!data?.session) {
+    document.getElementById("ai-loading")?.classList.add("hidden");
+    endAnalysisLoading();
+    return;
+  }
 
   await loadQuotaFromAPI();
 
@@ -603,16 +701,23 @@ async function extractWebsiteContent() {
     remainingToday <= 0 && 
     currentPlan === "free"
   ) {
+    document.getElementById("ai-loading")?.classList.add("hidden");
+    endAnalysisLoading();
     showLimitModal("analysis");
     return;
   }
-  if (currentView !== "analysis") return;
+  if (currentView !== "analysis") {
+    document.getElementById("ai-loading")?.classList.add("hidden");
+    endAnalysisLoading();
+    return;
+  }
   const aiCard = document.getElementById('ai-analysis');
   const contentLoading = document.getElementById('ai-loading');
   const contentError = document.getElementById('content-error');
   const contentData = document.getElementById('ai-data');
 
-  if (contentLoading && !contentLoading.classList.contains("hidden")) {
+  if (contentLoading && !contentLoading.classList.contains("hidden") && !forceRefresh) {
+    endAnalysisLoading();
     return;
   }
 
@@ -668,23 +773,34 @@ async function extractWebsiteContent() {
       return;
     }
 
-    chrome.tabs.sendMessage(
-      tab.id,
-      { type: "EXTRACT_WEBSITE_CONTENT" },
-      async (response) => {
+    return new Promise((resolve) => {
+      const timeoutId = setTimeout(() => {
+        document.getElementById("ai-loading")?.classList.add("hidden");
+        showContentBlocked("Timed out while analyzing. Please try again.");
+        resolve();
+      }, 15000);
+
+      chrome.tabs.sendMessage(
+        tab.id,
+        { type: "EXTRACT_WEBSITE_CONTENT" },
+        async (response) => {
+        clearTimeout(timeoutId);
         if (chrome.runtime.lastError) {
           endAnalysisLoading();
           showContentBlocked("Failed to extract page content. This page may not be accessible.");
+          resolve();
           return;
         }
         
         if (!response) {
           endAnalysisLoading();
           showContentBlocked("No response from content script");
+          resolve();
           return;
         }
 
         if (response?.ok && response.content) {
+          const previousUrl = lastExtractedMeta?.url || null;
 
           lastExtractedMeta = {
             title: cleanTitle(response.content.title),
@@ -696,7 +812,6 @@ async function extractWebsiteContent() {
           const currentDomain = lastExtractedMeta.domain;
           const currentUrl = lastExtractedMeta.url;
           lastContentHash = await hashContent(response.content);
-          lastAnalyzedDomain = currentDomain;
 
           const btn = document.getElementById("saveButton");
           btn?.classList.remove("active");
@@ -723,6 +838,7 @@ async function extractWebsiteContent() {
               if (btn) btn.title = "Remove";
             }
           }
+          // Only check URL-level cache (exact same URL)
           cached = await getCachedAnalysis(currentUrl);
 
           try {
@@ -733,8 +849,10 @@ async function extractWebsiteContent() {
             if (aiCard) aiCard.classList.remove('hidden');
 
             const reuseAllowed = settings.reanalysisMode === "content-change" && !forceRefresh;
-            const canReuseExisting = reuseAllowed && existing && existing.content_hash === lastContentHash;
-            const canReuseCached = reuseAllowed && cached; // Reuse cached result by domain
+            // Only reuse if it's the EXACT same URL
+            const canReuseExisting = reuseAllowed && existing && existing.content_hash === lastContentHash && existing.url === currentUrl;
+            const canReuseCached = reuseAllowed && cached && cached.meta?.url === currentUrl;
+            
             const shouldReuse = canReuseExisting || canReuseCached;
 
             if (shouldReuse) {
@@ -772,24 +890,43 @@ async function extractWebsiteContent() {
 
               displayAIAnalysis(lastAnalysis);
               endAnalysisLoading();
+              
+              lastAnalyzedDomain = currentDomain;
+              
+              resolve();
 
             } else {
+              const rootDomain = extractRootDomain(currentDomain);
+              const lastRootDomain = lastAnalyzedDomain
+                ? extractRootDomain(lastAnalyzedDomain)
+                : null;
+
+              const isNewRootDomain = !lastRootDomain || lastRootDomain !== rootDomain;
+              const isNewUrl = previousUrl !== currentUrl;
+              if (!forceRefresh && !isNewRootDomain && !isNewUrl) {
+                if (aiLoading) aiLoading.classList.add("hidden");
+                if (aiData) aiData.classList.add("hidden");
+                showContentBlocked("Click the refresh button to analyze this page.");
+                resolve();
+                return;
+              }
+
               if (aiLoading) aiLoading.classList.remove("hidden");
               if (aiData) aiData.classList.add("hidden");
 
               if (!response.content.paragraphs?.length && !response.content.headings?.length) {
                 showContentBlocked("Not enough readable content to analyze.");
+                resolve();
                 return;
               }
 
             const urlObj = new URL(response.content.url);
             const isInternal = urlObj.hostname === "signalizeai.org" || urlObj.hostname === "www.signalizeai.org";
-            const result = await analyzeWebsiteContent(response.content, isInternal);
-
-            if (result.blocked) {
-              showLimitModal("analysis");
-              return;
-            }
+            
+            // Check if this domain was already analyzed today
+            const domainAnalyzedToday = await wasDomainAnalyzedToday(currentDomain);
+            
+            const result = await analyzeWebsiteContent(response.content, isInternal, domainAnalyzedToday);
 
             if (result.quota) {
               currentPlan = result.quota.plan;
@@ -801,18 +938,34 @@ async function extractWebsiteContent() {
               renderQuotaBanner();
             }
 
+            if (result.blocked) {
+              document.getElementById("ai-loading")?.classList.add("hidden");
+              document.getElementById("ai-data")?.classList.add("hidden");
+              endAnalysisLoading();
+              showLimitModal("analysis");
+              resolve();
+              return;
+            }
+
             if (!result.analysis) {
               showContentBlocked("Failed to generate analysis");
+              endAnalysisLoading();
+              resolve();
               return;
             }
 
               const analysis = result.analysis;
               lastAnalysis = analysis;
               displayAIAnalysis(analysis);
+              lastAnalyzedDomain = currentDomain;
+              markDomainAnalyzedToday(currentDomain);
 
-              // Store successful analysis in local cache for revisit reuse
               setCachedAnalysis(currentUrl, {
                 content_hash: lastContentHash,
+                analysis,
+                meta: lastExtractedMeta
+              });
+              setCachedAnalysisByDomain(currentDomain, {
                 analysis,
                 meta: lastExtractedMeta
               });
@@ -840,10 +993,12 @@ async function extractWebsiteContent() {
                   })
                   .eq("id", existing.id);
               }
+              resolve();
             }
           } catch (err) {
             showContentBlocked("Failed to analyze page: " + err.message);
             endAnalysisLoading();
+            resolve();
           }
 
         }
@@ -856,9 +1011,11 @@ async function extractWebsiteContent() {
               originalUrl: tab.url
             }
           );
+          resolve();
           return;
         }
         else if (response?.reason === "RESTRICTED") {
+          endAnalysisLoading();
           showContentBlocked(
             "This page requires login or consent before content can be analyzed.",
             {
@@ -866,6 +1023,7 @@ async function extractWebsiteContent() {
               originalUrl: tab.url
             }
           );
+          resolve();
           return;
         }
         else {
@@ -875,8 +1033,10 @@ async function extractWebsiteContent() {
             showContentBlocked("Unable to analyze this page.");
           }
         }
+        resolve();
       }
     );
+    });
   } catch (err) {
     endAnalysisLoading();
   }
@@ -888,7 +1048,7 @@ async function analyzeSpecificUrl(url) {
 
   await loadQuotaFromAPI();
 
-  if (currentPlan === "free" && remainingToday <= 0) {
+  if (currentPlan === "free" && remainingToday !== null && remainingToday <= 0) {
     showLimitModal("analysis");
     return;
   }
@@ -938,14 +1098,30 @@ async function analyzeSpecificUrl(url) {
 
       const urlObj = new URL(response.content.url);
       const isInternal = urlObj.hostname === "signalizeai.org" || urlObj.hostname === "www.signalizeai.org";
-      const analysis = await analyzeWebsiteContent(response.content, isInternal);
-      lastAnalysis = analysis;
+      const result = await analyzeWebsiteContent(response.content, isInternal);
 
-      displayAIAnalysis(analysis);
+      if (result.quota) {
+        currentPlan = result.quota.plan;
+        usedToday = result.quota.used_today;
+        remainingToday = result.quota.remaining_today;
+        dailyLimitFromAPI = result.quota.daily_limit;
+        maxSavedLimit = result.quota.max_saved;
+        totalSavedCount = result.quota.total_saved;
+        renderQuotaBanner();
+      }
+
+      if (result.blocked) {
+        endAnalysisLoading();
+        showLimitModal("analysis");
+        return;
+      }
+
+      lastAnalysis = result.analysis;
+      displayAIAnalysis(result.analysis);
 
       setCachedAnalysis(lastAnalyzedDomain, {
         content_hash: lastContentHash,
-        analysis,
+        analysis: result.analysis,
         meta: lastExtractedMeta
       });
     }
