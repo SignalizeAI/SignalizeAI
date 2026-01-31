@@ -668,9 +668,39 @@ document.getElementById("no-results-reset")?.addEventListener("click", () => {
   updateSavedEmptyState(); 
 });
 
-async function shouldAutoAnalyze() {
+async function shouldAutoAnalyze(url = '') {
   const settings = await loadSettings();
-  return settings.autoReanalysis;
+  if (!settings.autoReanalysis) return false;
+
+  // Don't auto-analyze on search engines, social media, and other non-relevant sites
+  url = url?.toLowerCase() || '';
+  const irrelevantDomains = [
+    'google.com', 'google.',
+    'bing.com', 'bing.',
+    'yahoo.com',
+    'duckduckgo.com',
+    'baidu.com',
+    'yandex.com',
+    'facebook.com',
+    'twitter.com', 'x.com',
+    'instagram.com',
+    'tiktok.com',
+    'reddit.com',
+    'linkedin.com',
+    'youtube.com',
+    'pinterest.com',
+    'snapchat.com',
+    'wikipedia.org',
+    'github.com'
+  ];
+
+  for (const domain of irrelevantDomains) {
+    if (url.includes(domain)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function endAnalysisLoading() {
@@ -768,7 +798,14 @@ async function extractWebsiteContent() {
       endAnalysisLoading();
       document.getElementById("ai-analysis")?.classList.add("hidden");
       document.getElementById("ai-loading")?.classList.add("hidden");
-      document.getElementById("empty-tab-view")?.classList.remove("hidden");
+      const emptyView = document.getElementById("empty-tab-view");
+      if (emptyView) {
+        const titleEl = emptyView.querySelector(".empty-tab-title");
+        const descEl = emptyView.querySelector(".empty-tab-description");
+        if (titleEl) titleEl.textContent = "No website open";
+        if (descEl) descEl.textContent = "Navigate to any business website to see AI-powered sales insights instantly.";
+        emptyView.classList.remove("hidden");
+      }
       console.info("Empty tab or browser system page:", tab.url);
       return;
     }
@@ -1921,8 +1958,49 @@ document.addEventListener("click", (e) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "TAB_CHANGED") {
     if (isUserInteracting || isMenuOpen()) return;
-    shouldAutoAnalyze().then(enabled => {
-      if (!enabled) return;
+    
+    chrome.tabs.query({ active: true, currentWindow: true }).then(tabs => {
+      const url = tabs[0]?.url || '';
+      return shouldAutoAnalyze(url).then(enabled => ({ enabled, url }));
+    }).then(({ enabled, url }) => {
+      if (!enabled && currentView === "analysis") {
+        // Check if it's a search engine or irrelevant site
+        const lowerUrl = url?.toLowerCase() || '';
+        const irrelevantDomains = [
+          'google.com', 'google.',
+          'bing.com', 'bing.',
+          'yahoo.com',
+          'duckduckgo.com',
+          'baidu.com',
+          'yandex.com',
+          'facebook.com',
+          'twitter.com', 'x.com',
+          'instagram.com',
+          'tiktok.com',
+          'reddit.com',
+          'linkedin.com',
+          'youtube.com',
+          'pinterest.com',
+          'snapchat.com',
+          'wikipedia.org',
+          'github.com'
+        ];
+
+        const isIrrelevant = irrelevantDomains.some(domain => lowerUrl.includes(domain));
+        if (isIrrelevant) {
+          document.getElementById("ai-analysis")?.classList.add("hidden");
+          document.getElementById("ai-loading")?.classList.add("hidden");
+          const emptyView = document.getElementById("empty-tab-view");
+          if (emptyView) {
+            const titleEl = emptyView.querySelector(".empty-tab-title");
+            const descEl = emptyView.querySelector(".empty-tab-description");
+            if (titleEl) titleEl.textContent = "Search engines & social media excluded";
+            if (descEl) descEl.textContent = "Analysis is automatically skipped on search engines and social media to save your credits. Navigate to a business website for analysis.";
+            emptyView.classList.remove("hidden");
+          }
+        }
+        return;
+      }
 
       supabase.auth.getSession().then(({ data }) => {
         if (currentView === "analysis") {
@@ -1936,8 +2014,47 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 document.addEventListener('visibilitychange', () => {
   if (isUserInteracting || isMenuOpen()) return;
   if (!document.hidden) {
-    shouldAutoAnalyze().then(enabled => {
-      if (!enabled) return;
+    chrome.tabs.query({ active: true, currentWindow: true }).then(tabs => {
+      const url = tabs[0]?.url || '';
+      return shouldAutoAnalyze(url).then(enabled => ({ enabled, url }));
+    }).then(({ enabled, url }) => {
+      if (!enabled && currentView === "analysis") {
+        const lowerUrl = url?.toLowerCase() || '';
+        const irrelevantDomains = [
+          'google.com', 'google.',
+          'bing.com', 'bing.',
+          'yahoo.com',
+          'duckduckgo.com',
+          'baidu.com',
+          'yandex.com',
+          'facebook.com',
+          'twitter.com', 'x.com',
+          'instagram.com',
+          'tiktok.com',
+          'reddit.com',
+          'linkedin.com',
+          'youtube.com',
+          'pinterest.com',
+          'snapchat.com',
+          'wikipedia.org',
+          'github.com'
+        ];
+
+        const isIrrelevant = irrelevantDomains.some(domain => lowerUrl.includes(domain));
+        if (isIrrelevant) {
+          document.getElementById("ai-analysis")?.classList.add("hidden");
+          document.getElementById("ai-loading")?.classList.add("hidden");
+          const emptyView = document.getElementById("empty-tab-view");
+          if (emptyView) {
+            const titleEl = emptyView.querySelector(".empty-tab-title");
+            const descEl = emptyView.querySelector(".empty-tab-description");
+            if (titleEl) titleEl.textContent = "Search engines & social media excluded";
+            if (descEl) descEl.textContent = "Analysis is automatically skipped on search engines and social media to save your credits. Navigate to a business website for analysis.";
+            emptyView.classList.remove("hidden");
+          }
+        }
+        return;
+      }
 
       supabase.auth.getSession().then(({ data }) => {
         if (currentView === "analysis") {
