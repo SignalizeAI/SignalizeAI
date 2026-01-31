@@ -24,9 +24,16 @@ export async function analyzeWebsiteContent(extracted, isInternal = false) {
     throw new Error("Invalid JSON from backend");
   }
 
-  if (!res.ok || data?.upgrade_required || data?.error === "limit_reached") {
+  const isLimit = data?.upgrade_required || data?.error === "limit_reached";
+
+  if (!res.ok && !isLimit) {
+    throw new Error(data?.error || "Analysis request failed");
+  }
+
+  if (isLimit) {
     return {
       blocked: true,
+      reason: "limit",
       quota: {
         plan: data.plan || "free",
         used_today: data.used_today ?? 0,

@@ -130,12 +130,12 @@ async function loadQuotaFromAPI() {
 
     if (!res.ok) {
       console.warn("Quota fetch failed:", res.status);
-      currentPlan = "free";
-      remainingToday = 0;
-      usedToday = 0;
-      dailyLimitFromAPI = 5;
-      maxSavedLimit = 3;
-      totalSavedCount = 0;
+      currentPlan = currentPlan || "free";
+      remainingToday = null;
+      usedToday = null;
+      dailyLimitFromAPI = dailyLimitFromAPI || 5;
+      maxSavedLimit = maxSavedLimit || 3;
+      totalSavedCount = totalSavedCount || 0;
       renderQuotaBanner();
       return;
     }
@@ -154,12 +154,12 @@ async function loadQuotaFromAPI() {
     }
   } catch (e) {
     console.warn("Quota fetch failed", e);
-    currentPlan = "free";
-    remainingToday = 0;
-    usedToday = 0;
-    dailyLimitFromAPI = 5;
-    maxSavedLimit = 3;
-    totalSavedCount = 0;
+    currentPlan = currentPlan || "free";
+    remainingToday = null;
+    usedToday = null;
+    dailyLimitFromAPI = dailyLimitFromAPI || 5;
+    maxSavedLimit = maxSavedLimit || 3;
+    totalSavedCount = totalSavedCount || 0;
     renderQuotaBanner();
   }
 }
@@ -188,7 +188,9 @@ function renderQuotaBanner() {
   if (progressBar) {
     progressBar.style.width = `${percentage}%`;
 
-    if (Number(remainingToday ?? 0) <= 0) {
+    if (remainingToday === null) {
+      progressBar.classList.remove("danger");
+    } else if (Number(remainingToday ?? 0) <= 0) {
       progressBar.classList.add("danger");
     } else {
       progressBar.classList.remove("danger");
@@ -197,7 +199,10 @@ function renderQuotaBanner() {
 
   const savedText = `${Number(totalSavedCount ?? 0)} / ${Number(maxSavedLimit ?? 0)} saved`;
 
-  if (Number(remainingToday ?? 0) > 0) {
+  if (remainingToday === null) {
+    text.textContent = `Usage unavailable, ${savedText}`;
+    btn.classList.add("hidden");
+  } else if (Number(remainingToday ?? 0) > 0) {
     text.textContent = `${used} / ${totalLimit} analyses, ${savedText}`;
     
     if (currentPlan === "team") {
@@ -589,12 +594,24 @@ async function shouldAutoAnalyze() {
 
 function endAnalysisLoading() {
   isAnalysisLoading = false;
+  const refreshBtn = document.getElementById("refreshButton");
+  if (refreshBtn) {
+    refreshBtn.disabled = false;
+  }
 }
 
 async function extractWebsiteContent() {
-  if (isUserInteracting) return;
+  if (isUserInteracting) {
+    document.getElementById("ai-loading")?.classList.add("hidden");
+    endAnalysisLoading();
+    return;
+  }
   const { data } = await supabase.auth.getSession();
-  if (!data?.session) return;
+  if (!data?.session) {
+    document.getElementById("ai-loading")?.classList.add("hidden");
+    endAnalysisLoading();
+    return;
+  }
 
   await loadQuotaFromAPI();
 
@@ -603,16 +620,23 @@ async function extractWebsiteContent() {
     remainingToday <= 0 && 
     currentPlan === "free"
   ) {
+    document.getElementById("ai-loading")?.classList.add("hidden");
+    endAnalysisLoading();
     showLimitModal("analysis");
     return;
   }
-  if (currentView !== "analysis") return;
+  if (currentView !== "analysis") {
+    document.getElementById("ai-loading")?.classList.add("hidden");
+    endAnalysisLoading();
+    return;
+  }
   const aiCard = document.getElementById('ai-analysis');
   const contentLoading = document.getElementById('ai-loading');
   const contentError = document.getElementById('content-error');
   const contentData = document.getElementById('ai-data');
 
-  if (contentLoading && !contentLoading.classList.contains("hidden")) {
+  if (contentLoading && !contentLoading.classList.contains("hidden") && !forceRefresh) {
+    endAnalysisLoading();
     return;
   }
 
@@ -668,19 +692,29 @@ async function extractWebsiteContent() {
       return;
     }
 
-    chrome.tabs.sendMessage(
-      tab.id,
-      { type: "EXTRACT_WEBSITE_CONTENT" },
-      async (response) => {
+    return new Promise((resolve) => {
+      const timeoutId = setTimeout(() => {
+        document.getElementById("ai-loading")?.classList.add("hidden");
+        showContentBlocked("Timed out while analyzing. Please try again.");
+        resolve();
+      }, 15000);
+
+      chrome.tabs.sendMessage(
+        tab.id,
+        { type: "EXTRACT_WEBSITE_CONTENT" },
+        async (response) => {
+        clearTimeout(timeoutId);
         if (chrome.runtime.lastError) {
           endAnalysisLoading();
           showContentBlocked("Failed to extract page content. This page may not be accessible.");
+          resolve();
           return;
         }
         
         if (!response) {
           endAnalysisLoading();
           showContentBlocked("No response from content script");
+          resolve();
           return;
         }
 
@@ -772,6 +806,7 @@ async function extractWebsiteContent() {
 
               displayAIAnalysis(lastAnalysis);
               endAnalysisLoading();
+              resolve();
 
             } else {
               if (aiLoading) aiLoading.classList.remove("hidden");
@@ -779,17 +814,13 @@ async function extractWebsiteContent() {
 
               if (!response.content.paragraphs?.length && !response.content.headings?.length) {
                 showContentBlocked("Not enough readable content to analyze.");
+                resolve();
                 return;
               }
 
             const urlObj = new URL(response.content.url);
             const isInternal = urlObj.hostname === "signalizeai.org" || urlObj.hostname === "www.signalizeai.org";
             const result = await analyzeWebsiteContent(response.content, isInternal);
-
-            if (result.blocked) {
-              showLimitModal("analysis");
-              return;
-            }
 
             if (result.quota) {
               currentPlan = result.quota.plan;
@@ -801,8 +832,19 @@ async function extractWebsiteContent() {
               renderQuotaBanner();
             }
 
+            if (result.blocked) {
+              document.getElementById("ai-loading")?.classList.add("hidden");
+              document.getElementById("ai-data")?.classList.add("hidden");
+              endAnalysisLoading();
+              showLimitModal("analysis");
+              resolve();
+              return;
+            }
+
             if (!result.analysis) {
               showContentBlocked("Failed to generate analysis");
+              endAnalysisLoading();
+              resolve();
               return;
             }
 
@@ -840,10 +882,12 @@ async function extractWebsiteContent() {
                   })
                   .eq("id", existing.id);
               }
+              resolve();
             }
           } catch (err) {
             showContentBlocked("Failed to analyze page: " + err.message);
             endAnalysisLoading();
+            resolve();
           }
 
         }
@@ -856,9 +900,11 @@ async function extractWebsiteContent() {
               originalUrl: tab.url
             }
           );
+          resolve();
           return;
         }
         else if (response?.reason === "RESTRICTED") {
+          endAnalysisLoading();
           showContentBlocked(
             "This page requires login or consent before content can be analyzed.",
             {
@@ -866,6 +912,7 @@ async function extractWebsiteContent() {
               originalUrl: tab.url
             }
           );
+          resolve();
           return;
         }
         else {
@@ -875,8 +922,10 @@ async function extractWebsiteContent() {
             showContentBlocked("Unable to analyze this page.");
           }
         }
+        resolve();
       }
     );
+    });
   } catch (err) {
     endAnalysisLoading();
   }
@@ -888,7 +937,7 @@ async function analyzeSpecificUrl(url) {
 
   await loadQuotaFromAPI();
 
-  if (currentPlan === "free" && remainingToday <= 0) {
+  if (currentPlan === "free" && remainingToday !== null && remainingToday <= 0) {
     showLimitModal("analysis");
     return;
   }
@@ -938,14 +987,30 @@ async function analyzeSpecificUrl(url) {
 
       const urlObj = new URL(response.content.url);
       const isInternal = urlObj.hostname === "signalizeai.org" || urlObj.hostname === "www.signalizeai.org";
-      const analysis = await analyzeWebsiteContent(response.content, isInternal);
-      lastAnalysis = analysis;
+      const result = await analyzeWebsiteContent(response.content, isInternal);
 
-      displayAIAnalysis(analysis);
+      if (result.quota) {
+        currentPlan = result.quota.plan;
+        usedToday = result.quota.used_today;
+        remainingToday = result.quota.remaining_today;
+        dailyLimitFromAPI = result.quota.daily_limit;
+        maxSavedLimit = result.quota.max_saved;
+        totalSavedCount = result.quota.total_saved;
+        renderQuotaBanner();
+      }
+
+      if (result.blocked) {
+        endAnalysisLoading();
+        showLimitModal("analysis");
+        return;
+      }
+
+      lastAnalysis = result.analysis;
+      displayAIAnalysis(result.analysis);
 
       setCachedAnalysis(lastAnalyzedDomain, {
         content_hash: lastContentHash,
-        analysis,
+        analysis: result.analysis,
         meta: lastExtractedMeta
       });
     }
