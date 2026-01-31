@@ -2077,6 +2077,13 @@ dropdownMenu?.addEventListener("click", (e) => {
   navigateTo("saved");
 });
 
+const subscriptionMenu = document.getElementById("menu-subscription");
+
+subscriptionMenu?.addEventListener("click", (e) => {
+  e.preventDefault();
+  chrome.tabs.create({ url: "https://signalizeai.org/pricing" });
+});
+
 document.getElementById("export-csv")?.addEventListener("click", async () => {
   const data = await fetchSavedAnalysesData();
   exportToCSV(data);
@@ -2845,6 +2852,19 @@ chrome.runtime.onMessage.addListener(async (msg) => {
     if (!data?.session) return;
 
     updateUI(data.session);
+  }
+
+  if (msg.type === "PAYMENT_SUCCESS") {
+    await loadQuotaFromAPI();
+    
+    const banner = document.getElementById("quota-banner");
+    if (banner) {
+      const originalBg = banner.style.backgroundColor;
+      banner.style.backgroundColor = "#10b981"; // Green
+      setTimeout(() => {
+        banner.style.backgroundColor = originalBg;
+      }, 2000);
+    }
   }
 });
 
