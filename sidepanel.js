@@ -2897,12 +2897,14 @@ async function openCheckout(variantId) {
   const email = data.session.user.email;
   const userId = data.session.user.id;
   const plan = variantId === "88e4933d-9fae-4a7a-8c3f-ee72d78018b0" ? "team" : "pro";
+  const successUrl = encodeURIComponent(`https://signalizeai.org/payment-success?plan=${plan}`);
 
   const checkoutUrl =
     `https://signalizeaipay.lemonsqueezy.com/checkout/buy/${variantId}` +
     `?checkout[email]=${encodeURIComponent(email)}` +
     `&checkout[custom][user_id]=${encodeURIComponent(userId)}` +
     `&checkout[custom][plan]=${plan}` +
+    `&checkout[success_url]=${successUrl}` +
     `&media=0&discount=0`;
 
   chrome.tabs.create({ url: checkoutUrl });
@@ -2975,15 +2977,6 @@ chrome.runtime.onMessage.addListener(async (msg) => {
 
   if (msg.type === "PAYMENT_SUCCESS") {
     await loadQuotaFromAPI();
-    
-    const banner = document.getElementById("quota-banner");
-    if (banner) {
-      const originalBg = banner.style.backgroundColor;
-      banner.style.backgroundColor = "#10b981"; // Green
-      setTimeout(() => {
-        banner.style.backgroundColor = originalBg;
-      }, 2000);
-    }
   }
 });
 
