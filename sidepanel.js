@@ -2976,15 +2976,24 @@ chrome.runtime.onMessage.addListener(async (msg) => {
   }
 
   if (msg.type === "PAYMENT_SUCCESS") {
+    await restoreSessionFromStorage();
+
     // Refresh session to ensure we have the latest auth tokens
     const { data } = await supabase.auth.getSession();
-    if (data?.session) {
+    if (!data?.session) {
+      console.warn("No active session after payment success");
+      return;
+    }
+    try {
       // Force a new JWT to get updated user data from server
       await supabase.auth.refreshSession();
+    } catch (err) {
+      console.warn("Failed to refresh session after payment", err);
     }
     // Load quota after a short delay to allow backend to update
     await new Promise(resolve => setTimeout(resolve, 500));
     await loadQuotaFromAPI();
+    updateUI(data.session);
   }
 });
 
