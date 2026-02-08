@@ -16,6 +16,8 @@ let selectedSavedIds = new Set();
 let isRangeSelecting = false;
 let isFinalizingDeletes = false;
 let isUndoToastActive = false;
+let pendingDeleteMap = new Map();
+let undoTimer = null;
 let totalFilteredCount = 0;
 let currentPage = 1;
 const PAGE_SIZE = 10;
@@ -24,10 +26,14 @@ let remainingToday = null;
 let usedToday = null;
 let maxSavedLimit = 5;
 let totalSavedCount = 0;
-let dailyLimitFromAPI = 0;
+let dailyLimitFromAPI = 5;
 let isUserInteracting = false;
 let dropdownOpenedAt = 0;
 let isAnalysisLoading = false;
+let lastQuotaFetch = 0;
+const QUOTA_TTL = 30_000;
+let lastAutoAnalyzeAt = 0;
+const AUTO_ANALYZE_DEBOUNCE = 500;
 let activeFilters = {
   minScore: 0,
   maxScore: 100,
@@ -35,6 +41,31 @@ let activeFilters = {
   searchQuery: "",
   sort: "created_at_desc"
 };
+
+const IRRELEVANT_DOMAINS = [
+  "google.com",
+  "google.",
+  "bing.com",
+  "bing.",
+  "yahoo.com",
+  "duckduckgo.com",
+  "baidu.com",
+  "yandex.com",
+  "facebook.com",
+  "twitter.com",
+  "x.com",
+  "instagram.com",
+  "tiktok.com",
+  "reddit.com",
+  "linkedin.com",
+  "youtube.com",
+  "pinterest.com",
+  "snapchat.com",
+  "wikipedia.org",
+  "github.com",
+];
+
+const TWO_PART_TLDS = ["co.uk", "com.au", "co.in", "org.uk"];
 
 const SELECT_ALL_ICON = `
 <svg
@@ -117,7 +148,9 @@ async function signInWithGoogle() {
   }
 }
 
-async function loadQuotaFromAPI() {
+async function loadQuotaFromAPI(force = false) {
+  if (!force && Date.now() - lastQuotaFetch < QUOTA_TTL) return;
+  lastQuotaFetch = Date.now();
   const { data } = await supabase.auth.getSession();
   if (!data?.session) return;
 
@@ -133,9 +166,9 @@ async function loadQuotaFromAPI() {
       currentPlan = currentPlan || "free";
       remainingToday = null;
       usedToday = null;
-      dailyLimitFromAPI = dailyLimitFromAPI || 5;
-      maxSavedLimit = maxSavedLimit || 3;
-      totalSavedCount = totalSavedCount || 0;
+      dailyLimitFromAPI = dailyLimitFromAPI ?? 5;
+      maxSavedLimit = maxSavedLimit ?? 3;
+      totalSavedCount = totalSavedCount ?? 0;
       renderQuotaBanner();
       return;
     }
@@ -147,8 +180,8 @@ async function loadQuotaFromAPI() {
       remainingToday = dataJson.remaining_today;
       usedToday = dataJson.used_today;
       dailyLimitFromAPI = dataJson.daily_limit;
-      maxSavedLimit = dataJson.max_saved || 0;
-      totalSavedCount = dataJson.total_saved || 0;
+      maxSavedLimit = dataJson.max_saved ?? 0;
+      totalSavedCount = dataJson.total_saved ?? 0;
       
       renderQuotaBanner();
     }
@@ -157,9 +190,9 @@ async function loadQuotaFromAPI() {
     currentPlan = currentPlan || "free";
     remainingToday = null;
     usedToday = null;
-    dailyLimitFromAPI = dailyLimitFromAPI || 5;
-    maxSavedLimit = maxSavedLimit || 3;
-    totalSavedCount = totalSavedCount || 0;
+    dailyLimitFromAPI = dailyLimitFromAPI ?? 5;
+    maxSavedLimit = maxSavedLimit ?? 3;
+    totalSavedCount = totalSavedCount ?? 0;
     renderQuotaBanner();
   }
 }
@@ -330,6 +363,12 @@ async function signOut() {
   usedToday = null;
   totalSavedCount = 0;
   currentPlan = null;
+  lastAnalysis = null;
+  lastExtractedMeta = null;
+  lastContentHash = null;
+  lastAnalyzedDomain = null;
+  pendingDeleteMap.clear();
+  selectedSavedIds.clear();
 
   await chrome.storage.local.remove("supabaseSession");
 
@@ -383,7 +422,14 @@ function extractRootDomain(hostname) {
     return hostname;
   }
 
-  return parts.slice(-2).join(".");
+  const lastTwo = parts.slice(-2).join(".");
+  const lastThree = parts.slice(-3).join(".");
+
+  if (TWO_PART_TLDS.includes(lastTwo)) {
+    return lastThree;
+  }
+
+  return lastTwo;
 }
 
 function makeCacheKey(url) {
@@ -500,19 +546,23 @@ function showContentBlocked(message, options = {}) {
   if (contentLoading) contentLoading.classList.add("hidden");
 
   if (contentError) {
-    contentError.innerHTML = `
-      <div class="blocked-message">
-        <p>${message}</p>
+    contentError.textContent = "";
+    const wrapper = document.createElement("div");
+    wrapper.className = "blocked-message";
 
-        ${
-          options.allowHomepageFallback
-            ? `<button id="analyze-homepage-btn" class="primary-btn">
-                Analyze homepage instead
-              </button>`
-            : ""
-        }
-      </div>
-    `;
+    const messageEl = document.createElement("p");
+    messageEl.textContent = message;
+    wrapper.appendChild(messageEl);
+
+    if (options.allowHomepageFallback) {
+      const btn = document.createElement("button");
+      btn.id = "analyze-homepage-btn";
+      btn.className = "primary-btn";
+      btn.textContent = "Analyze homepage instead";
+      wrapper.appendChild(btn);
+    }
+
+    contentError.appendChild(wrapper);
     contentError.classList.remove("hidden");
   }
 
@@ -627,7 +677,11 @@ function updateSavedActionsVisibility(count) {
   }
 }
 
-function updateSavedEmptyState(visibleCount) {
+function updateSavedEmptyState(visibleCount = null) {
+  if (visibleCount === null) {
+    visibleCount = Array.from(document.querySelectorAll("#saved-list .saved-item"))
+      .filter(item => !item.classList.contains("pending-delete")).length;
+  }
   const emptyEl = document.getElementById("saved-empty");
   const filterEmptyEl = document.getElementById("filter-empty");
 
@@ -674,27 +728,7 @@ async function shouldAutoAnalyze(url = '') {
 
   // Don't auto-analyze on search engines, social media, and other non-relevant sites
   url = url?.toLowerCase() || '';
-  const irrelevantDomains = [
-    'google.com', 'google.',
-    'bing.com', 'bing.',
-    'yahoo.com',
-    'duckduckgo.com',
-    'baidu.com',
-    'yandex.com',
-    'facebook.com',
-    'twitter.com', 'x.com',
-    'instagram.com',
-    'tiktok.com',
-    'reddit.com',
-    'linkedin.com',
-    'youtube.com',
-    'pinterest.com',
-    'snapchat.com',
-    'wikipedia.org',
-    'github.com'
-  ];
-
-  for (const domain of irrelevantDomains) {
+  for (const domain of IRRELEVANT_DOMAINS) {
     if (url.includes(domain)) {
       return false;
     }
@@ -708,6 +742,19 @@ function endAnalysisLoading() {
   const refreshBtn = document.getElementById("refreshButton");
   if (refreshBtn) {
     refreshBtn.disabled = false;
+  }
+}
+
+function showIrrelevantDomainView() {
+  document.getElementById("ai-analysis")?.classList.add("hidden");
+  document.getElementById("ai-loading")?.classList.add("hidden");
+  const emptyView = document.getElementById("empty-tab-view");
+  if (emptyView) {
+    const titleEl = emptyView.querySelector(".empty-tab-title");
+    const descEl = emptyView.querySelector(".empty-tab-description");
+    if (titleEl) titleEl.textContent = "Search engines & social media excluded";
+    if (descEl) descEl.textContent = "Analysis is automatically skipped on search engines and social media to save your credits. Navigate to a business website for analysis.";
+    emptyView.classList.remove("hidden");
   }
 }
 
@@ -773,20 +820,14 @@ async function extractWebsiteContent() {
     if (!tab?.id) {
       endAnalysisLoading();
       if (contentLoading) contentLoading.classList.add('hidden');
-      if (contentError) {
-        contentError.innerHTML = '<div class="blocked-message"><p>Unable to access tab information.</p></div>';
-        contentError.classList.remove('hidden');
-      }
+      showContentBlocked("Unable to access tab information.");
       return;
     }
 
     if (!tab.url) {
       endAnalysisLoading();
       if (contentLoading) contentLoading.classList.add('hidden');
-      if (contentError) {
-        contentError.innerHTML = '<div class="blocked-message"><p>Please navigate to a website to analyze.</p></div>';
-        contentError.classList.remove('hidden');
-      }
+      showContentBlocked("Please navigate to a website to analyze.");
       return;
     }
 
@@ -848,6 +889,7 @@ async function extractWebsiteContent() {
 
           const currentDomain = lastExtractedMeta.domain;
           const currentUrl = lastExtractedMeta.url;
+          const previousContentHash = lastContentHash;
           lastContentHash = await hashContent(response.content);
 
           const btn = document.getElementById("saveButton");
@@ -865,7 +907,7 @@ async function extractWebsiteContent() {
               .from("saved_analyses")
               .select("*")
               .eq("user_id", user.id)
-              .eq("domain", lastExtractedMeta.domain)
+              .eq("url", currentUrl)
               .maybeSingle();
 
             existing = data;
@@ -873,6 +915,9 @@ async function extractWebsiteContent() {
             if (existing) {
               btn?.classList.add("active");
               if (btn) btn.title = "Remove";
+              if (btn) btn.dataset.savedId = existing.id;
+            } else if (btn) {
+              delete btn.dataset.savedId;
             }
           }
           // Only check URL-level cache (exact same URL)
@@ -940,7 +985,9 @@ async function extractWebsiteContent() {
 
               const isNewRootDomain = !lastRootDomain || lastRootDomain !== rootDomain;
               const isNewUrl = previousUrl !== currentUrl;
-              if (!forceRefresh && !isNewRootDomain && !isNewUrl) {
+              const contentChanged =
+                previousContentHash && previousContentHash !== lastContentHash;
+              if (!forceRefresh && !isNewRootDomain && !isNewUrl && !contentChanged) {
                 if (aiLoading) aiLoading.classList.add("hidden");
                 if (aiData) aiData.classList.add("hidden");
                 showContentBlocked("Click the refresh button to analyze this page.");
@@ -1011,7 +1058,7 @@ async function extractWebsiteContent() {
               });
 
               if (existing) {
-                await supabase
+                const { error: updateError } = await supabase
                   .from("saved_analyses")
                   .update({
                     content_hash: lastContentHash,
@@ -1032,6 +1079,11 @@ async function extractWebsiteContent() {
                     recommended_outreach_message: analysis.recommendedOutreach?.message
                   })
                   .eq("id", existing.id);
+
+                if (updateError) {
+                  console.error("Failed to update saved analysis:", updateError);
+                  showToast("Failed to update saved analysis. Try again.");
+                }
               }
               resolve();
             }
@@ -1127,11 +1179,12 @@ async function analyzeSpecificUrl(url) {
       lastAnalyzedDomain = lastExtractedMeta.domain;
       const settings = await loadSettings();
       const reuseAllowed = settings.reanalysisMode === "content-change" && !forceRefresh;
-      const cached = await getCachedAnalysis(lastAnalyzedDomain);
+      const cached = await getCachedAnalysisByDomain(lastAnalyzedDomain);
 
       if (reuseAllowed && cached) {
+        // Domain-level reuse intentionally allowed for homepage fallback.
         lastAnalysis = cached.analysis;
-        lastExtractedMeta = cached.meta;
+        lastExtractedMeta = { ...cached.meta, url, domain: lastAnalyzedDomain };
         displayAIAnalysis(lastAnalysis);
         return;
       }
@@ -1141,7 +1194,12 @@ async function analyzeSpecificUrl(url) {
         urlObj.hostname === "signalizeai.org" ||
         urlObj.hostname === "www.signalizeai.org" ||
         urlObj.hostname === "signalizeaipay.lemonsqueezy.com";
-      const result = await analyzeWebsiteContent(response.content, isInternal);
+      const domainAnalyzedToday = await wasDomainAnalyzedToday(lastAnalyzedDomain);
+      const result = await analyzeWebsiteContent(
+        response.content,
+        isInternal,
+        domainAnalyzedToday
+      );
 
       if (result.quota) {
         currentPlan = result.quota.plan;
@@ -1161,9 +1219,13 @@ async function analyzeSpecificUrl(url) {
 
       lastAnalysis = result.analysis;
       displayAIAnalysis(result.analysis);
+      markDomainAnalyzedToday(lastAnalyzedDomain);
 
-      setCachedAnalysis(lastAnalyzedDomain, {
-        content_hash: lastContentHash,
+      setCachedAnalysis(lastExtractedMeta.url, {
+        analysis: result.analysis,
+        meta: lastExtractedMeta
+      });
+      setCachedAnalysisByDomain(lastAnalyzedDomain, {
         analysis: result.analysis,
         meta: lastExtractedMeta
       });
@@ -1230,6 +1292,18 @@ function displayAIAnalysis(analysis) {
 }
 
 function renderSavedItem(item) {
+  const escapeHtml = (value = "") =>
+    String(value).replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[char]));
+
+  const escapedTitle = escapeHtml(item.title || item.domain || "");
+  const escapedDescription = escapeHtml(item.description || "—");
+
   const wrapper = document.createElement("div");
   wrapper.dataset.salesScore = Number(item.sales_readiness_score ?? 0);
   wrapper.dataset.persona = (item.best_sales_persona || "")
@@ -1240,7 +1314,7 @@ function renderSavedItem(item) {
   wrapper.innerHTML = `
   <div class="saved-item-header">
     <div class="header-info">
-      <strong>${item.title || item.domain}</strong>
+      <strong>${escapedTitle}</strong>
       <div style="font-size:12px; opacity:0.7">${item.domain}</div>
     </div>
 
@@ -1312,7 +1386,7 @@ function renderSavedItem(item) {
 
     <p style="opacity:0.85">
       <strong>Company overview:</strong>
-      ${item.description || "—"}
+      ${escapedDescription}
     </p>
 
     ${
@@ -1546,6 +1620,11 @@ function updateSelectAllIcon() {
 function exportToCSV(rows) {
   if (!rows.length) return;
 
+  const csvEscape = (value) => {
+    const text = String(value ?? "");
+    return `"${text.replace(/"/g, '""')}"`;
+  };
+
   const headers = [
     "Title",
     "Domain",
@@ -1566,24 +1645,24 @@ function exportToCSV(rows) {
   ];
 
   const csvRows = [
-    headers.join(","),
+    headers.map(csvEscape).join(","),
     ...rows.map(item => [
-      item.title,
-      item.domain,
-      item.url,
-      `"${item.description || ""}"`,
-      item.sales_readiness_score,
-      `"${item.what_they_do || ""}"`,
-      `"${item.target_customer || ""}"`,
-      `"${item.value_proposition || ""}"`,
-      item.best_sales_persona,
-      `"${item.best_sales_persona_reason || ""}"`,
-      `"${item.sales_angle || ""}"`,
-      item.recommended_outreach_persona,
-      `"${item.recommended_outreach_goal || ""}"`,
-      `"${item.recommended_outreach_angle || ""}"`,
-      `"${item.recommended_outreach_message || ""}"`,
-      item.created_at
+      csvEscape(item.title),
+      csvEscape(item.domain),
+      csvEscape(item.url),
+      csvEscape(item.description),
+      csvEscape(item.sales_readiness_score),
+      csvEscape(item.what_they_do),
+      csvEscape(item.target_customer),
+      csvEscape(item.value_proposition),
+      csvEscape(item.best_sales_persona),
+      csvEscape(item.best_sales_persona_reason),
+      csvEscape(item.sales_angle),
+      csvEscape(item.recommended_outreach_persona),
+      csvEscape(item.recommended_outreach_goal),
+      csvEscape(item.recommended_outreach_angle),
+      csvEscape(item.recommended_outreach_message),
+      csvEscape(item.created_at)
     ].join(","))
   ];
 
@@ -1684,7 +1763,10 @@ async function fetchAndRenderPage() {
     countQuery = countQuery.lte("sales_readiness_score", activeFilters.maxScore);
 
   if (activeFilters.persona)
-    countQuery = countQuery.ilike("best_sales_persona", activeFilters.persona);
+    countQuery = countQuery.ilike(
+      "best_sales_persona",
+      `%${activeFilters.persona}%`
+    );
 
   if (activeFilters.searchQuery) {
     const q = `%${activeFilters.searchQuery}%`;
@@ -1717,7 +1799,10 @@ async function fetchAndRenderPage() {
   if (activeFilters.maxScore < 100)
     dataQuery = dataQuery.lte("sales_readiness_score", activeFilters.maxScore);
   if (activeFilters.persona)
-    dataQuery = dataQuery.ilike("best_sales_persona", activeFilters.persona);
+    dataQuery = dataQuery.ilike(
+      "best_sales_persona",
+      `%${activeFilters.persona}%`
+    );
   if (activeFilters.searchQuery) {
     const q = `%${activeFilters.searchQuery}%`;
     dataQuery = dataQuery.or(`title.ilike.${q},domain.ilike.${q}`);
@@ -1755,12 +1840,12 @@ async function fetchAndRenderPage() {
       sortAsc = true;
       break;
 
-    case "domain_asc":
+    case "title_asc":
       sortColumn = "title";
       sortAsc = true;
       break;
 
-    case "domain_desc":
+    case "title_desc":
       sortColumn = "title";
       sortAsc = false;
       break;
@@ -1868,7 +1953,6 @@ function updateFilterBanner() {
 
   const isFiltering = areFiltersActive();
   const isNoResults = totalFilteredCount === 0;
-  const searchOpen = !searchContainer.classList.contains("hidden");
 
   if (isFiltering && !isNoResults) {
     const shownSoFar = Math.min(
@@ -1961,64 +2045,63 @@ document.addEventListener("click", (e) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "TAB_CHANGED") {
-    if (isUserInteracting || isMenuOpen()) return;
-    
-    chrome.tabs.query({ active: true, currentWindow: true }).then(tabs => {
-      const url = tabs[0]?.url || '';
-      return shouldAutoAnalyze(url).then(enabled => ({ enabled, url }));
-    }).then(({ enabled, url }) => {
-      if (!enabled && currentView === "analysis") {
-        // Check if it's a search engine or irrelevant site
-        const lowerUrl = url?.toLowerCase() || '';
-        const irrelevantDomains = [
-          'google.com', 'google.',
-          'bing.com', 'bing.',
-          'yahoo.com',
-          'duckduckgo.com',
-          'baidu.com',
-          'yandex.com',
-          'facebook.com',
-          'twitter.com', 'x.com',
-          'instagram.com',
-          'tiktok.com',
-          'reddit.com',
-          'linkedin.com',
-          'youtube.com',
-          'pinterest.com',
-          'snapchat.com',
-          'wikipedia.org',
-          'github.com'
-        ];
+chrome.runtime.onMessage.addListener(async (message) => {
+  switch (message.type) {
+    case "TAB_CHANGED": {
+      if (isUserInteracting || isMenuOpen() || isAnalysisLoading) return;
+      if (Date.now() - lastAutoAnalyzeAt < AUTO_ANALYZE_DEBOUNCE) return;
+      lastAutoAnalyzeAt = Date.now();
 
-        const isIrrelevant = irrelevantDomains.some(domain => lowerUrl.includes(domain));
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const url = tabs[0]?.url || "";
+      const enabled = await shouldAutoAnalyze(url);
+
+      if (!enabled && currentView === "analysis") {
+        const lowerUrl = url?.toLowerCase() || "";
+        const isIrrelevant = IRRELEVANT_DOMAINS.some(domain => lowerUrl.includes(domain));
         if (isIrrelevant) {
-          document.getElementById("ai-analysis")?.classList.add("hidden");
-          document.getElementById("ai-loading")?.classList.add("hidden");
-          const emptyView = document.getElementById("empty-tab-view");
-          if (emptyView) {
-            const titleEl = emptyView.querySelector(".empty-tab-title");
-            const descEl = emptyView.querySelector(".empty-tab-description");
-            if (titleEl) titleEl.textContent = "Search engines & social media excluded";
-            if (descEl) descEl.textContent = "Analysis is automatically skipped on search engines and social media to save your credits. Navigate to a business website for analysis.";
-            emptyView.classList.remove("hidden");
-          }
+          showIrrelevantDomainView();
         }
         return;
       }
 
-      supabase.auth.getSession().then(({ data }) => {
-        if (currentView === "analysis") {
-          setTimeout(extractWebsiteContent, 100);
-        }
-      });
-    });
+      const { data } = await supabase.auth.getSession();
+      if (currentView === "analysis" && data?.session) {
+        setTimeout(extractWebsiteContent, 100);
+      }
+      break;
+    }
+    case "SESSION_UPDATED": {
+      await restoreSessionFromStorage();
+      const { data } = await supabase.auth.getSession();
+      if (!data?.session) return;
+      updateUI(data.session);
+      break;
+    }
+    case "PAYMENT_SUCCESS": {
+      await restoreSessionFromStorage();
+      const { data } = await supabase.auth.getSession();
+      if (!data?.session) {
+        console.warn("No active session after payment success");
+        return;
+      }
+      try {
+        await supabase.auth.refreshSession();
+      } catch (err) {
+        console.warn("Failed to refresh session after payment", err);
+      }
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await loadQuotaFromAPI(true);
+      updateUI(data.session);
+      break;
+    }
+    default:
+      break;
   }
 });
 
 document.addEventListener('visibilitychange', () => {
-  if (isUserInteracting || isMenuOpen()) return;
+  if (isUserInteracting || isMenuOpen() || isAnalysisLoading) return;
   if (!document.hidden) {
     chrome.tabs.query({ active: true, currentWindow: true }).then(tabs => {
       const url = tabs[0]?.url || '';
@@ -2026,38 +2109,9 @@ document.addEventListener('visibilitychange', () => {
     }).then(({ enabled, url }) => {
       if (!enabled && currentView === "analysis") {
         const lowerUrl = url?.toLowerCase() || '';
-        const irrelevantDomains = [
-          'google.com', 'google.',
-          'bing.com', 'bing.',
-          'yahoo.com',
-          'duckduckgo.com',
-          'baidu.com',
-          'yandex.com',
-          'facebook.com',
-          'twitter.com', 'x.com',
-          'instagram.com',
-          'tiktok.com',
-          'reddit.com',
-          'linkedin.com',
-          'youtube.com',
-          'pinterest.com',
-          'snapchat.com',
-          'wikipedia.org',
-          'github.com'
-        ];
-
-        const isIrrelevant = irrelevantDomains.some(domain => lowerUrl.includes(domain));
+        const isIrrelevant = IRRELEVANT_DOMAINS.some(domain => lowerUrl.includes(domain));
         if (isIrrelevant) {
-          document.getElementById("ai-analysis")?.classList.add("hidden");
-          document.getElementById("ai-loading")?.classList.add("hidden");
-          const emptyView = document.getElementById("empty-tab-view");
-          if (emptyView) {
-            const titleEl = emptyView.querySelector(".empty-tab-title");
-            const descEl = emptyView.querySelector(".empty-tab-description");
-            if (titleEl) titleEl.textContent = "Search engines & social media excluded";
-            if (descEl) descEl.textContent = "Analysis is automatically skipped on search engines and social media to save your credits. Navigate to a business website for analysis.";
-            emptyView.classList.remove("hidden");
-          }
+          showIrrelevantDomainView();
         }
         return;
       }
@@ -2093,11 +2147,19 @@ button?.addEventListener("click", async () => {
   const domain = lastExtractedMeta.domain;
 
   if (button.classList.contains("active")) {
-    const { error } = await supabase
+    const savedId = button.dataset.savedId;
+    let deleteQuery = supabase
       .from("saved_analyses")
       .delete()
-      .eq("user_id", user.id)
-      .eq("domain", domain);
+      .eq("user_id", user.id);
+
+    if (savedId) {
+      deleteQuery = deleteQuery.eq("id", savedId);
+    } else {
+      deleteQuery = deleteQuery.eq("url", lastExtractedMeta.url);
+    }
+
+    const { error } = await deleteQuery;
 
     if (error) {
       console.error("Failed to delete:", error);
@@ -2106,10 +2168,11 @@ button?.addEventListener("click", async () => {
 
     button.classList.remove("active");
     button.title = "Save";
+    delete button.dataset.savedId;
     loadSavedAnalyses();
     await loadQuotaFromAPI();
   } else {
-    const { error } = await supabase.from("saved_analyses").insert({
+    const { data: insertData, error } = await supabase.from("saved_analyses").insert({
       user_id: user.id,
       domain: lastExtractedMeta.domain,
       url: lastExtractedMeta.url,
@@ -2128,7 +2191,7 @@ button?.addEventListener("click", async () => {
       recommended_outreach_goal: lastAnalysis.recommendedOutreach?.goal,
       recommended_outreach_angle: lastAnalysis.recommendedOutreach?.angle,
       recommended_outreach_message: lastAnalysis.recommendedOutreach?.message
-    });
+    }).select("id").single();
 
     if (error) {
       console.error("Failed to save:", error);
@@ -2137,6 +2200,9 @@ button?.addEventListener("click", async () => {
 
     button.classList.add("active");
     button.title = "Remove";
+    if (insertData?.id) {
+      button.dataset.savedId = insertData.id;
+    }
     loadSavedAnalyses();
     await loadQuotaFromAPI();
   }
@@ -2504,7 +2570,16 @@ clearCacheBtn?.addEventListener("click", async () => {
   lastExtractedMeta = null;
   lastAnalyzedDomain = null;
 
-  chrome.storage.local.clear();
+  chrome.storage.local.get(null, (items) => {
+    const keysToRemove = Object.keys(items).filter(
+      (k) =>
+        k.startsWith("analysis_cache:") ||
+        k.startsWith("domain_analyzed_today:")
+    );
+    if (keysToRemove.length) {
+      chrome.storage.local.remove(keysToRemove);
+    }
+  });
 
   const originalText = clearCacheBtn.textContent;
   clearCacheBtn.textContent = "Cleared";
@@ -2580,14 +2655,12 @@ multiSelectToggle?.addEventListener("click", async () => {
   if (selectedSavedIds.size === 0) return;
 
   const idsToDelete = Array.from(selectedSavedIds);
-  const elementsToFlag = [];
 
   document.querySelectorAll(".saved-item").forEach(el => {
     const cb = el.querySelector(".saved-select-checkbox");
     if (cb && idsToDelete.includes(cb.dataset.id)) {
       el.dataset.isPendingDelete = "true";
       el.classList.add("pending-delete");
-      elementsToFlag.push(el);
     }
   });
 
@@ -2707,8 +2780,22 @@ selectAllBtn?.addEventListener("click", () => {
   toggleSelectAllVisible();
 });
 
-let pendingDeleteMap = new Map();
-let undoTimer = null;
+function showToast(message) {
+  let toast = document.getElementById("simple-toast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "simple-toast";
+    toast.className = "toast-snackbar";
+    document.body.appendChild(toast);
+  }
+
+  toast.textContent = message;
+  toast.classList.add("show");
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 1800);
+}
 
 function showUndoToast() {
   isUndoToastActive = true;
@@ -2744,7 +2831,7 @@ function showUndoToast() {
   const undoBtn = document.getElementById("undo-button");
   const closeBtn = document.getElementById("close-toast-btn");
 
-  undoBtn.onclick = () => {
+  undoBtn.onclick = async () => {
     isUndoToastActive = false;
     document.body.classList.remove("undo-active");
     clearTimeout(undoTimer);
@@ -2757,6 +2844,7 @@ function showUndoToast() {
 
     pendingDeleteMap.clear();
     updateSavedEmptyState();
+    await loadQuotaFromAPI(true);
   };
 
   closeBtn.onclick = finalizePendingDeletes;
@@ -2803,6 +2891,11 @@ async function finalizePendingDeletes() {
         await item.finalize();
       } catch (err) {
         console.error("Delete failed:", err);
+        if (item.element) {
+          delete item.element.dataset.isPendingDelete;
+          item.element.classList.remove("pending-delete");
+        }
+        showToast("Delete failed. Item restored.");
       }
     }
   }
@@ -2971,37 +3064,6 @@ document.getElementById("upgrade-btn")?.addEventListener("click", () => {
   
 });
 
-chrome.runtime.onMessage.addListener(async (msg) => {
-  if (msg.type === "SESSION_UPDATED") {
-    await restoreSessionFromStorage();
-
-    const { data } = await supabase.auth.getSession();
-    if (!data?.session) return;
-
-    updateUI(data.session);
-  }
-
-  if (msg.type === "PAYMENT_SUCCESS") {
-    await restoreSessionFromStorage();
-
-    // Refresh session to ensure we have the latest auth tokens
-    const { data } = await supabase.auth.getSession();
-    if (!data?.session) {
-      console.warn("No active session after payment success");
-      return;
-    }
-    try {
-      // Force a new JWT to get updated user data from server
-      await supabase.auth.refreshSession();
-    } catch (err) {
-      console.warn("Failed to refresh session after payment", err);
-    }
-    // Load quota after a short delay to allow backend to update
-    await new Promise(resolve => setTimeout(resolve, 500));
-    await loadQuotaFromAPI();
-    updateUI(data.session);
-  }
-});
 
 async function restoreSessionFromStorage() {
   const { supabaseSession } = await chrome.storage.local.get("supabaseSession");
