@@ -958,7 +958,10 @@ async function extractWebsiteContent() {
               }
 
             const urlObj = new URL(response.content.url);
-            const isInternal = urlObj.hostname === "signalizeai.org" || urlObj.hostname === "www.signalizeai.org";
+            const isInternal =
+              urlObj.hostname === "signalizeai.org" ||
+              urlObj.hostname === "www.signalizeai.org" ||
+              urlObj.hostname === "signalizeaipay.lemonsqueezy.com";
             
             // Check if this domain was already analyzed today
             const domainAnalyzedToday = await wasDomainAnalyzedToday(currentDomain);
@@ -1134,7 +1137,10 @@ async function analyzeSpecificUrl(url) {
       }
 
       const urlObj = new URL(response.content.url);
-      const isInternal = urlObj.hostname === "signalizeai.org" || urlObj.hostname === "www.signalizeai.org";
+      const isInternal =
+        urlObj.hostname === "signalizeai.org" ||
+        urlObj.hostname === "www.signalizeai.org" ||
+        urlObj.hostname === "signalizeaipay.lemonsqueezy.com";
       const result = await analyzeWebsiteContent(response.content, isInternal);
 
       if (result.quota) {
