@@ -651,6 +651,10 @@ async function updateUI(session) {
 
     const settings = await loadSettings();
     applySettingsToUI(settings);
+
+    if (currentView === "analysis" && !isAnalysisLoading) {
+      setTimeout(extractWebsiteContent, 0);
+    }
   } else {
     document.getElementById("limit-modal")?.classList.add("hidden");
     loginView.classList.remove('hidden');
@@ -2169,8 +2173,12 @@ button?.addEventListener("click", async () => {
     button.classList.remove("active");
     button.title = "Save";
     delete button.dataset.savedId;
+    if (Number.isFinite(totalSavedCount) && totalSavedCount > 0) {
+      totalSavedCount -= 1;
+    }
+    renderQuotaBanner();
     loadSavedAnalyses();
-    await loadQuotaFromAPI();
+    await loadQuotaFromAPI(true);
   } else {
     const { data: insertData, error } = await supabase.from("saved_analyses").insert({
       user_id: user.id,
@@ -2203,8 +2211,12 @@ button?.addEventListener("click", async () => {
     if (insertData?.id) {
       button.dataset.savedId = insertData.id;
     }
+    if (Number.isFinite(totalSavedCount)) {
+      totalSavedCount += 1;
+    }
+    renderQuotaBanner();
     loadSavedAnalyses();
-    await loadQuotaFromAPI();
+    await loadQuotaFromAPI(true);
   }
 });
 
