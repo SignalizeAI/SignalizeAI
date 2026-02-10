@@ -1,0 +1,104 @@
+.toast-snackbar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: rgba(28, 28, 30, 0.95);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  z-index: 10000;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  min-width: 280px;
+}
+
+.toast-snackbar.show {
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast-content {
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.toast-main {
+  display: flex;
+  align-items: center;
+  font-size: 13.5px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.toast-icon {
+  opacity: 0.6;
+  color: #ff4b4b;
+}
+
+.toast-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#undo-button {
+  background: rgba(77, 171, 247, 0.1);
+  border: none;
+  color: #4dabf7;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  transition: background 0.2s ease;
+}
+
+#undo-button:hover {
+  background: rgba(77, 171, 247, 0.2);
+}
+
+#close-toast-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+#close-toast-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.undo-progress-container {
+  height: 2px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.undo-progress-bar {
+  height: 100%;
+  width: 100%;
+  background: #4dabf7;
+  transform-origin: left;
+}
+
+.toast-snackbar.show .undo-progress-bar {
+  animation: shrinkProgress 5s linear forwards;
+}
+
+@keyframes shrinkProgress {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
