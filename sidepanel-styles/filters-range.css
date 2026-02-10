@@ -26,3 +26,8 @@
   position: relative;
   z-index: 2;
 }
+
+.filter-group.slider-group {
+  position: relative;
+  padding-bottom: 10px;
+}
