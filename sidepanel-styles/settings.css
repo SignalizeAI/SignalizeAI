@@ -32,7 +32,7 @@
   cursor: pointer;
 }
 
-.setting-label input[type="checkbox"] {
+.setting-label input[type='checkbox'] {
   width: 16px;
   height: 16px;
   accent-color: #4ade80;
@@ -48,7 +48,7 @@
   cursor: pointer;
 }
 
-.setting-option input[type="radio"] {
+.setting-option input[type='radio'] {
   accent-color: #4285f4;
 }
 

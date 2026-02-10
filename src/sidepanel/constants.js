@@ -1,27 +1,27 @@
 export const IRRELEVANT_DOMAINS = [
-  "google.com",
-  "google.",
-  "bing.com",
-  "bing.",
-  "yahoo.com",
-  "duckduckgo.com",
-  "baidu.com",
-  "yandex.com",
-  "facebook.com",
-  "twitter.com",
-  "x.com",
-  "instagram.com",
-  "tiktok.com",
-  "reddit.com",
-  "linkedin.com",
-  "youtube.com",
-  "pinterest.com",
-  "snapchat.com",
-  "wikipedia.org",
-  "github.com"
+  'google.com',
+  'google.',
+  'bing.com',
+  'bing.',
+  'yahoo.com',
+  'duckduckgo.com',
+  'baidu.com',
+  'yandex.com',
+  'facebook.com',
+  'twitter.com',
+  'x.com',
+  'instagram.com',
+  'tiktok.com',
+  'reddit.com',
+  'linkedin.com',
+  'youtube.com',
+  'pinterest.com',
+  'snapchat.com',
+  'wikipedia.org',
+  'github.com',
 ];
 
-export const TWO_PART_TLDS = ["co.uk", "com.au", "co.in", "org.uk"];
+export const TWO_PART_TLDS = ['co.uk', 'com.au', 'co.in', 'org.uk'];
 
 export const SELECT_ALL_ICON = `
 <svg
@@ -74,8 +74,8 @@ export const DESELECT_ALL_ICON = `
 
 export const DEFAULT_SETTINGS = {
   autoReanalysis: true,
-  reanalysisMode: "content-change",
-  copyFormat: "full"
+  reanalysisMode: 'content-change',
+  copyFormat: 'full',
 };
 
 export const PAGE_SIZE = 10;

@@ -5,7 +5,10 @@
   padding: 20px;
   border: 1px solid #333;
   max-width: 400px;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
 
 .saved-item {
@@ -24,7 +27,7 @@
 .delete-saved-btn {
   background: transparent;
   border: none;
-  color: #fff; 
+  color: #fff;
   width: 34px;
   height: 34px;
   display: flex;

@@ -4,7 +4,7 @@ export const state = {
   lastExtractedMeta: null,
   lastAnalyzedDomain: null,
   forceRefresh: false,
-  currentView: "analysis",
+  currentView: 'analysis',
   selectionMode: false,
   lastSelectedIndex: null,
   selectedSavedIds: new Set(),
@@ -15,7 +15,7 @@ export const state = {
   undoTimer: null,
   totalFilteredCount: 0,
   currentPage: 1,
-  currentPlan: "free",
+  currentPlan: 'free',
   remainingToday: null,
   usedToday: null,
   maxSavedLimit: 5,
@@ -29,8 +29,8 @@ export const state = {
   activeFilters: {
     minScore: 0,
     maxScore: 100,
-    persona: "",
-    searchQuery: "",
-    sort: "created_at_desc"
-  }
+    persona: '',
+    searchQuery: '',
+    sort: 'created_at_desc',
+  },
 };

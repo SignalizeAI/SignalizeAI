@@ -1,6 +1,6 @@
-import { QUOTA_TTL } from "./constants.js";
-import { supabase } from "./supabase.js";
-import { state } from "./state.js";
+import { QUOTA_TTL } from './constants.js';
+import { supabase } from './supabase.js';
+import { state } from './state.js';
 
 export async function loadQuotaFromAPI(force = false) {
   if (!force && Date.now() - state.lastQuotaFetch < QUOTA_TTL) return;
@@ -11,13 +11,13 @@ export async function loadQuotaFromAPI(force = false) {
   const jwt = data.session.access_token;
 
   try {
-    const res = await fetch("https://api.signalizeai.org/quota", {
-      headers: { Authorization: `Bearer ${jwt}` }
+    const res = await fetch('https://api.signalizeai.org/quota', {
+      headers: { Authorization: `Bearer ${jwt}` },
     });
 
     if (!res.ok) {
-      console.warn("Quota fetch failed:", res.status);
-      state.currentPlan = state.currentPlan || "free";
+      console.warn('Quota fetch failed:', res.status);
+      state.currentPlan = state.currentPlan || 'free';
       state.remainingToday = null;
       state.usedToday = null;
       state.dailyLimitFromAPI = state.dailyLimitFromAPI ?? 5;
@@ -40,8 +40,8 @@ export async function loadQuotaFromAPI(force = false) {
       renderQuotaBanner();
     }
   } catch (e) {
-    console.warn("Quota fetch failed", e);
-    state.currentPlan = state.currentPlan || "free";
+    console.warn('Quota fetch failed', e);
+    state.currentPlan = state.currentPlan || 'free';
     state.remainingToday = null;
     state.usedToday = null;
     state.dailyLimitFromAPI = state.dailyLimitFromAPI ?? 5;
@@ -52,21 +52,21 @@ export async function loadQuotaFromAPI(force = false) {
 }
 
 export function renderQuotaBanner() {
-  const banner = document.getElementById("quota-banner");
-  const text = document.getElementById("quota-text");
-  const btn = document.getElementById("upgrade-btn");
-  const badge = document.getElementById("plan-badge");
-  const progressBar = document.getElementById("quota-progress-fill");
+  const banner = document.getElementById('quota-banner');
+  const text = document.getElementById('quota-text');
+  const btn = document.getElementById('upgrade-btn');
+  const badge = document.getElementById('plan-badge');
+  const progressBar = document.getElementById('quota-progress-fill');
 
   if (badge) {
     badge.textContent = state.currentPlan.toUpperCase();
-    badge.className = "badge";
+    badge.className = 'badge';
     badge.classList.add(`badge-${state.currentPlan.toLowerCase()}`);
   }
 
   if (!banner || !text || !btn) return;
 
-  banner.classList.remove("hidden");
+  banner.classList.remove('hidden');
   const used = Number(state.usedToday ?? 0);
   const totalLimit = Math.max(1, Number(state.dailyLimitFromAPI ?? 0));
   const percentage = Math.min(100, (used / totalLimit) * 100);
@@ -75,11 +75,11 @@ export function renderQuotaBanner() {
     progressBar.style.width = `${percentage}%`;
 
     if (state.remainingToday === null) {
-      progressBar.classList.remove("danger");
+      progressBar.classList.remove('danger');
     } else if (Number(state.remainingToday ?? 0) <= 0) {
-      progressBar.classList.add("danger");
+      progressBar.classList.add('danger');
     } else {
-      progressBar.classList.remove("danger");
+      progressBar.classList.remove('danger');
     }
   }
 
@@ -89,20 +89,19 @@ export function renderQuotaBanner() {
 
   if (state.remainingToday === null) {
     text.textContent = `Usage unavailable, ${savedText}`;
-    btn.classList.add("hidden");
+    btn.classList.add('hidden');
   } else if (Number(state.remainingToday ?? 0) > 0) {
     text.textContent = `${used} / ${totalLimit} analyses, ${savedText}`;
 
-    if (state.currentPlan === "team") {
-      btn.classList.add("hidden");
+    if (state.currentPlan === 'team') {
+      btn.classList.add('hidden');
     } else {
-      btn.classList.remove("hidden");
-      btn.textContent = state.currentPlan === "pro" ? "Upgrade to Team" : "Upgrade";
+      btn.classList.remove('hidden');
+      btn.textContent = state.currentPlan === 'pro' ? 'Upgrade to Team' : 'Upgrade';
     }
   } else {
     text.textContent = `Daily limit reached, ${savedText}`;
-    btn.classList.remove("hidden");
-    btn.textContent =
-      state.currentPlan === "pro" ? "Upgrade to Team" : "Upgrade to continue";
+    btn.classList.remove('hidden');
+    btn.textContent = state.currentPlan === 'pro' ? 'Upgrade to Team' : 'Upgrade to continue';
   }
 }

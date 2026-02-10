@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .filter-group:last-of-type {
@@ -11,7 +11,8 @@
   margin-bottom: 0;
 }
 
-#filter-min-score, #filter-max-score {
+#filter-min-score,
+#filter-max-score {
   position: absolute;
   width: 100%;
   pointer-events: none;
@@ -20,7 +21,7 @@
   margin-top: 25px;
 }
 
-#filter-min-score::-webkit-slider-thumb, 
+#filter-min-score::-webkit-slider-thumb,
 #filter-max-score::-webkit-slider-thumb {
   pointer-events: auto;
   position: relative;

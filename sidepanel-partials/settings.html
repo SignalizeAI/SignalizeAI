@@ -1,65 +1,55 @@
-        <!-- Settings -->
-        <div id="settings-view" class="website-content-card hidden">
-          <div class="content-header">
-            <h3 class="content-title">Settings</h3>
-          </div>
-          <div class="settings-section">
+<!-- Settings -->
+<div id="settings-view" class="website-content-card hidden">
+  <div class="content-header">
+    <h3 class="content-title">Settings</h3>
+  </div>
+  <div class="settings-section">
+    <div class="setting-row">
+      <label class="setting-label">
+        <input type="checkbox" id="setting-auto-reanalysis" checked />
+        Auto re-analysis
+      </label>
+      <p class="setting-help">Automatically analyze sites when switching tabs</p>
+    </div>
 
-            <div class="setting-row">
-              <label class="setting-label">
-                <input type="checkbox" id="setting-auto-reanalysis" checked />
-                Auto re-analysis
-              </label>
-              <p class="setting-help">
-                Automatically analyze sites when switching tabs
-              </p>
-            </div>
+    <div id="reanalysis-section" class="settings-section">
+      <div class="setting-row">
+        <div class="setting-label">Re-analysis behavior</div>
 
-            <div
-              id="reanalysis-section"
-              class="settings-section"
-            >
-              <div class="setting-row">
-                <div class="setting-label">Re-analysis behavior</div>
+        <label class="setting-option">
+          <input type="radio" name="reanalysis-mode" value="content-change" checked />
+          Only if content changes
+        </label>
 
-                <label class="setting-option">
-                  <input type="radio" name="reanalysis-mode" value="content-change" checked />
-                  Only if content changes
-                </label>
+        <label class="setting-option">
+          <input type="radio" name="reanalysis-mode" value="always" />
+          Always re-run
+        </label>
 
-                <label class="setting-option">
-                  <input type="radio" name="reanalysis-mode" value="always" />
-                  Always re-run
-                </label>
+        <label class="setting-option">
+          <input type="radio" name="reanalysis-mode" value="manual" />
+          Manual only
+        </label>
+      </div>
+    </div>
 
-                <label class="setting-option">
-                  <input type="radio" name="reanalysis-mode" value="manual" />
-                  Manual only
-                </label>
-              </div>
-            </div>
+    <div class="setting-row">
+      <div class="setting-label">Default copy format</div>
 
-            <div class="setting-row">
-              <div class="setting-label">Default copy format</div>
+      <label class="setting-option">
+        <input type="radio" name="copy-format" value="short" checked />
+        Short summary
+      </label>
 
-              <label class="setting-option">
-                <input type="radio" name="copy-format" value="short" checked />
-                Short summary
-              </label>
+      <label class="setting-option">
+        <input type="radio" name="copy-format" value="full" />
+        Full analysis
+      </label>
+    </div>
 
-              <label class="setting-option">
-                <input type="radio" name="copy-format" value="full" />
-                Full analysis
-              </label>
-            </div>
-
-            <div class="setting-row">
-              <button id="clear-cache-btn" class="secondary-btn danger">
-                Clear local cache
-              </button>
-              <p class="setting-help">
-                Clears temporary analysis data stored locally
-              </p>
-            </div>
-          </div>
-        </div>
+    <div class="setting-row">
+      <button id="clear-cache-btn" class="secondary-btn danger">Clear local cache</button>
+      <p class="setting-help">Clears temporary analysis data stored locally</p>
+    </div>
+  </div>
+</div>

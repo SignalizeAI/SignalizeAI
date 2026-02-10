@@ -89,12 +89,12 @@
   padding: 8px 12px;
   background-color: #1a1a1a;
   border-radius: 8px;
-  border-left: 3px solid #4285F4;
+  border-left: 3px solid #4285f4;
 }
 
 .content-url {
   font-size: 13px;
-  color: #4285F4;
+  color: #4285f4;
   text-decoration: none;
   word-break: break-all;
   transition: color 0.2s ease;

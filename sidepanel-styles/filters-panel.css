@@ -1,6 +1,6 @@
 .filter-btn {
   background: transparent;
-  border: 1px solid #1A1A1A;
+  border: 1px solid #1a1a1a;
   border-radius: 6px;
   width: 32px;
   height: 32px;
@@ -12,13 +12,13 @@
 }
 
 .filter-btn:hover {
-  background-color: rgba(255,255,255,0.08);
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 .filter-btn svg {
   width: 18px;
   height: 18px;
-  stroke: rgba(255,255,255,0.7);
+  stroke: rgba(255, 255, 255, 0.7);
 }
 
 .filter-panel {
@@ -32,7 +32,7 @@
   border-radius: 14px;
   padding: 20px;
 
-  box-shadow: 0 12px 30px rgba(0,0,0,0.65);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65);
   z-index: 1200;
 }
 
@@ -87,7 +87,7 @@
   color: #9ca3af;
   padding: 2px 8px;
   border-radius: 999px;
-  background-color: rgba(255,255,255,0.06);
+  background-color: rgba(255, 255, 255, 0.06);
   margin-bottom: 6px;
   margin-top: 6px;
 }
@@ -176,7 +176,9 @@
   cursor: pointer;
   width: auto;
   max-width: none;
-  transition: background-color 0.2s ease, transform 0.1s ease;
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s ease;
 }
 
 .filter-panel .filter-apply {

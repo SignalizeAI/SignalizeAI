@@ -1,0 +1,15 @@
+{
+  "env": {
+    "browser": true,
+    "es2022": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module"
+  },
+  "globals": {
+    "chrome": "readonly"
+  },
+  "ignorePatterns": ["extension/**", "node_modules/**"],
+  "extends": ["eslint:recommended"]
+}

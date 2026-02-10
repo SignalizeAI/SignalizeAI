@@ -11,32 +11,32 @@
   gap: 8px;
   padding: 6px 8px;
   border-radius: 8px;
-  background: rgba(255,255,255,0.03);
+  background: rgba(255, 255, 255, 0.03);
   cursor: pointer;
   transition: background 0.15s ease;
 }
 
 .filter-sort-option:hover {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.filter-sort-option input[type="radio"] {
+.filter-sort-option input[type='radio'] {
   appearance: none;
   -webkit-appearance: none;
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.4);
+  border: 2px solid rgba(255, 255, 255, 0.4);
   position: relative;
   cursor: pointer;
 }
 
-.filter-sort-option input[type="radio"]:checked {
+.filter-sort-option input[type='radio']:checked {
   border-color: #3b82f6;
 }
 
-.filter-sort-option input[type="radio"]:checked::after {
-  content: "";
+.filter-sort-option input[type='radio']:checked::after {
+  content: '';
   position: absolute;
   inset: 3px;
   background: #3b82f6;
@@ -58,10 +58,6 @@
 }
 
 .filter-sort-option:has(input:checked) {
-  background: linear-gradient(
-    90deg,
-    rgba(59,130,246,0.18),
-    rgba(59,130,246,0.05)
-  );
-  border-color: rgba(59,130,246,0.4);
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.18), rgba(59, 130, 246, 0.05));
+  border-color: rgba(59, 130, 246, 0.4);
 }

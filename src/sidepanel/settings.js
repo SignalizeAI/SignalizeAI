@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS } from "./constants.js";
+import { DEFAULT_SETTINGS } from './constants.js';
 
 export async function loadSettings() {
   return new Promise((resolve) => {
@@ -11,30 +11,26 @@ export function saveSettings(partial) {
 }
 
 export function applySettingsToUI(settings) {
-  const autoReanalysis = document.getElementById("setting-auto-reanalysis");
+  const autoReanalysis = document.getElementById('setting-auto-reanalysis');
   if (autoReanalysis) {
     autoReanalysis.checked = settings.autoReanalysis;
   }
 
   document
-    .querySelector(
-      `input[name="reanalysis-mode"][value="${settings.reanalysisMode}"]`
-    )
+    .querySelector(`input[name="reanalysis-mode"][value="${settings.reanalysisMode}"]`)
     ?.click();
-  document
-    .querySelector(`input[name="copy-format"][value="${settings.copyFormat}"]`)
-    ?.click();
+  document.querySelector(`input[name="copy-format"][value="${settings.copyFormat}"]`)?.click();
 
   updateReanalysisUI(settings);
 }
 
 export function updateReanalysisUI(settings) {
-  const section = document.getElementById("reanalysis-section");
+  const section = document.getElementById('reanalysis-section');
   if (!section) return;
 
   if (!settings.autoReanalysis) {
-    section.classList.add("disabled");
+    section.classList.add('disabled');
   } else {
-    section.classList.remove("disabled");
+    section.classList.remove('disabled');
   }
 }

@@ -4,6 +4,9 @@
   "description": "Cursor for sales pages 🚀",
   "main": "background.js",
   "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "build": "esbuild src/sidepanel-entry.js --bundle --format=iife --minify --outfile=extension/supabase.bundle.js && esbuild sidepanel.js --bundle --platform=browser --format=esm --minify --tree-shaking=true --splitting --outdir=extension",
     "watch": "esbuild src/sidepanel-entry.js --bundle --format=iife --outfile=extension/supabase.bundle.js --watch"
   },
@@ -15,6 +18,8 @@
     "exceljs": "^4.4.0"
   },
   "devDependencies": {
-    "esbuild": "^0.27.2"
+    "esbuild": "^0.27.2",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5"
   }
 }

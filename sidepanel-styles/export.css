@@ -1,6 +1,6 @@
 .secondary-btn {
   background: transparent;
-  border: 1px solid #1A1A1A;
+  border: 1px solid #1a1a1a;
   border-radius: 6px;
   padding: 6px;
   cursor: pointer;
@@ -21,8 +21,8 @@
   top: 100%;
   margin-top: 8px;
   min-width: unset;
-  background-color: #1A1A1A;
-  border: 1px solid #1A1A1A;
+  background-color: #1a1a1a;
+  border: 1px solid #1a1a1a;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   padding: 4px;

@@ -1,3 +1,3 @@
-import { initSidepanel } from "./src/sidepanel/init.js";
+import { initSidepanel } from './src/sidepanel/init.js';
 
 initSidepanel();

@@ -5,10 +5,10 @@
 }
 
 .outreach-section::before {
-  content: "";
+  content: '';
   display: block;
   height: 1px;
-  background: rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.06);
   margin-bottom: 16px;
 }
 
@@ -41,10 +41,10 @@
 }
 
 .outreach-message::after {
-  content: "";
+  content: '';
   display: block;
   height: 1px;
-  background: rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.06);
   margin-top: 16px;
 }
 
@@ -70,7 +70,7 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.85);
+  color: rgba(255, 255, 255, 0.85);
   margin-bottom: 12px;
   display: block;
 }
