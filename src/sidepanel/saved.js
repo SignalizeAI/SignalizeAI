@@ -127,8 +127,11 @@ export async function fetchAndRenderPage() {
   const sortMap = {
     created_at_desc: { column: 'created_at', ascending: false },
     created_at_asc: { column: 'created_at', ascending: true },
-    score_desc: { column: 'sales_readiness_score', ascending: false },
-    score_asc: { column: 'sales_readiness_score', ascending: true },
+    last_analyzed_at_desc: { column: 'last_analyzed_at', ascending: false },
+    sales_readiness_score_desc: { column: 'sales_readiness_score', ascending: false },
+    sales_readiness_score_asc: { column: 'sales_readiness_score', ascending: true },
+    title_asc: { column: 'title', ascending: true },
+    title_desc: { column: 'title', ascending: false },
   };
 
   const sortConfig = sortMap[sort] || sortMap.created_at_desc;
@@ -167,107 +170,146 @@ export async function fetchAndRenderPage() {
 }
 
 export function showUndoToast() {
-  const toast = document.getElementById('undo-toast');
-
-  if (!toast || state.isUndoToastActive) return;
-
   state.isUndoToastActive = true;
-  toast.classList.remove('hidden');
+  document.body.classList.add('undo-active');
 
-  const hideToast = () => {
-    toast.classList.add('hidden');
-    state.isUndoToastActive = false;
-  };
+  let toast = document.getElementById('undo-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'undo-toast';
+    toast.className = 'toast-snackbar';
+    document.body.appendChild(toast);
+  }
 
-  const finalizeDeletes = async () => {
-    await finalizePendingDeletes();
-    hideToast();
-  };
+  toast.innerHTML = `
+    <div class="toast-content">
+      <div class="toast-main">
+        <span id="toast-message"></span>
+      </div>
+      <div class="toast-actions">
+        <button id="undo-button">UNDO</button>
+        <button id="close-toast-btn">✕</button>
+      </div>
+    </div>
+    <div class="undo-progress-container">
+      <div class="undo-progress-bar"></div>
+    </div>
+  `;
 
-  const undoBtn = toast.querySelector('.undo-btn');
-  const closeBtn = toast.querySelector('.close-toast-btn');
+  const message = document.getElementById('toast-message');
+  if (message) {
+    message.textContent = `${state.pendingDeleteMap.size} item(s) deleted`;
+  }
 
-  const undoHandler = () => {
-    state.pendingDeleteMap.forEach(({ element }) => {
-      if (!element) return;
+  toast.classList.add('show');
 
-      element.dataset.isPendingDelete = 'false';
-      element.classList.remove('pending-delete');
-    });
+  const undoBtn = document.getElementById('undo-button');
+  const closeBtn = document.getElementById('close-toast-btn');
 
-    state.pendingDeleteMap.clear();
-    hideToast();
-    updateFilterBanner();
-  };
+  if (undoBtn) {
+    undoBtn.onclick = async () => {
+      state.isUndoToastActive = false;
+      document.body.classList.remove('undo-active');
+      clearTimeout(state.undoTimer);
+      toast.classList.remove('show');
 
-  const closeHandler = () => {
-    finalizeDeletes();
-  };
+      state.pendingDeleteMap.forEach(({ element }) => {
+        if (!element) return;
+        delete element.dataset.isPendingDelete;
+        element.classList.remove('pending-delete');
+      });
 
-  undoBtn.addEventListener('click', undoHandler, { once: true });
-  closeBtn.addEventListener('click', closeHandler, { once: true });
+      state.pendingDeleteMap.clear();
+      const list = document.getElementById('saved-list');
+      const count = list ? list.querySelectorAll('.saved-item').length : 0;
+      updateSavedEmptyState(list, count);
+      await loadQuotaFromAPI(true);
+    };
+  }
 
-  toast.addEventListener(
-    'transitionend',
-    () => {
-      if (!state.isUndoToastActive) {
-        undoBtn.removeEventListener('click', undoHandler);
-        closeBtn.removeEventListener('click', closeHandler);
-      }
-    },
-    { once: true }
-  );
+  if (closeBtn) {
+    closeBtn.onclick = finalizePendingDeletes;
+  }
 
-  setTimeout(() => {
-    if (state.isUndoToastActive) finalizeDeletes();
-  }, 5000);
+  clearTimeout(state.undoTimer);
+  state.undoTimer = setTimeout(finalizePendingDeletes, 5000);
 }
 
-async function finalizePendingDeletes() {
-  if (!state.pendingDeleteMap.size) return;
+export async function finalizePendingDeletes() {
+  if (state.isFinalizingDeletes) return;
+  state.isFinalizingDeletes = true;
 
-  const { data: sessionData } = await supabase.auth.getSession();
-  const user = sessionData?.session?.user;
-  if (!user) return;
+  clearTimeout(state.undoTimer);
+  const toast = document.getElementById('undo-toast');
+  toast?.classList.remove('show');
 
-  const idsToDelete = Array.from(state.pendingDeleteMap.keys());
+  const { data } = await supabase.auth.getSession();
+  if (!data?.session?.user) {
+    state.isFinalizingDeletes = false;
+    return;
+  }
 
-  await supabase.from('saved_analyses').delete().eq('user_id', user.id).in('id', idsToDelete);
+  while (state.pendingDeleteMap.size > 0) {
+    const batch = Array.from(state.pendingDeleteMap.values());
+    state.pendingDeleteMap.clear();
 
-  state.pendingDeleteMap.forEach(({ element }) => {
-    if (element) element.remove();
-  });
+    for (const item of batch) {
+      try {
+        await item.finalize();
+      } catch (err) {
+        console.error('Delete failed:', err);
+        if (item.element) {
+          delete item.element.dataset.isPendingDelete;
+          item.element.classList.remove('pending-delete');
+        }
+        showToast('Delete failed. Item restored.');
+      }
+    }
+  }
 
-  state.pendingDeleteMap.clear();
-
-  const list = document.getElementById('saved-list');
-  if (!list) return;
-
-  updateSavedEmptyState(list, list.children.length);
+  state.isFinalizingDeletes = false;
+  state.isUndoToastActive = false;
+  document.body.classList.remove('undo-active');
+  await fetchAndRenderPage();
   updateFilterBanner();
   await loadQuotaFromAPI();
-
-  const remainingCount = list.querySelectorAll('.saved-item').length;
-  if (remainingCount <= 1 && state.selectionMode) {
-    exitSelectionMode();
-  }
 }
 
-export function toggleSearchMode() {
-  const searchRow = document.querySelector('.search-row');
-  if (!searchRow) return;
+export async function toggleSearchMode(active) {
+  if (state.isUndoToastActive) return;
+  const searchContainer = document.getElementById('search-bar-container');
+  const searchInput = document.getElementById('saved-search-input');
+  const searchToggleButton = document.getElementById('search-toggle');
+  const filterBtn = document.getElementById('filter-toggle');
+  const exportBtn = document.getElementById('export-menu-toggle');
+  const multiBtn = document.getElementById('multi-select-toggle');
 
-  state.isSearchMode = !state.isSearchMode;
+  if (!searchContainer || !searchInput) return;
 
-  searchRow.classList.toggle('hidden', !state.isSearchMode);
+  if (active) {
+    searchContainer.classList.remove('hidden');
 
-  if (!state.isSearchMode) {
-    const searchInput = document.getElementById('search-input');
-    if (searchInput) searchInput.value = '';
+    searchToggleButton?.classList.add('hidden');
+
+    filterBtn?.classList.add('hidden');
+    exportBtn?.classList.add('hidden');
+    multiBtn?.classList.add('hidden');
+    searchInput.focus();
+  } else {
+    searchContainer.classList.add('hidden');
+
+    searchToggleButton?.classList.remove('hidden');
+
+    filterBtn?.classList.remove('hidden');
+    exportBtn?.classList.remove('hidden');
+    updateSavedEmptyState(
+      document.getElementById('saved-list'),
+      document.querySelectorAll('#saved-list .saved-item').length
+    );
+
+    searchInput.value = '';
     state.activeFilters.searchQuery = '';
-    state.currentPage = 1;
-    fetchAndRenderPage();
+    await fetchAndRenderPage();
+    updateFilterBanner();
   }
-
-  updateFilterBanner();
 }
