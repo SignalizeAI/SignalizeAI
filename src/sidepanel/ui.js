@@ -6,7 +6,7 @@ import { exitSelectionMode } from './saved.js';
 import { showView } from './views.js';
 
 export function navigateTo(view) {
-  const { headerSubtitle, loginView, userInitialSpan, welcomeView } = getElements();
+  const { headerSubtitle, welcomeView } = getElements();
   const prevView = state.currentView;
 
   if (view !== 'saved' && state.selectionMode) {
