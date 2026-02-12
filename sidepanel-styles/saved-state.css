@@ -1,0 +1,19 @@
+body.undo-active .delete-saved-btn,
+body.undo-active .multi-select-icon,
+body.undo-active #multi-select-toggle {
+  opacity: 0.35;
+  filter: grayscale(1);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+body.undo-active .delete-saved-btn:hover,
+body.undo-active #multi-select-toggle:hover {
+  background: none;
+  transform: none;
+}
+
+.saved-item.pending-delete {
+  opacity: 0.3;
+  pointer-events: none;
+}

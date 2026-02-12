@@ -3,16 +3,8 @@
   "name": "SignalizeAI",
   "version": "2.0.0",
   "description": "AI-powered sales insights for any website.",
-  "permissions": [
-    "activeTab",
-    "sidePanel",
-    "storage",
-    "tabs"
-  ],
-  "host_permissions": [
-    "https://*.supabase.co/*",
-    "https://api.signalizeai.org/*"
-  ],
+  "permissions": ["activeTab", "sidePanel", "storage", "tabs"],
+  "host_permissions": ["https://*.supabase.co/*", "https://api.signalizeai.org/*"],
   "icons": {
     "16": "icons/16.png",
     "48": "icons/48.png",

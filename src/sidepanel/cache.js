@@ -1,35 +1,35 @@
-import { TWO_PART_TLDS } from "./constants.js";
+import { TWO_PART_TLDS } from './constants.js';
 
 export async function hashContent(content) {
   const text = [
     content.title,
     content.metaDescription,
     ...(content.headings || []),
-    ...(content.paragraphs || [])
-  ].join(" ");
+    ...(content.paragraphs || []),
+  ].join(' ');
 
   const encoder = new TextEncoder();
   const data = encoder.encode(text);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
 
   return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 export function extractRootDomain(hostname) {
-  if (hostname === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+  if (hostname === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
     return hostname;
   }
 
-  const parts = hostname.split(".");
+  const parts = hostname.split('.');
 
   if (parts.length <= 2) {
     return hostname;
   }
 
-  const lastTwo = parts.slice(-2).join(".");
-  const lastThree = parts.slice(-3).join(".");
+  const lastTwo = parts.slice(-2).join('.');
+  const lastThree = parts.slice(-3).join('.');
 
   if (TWO_PART_TLDS.includes(lastTwo)) {
     return lastThree;
@@ -125,7 +125,7 @@ export function setCachedAnalysis(url, payload) {
   const value = {
     analysis: payload.analysis,
     meta: payload.meta,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   };
   chrome.storage.local.set({ [key]: value });
 }
@@ -135,7 +135,7 @@ export function setCachedAnalysisByDomain(domain, payload) {
   const value = {
     analysis: payload.analysis,
     meta: payload.meta,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   };
   chrome.storage.local.set({ [key]: value });
 }

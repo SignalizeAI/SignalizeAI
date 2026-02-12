@@ -1,16 +1,16 @@
 export function showToast(message) {
-  let toast = document.getElementById("simple-toast");
+  let toast = document.getElementById('simple-toast');
   if (!toast) {
-    toast = document.createElement("div");
-    toast.id = "simple-toast";
-    toast.className = "toast-snackbar";
+    toast = document.createElement('div');
+    toast.id = 'simple-toast';
+    toast.className = 'toast-snackbar';
     document.body.appendChild(toast);
   }
 
   toast.textContent = message;
-  toast.classList.add("show");
+  toast.classList.add('show');
 
   setTimeout(() => {
-    toast.classList.remove("show");
+    toast.classList.remove('show');
   }, 1800);
 }
