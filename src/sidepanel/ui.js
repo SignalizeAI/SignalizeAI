@@ -46,12 +46,16 @@ export function navigateTo(view) {
 
   if (view === 'analysis') {
     document.getElementById('ai-analysis')?.classList.remove('hidden');
-    extractWebsiteContent();
+    requestAnimationFrame(() => {
+      extractWebsiteContent();
+    });
   }
 
   if (view === 'saved') {
     document.getElementById('saved-analyses')?.classList.remove('hidden');
-    loadSavedAnalyses();
+    requestAnimationFrame(() => {
+      loadSavedAnalyses();
+    });
   }
 
   if (view === 'profile') {
