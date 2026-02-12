@@ -1,14 +1,28 @@
-export const headerSubtitle = document.querySelector('#welcome-view .user-email-text');
-export const loginView = document.getElementById('login-view');
-export const welcomeView = document.getElementById('welcome-view');
-export const userInitialSpan = document.getElementById('user-initial');
-export const signInBtn = document.getElementById('google-signin');
-export const signOutBtn = document.getElementById('sign-out');
-export const statusMsg = document.getElementById('status-msg');
-export const settingsMenu = document
-  .querySelector('.menu-item img[src*="settings"]')
-  ?.closest('.menu-item');
-export const settingsView = document.getElementById('settings-view');
-export const multiSelectToggle = document.getElementById('multi-select-toggle');
-export const selectionBackBtn = document.getElementById('selection-back-btn');
-export const selectAllBtn = document.getElementById('select-all-btn');
+import { byId, qs } from './dom.js';
+
+let cachedElements = null;
+
+export function getElements() {
+  if (cachedElements) return cachedElements;
+
+  cachedElements = {
+    headerSubtitle: qs('#welcome-view .user-email-text'),
+    loginView: byId('login-view'),
+    welcomeView: byId('welcome-view'),
+    userInitialSpan: byId('user-initial'),
+    signInBtn: byId('google-signin'),
+    signOutBtn: byId('sign-out'),
+    statusMsg: byId('status-msg'),
+    settingsMenu: qs('.menu-item img[src*="settings"]')?.closest('.menu-item'),
+    settingsView: byId('settings-view'),
+    multiSelectToggle: byId('multi-select-toggle'),
+    selectionBackBtn: byId('selection-back-btn'),
+    selectAllBtn: byId('select-all-btn'),
+  };
+
+  return cachedElements;
+}
+
+export function resetElementsCache() {
+  cachedElements = null;
+}

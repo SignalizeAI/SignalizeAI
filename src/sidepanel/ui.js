@@ -1,11 +1,12 @@
-import { headerSubtitle, loginView, userInitialSpan, welcomeView } from './elements.js';
+import { getElements } from './elements.js';
 import { loadQuotaFromAPI } from './quota.js';
 import { loadSettings, applySettingsToUI } from './settings.js';
 import { state } from './state.js';
-import { extractWebsiteContent } from './analysis.js';
-import { exitSelectionMode, loadSavedAnalyses } from './saved.js';
+import { exitSelectionMode } from './saved.js';
+import { showView } from './views.js';
 
 export function navigateTo(view) {
+  const { headerSubtitle, loginView, userInitialSpan, welcomeView } = getElements();
   const prevView = state.currentView;
 
   if (view !== 'saved' && state.selectionMode) {
@@ -20,15 +21,6 @@ export function navigateTo(view) {
     document.querySelector('.dropdown-card')?.classList.remove('expanded');
     state.isUserInteracting = false;
   }
-  document.getElementById('ai-analysis')?.classList.add('hidden');
-  document.getElementById('empty-tab-view')?.classList.add('hidden');
-  document.getElementById('saved-analyses')?.classList.add('hidden');
-  document.getElementById('profile-view')?.classList.add('hidden');
-  document.getElementById('settings-view')?.classList.add('hidden');
-
-  document.getElementById('ai-loading')?.classList.add('hidden');
-  document.getElementById('filter-panel')?.classList.add('hidden');
-
   if (headerSubtitle) {
     if (view === 'analysis') {
       headerSubtitle.textContent = 'Cursor for sales pages';
@@ -44,50 +36,11 @@ export function navigateTo(view) {
     }
   }
 
-  if (view === 'analysis') {
-    document.getElementById('ai-analysis')?.classList.remove('hidden');
-    requestAnimationFrame(() => {
-      extractWebsiteContent();
-    });
-  }
-
-  if (view === 'saved') {
-    document.getElementById('saved-analyses')?.classList.remove('hidden');
-    requestAnimationFrame(() => {
-      loadSavedAnalyses();
-    });
-  }
-
-  if (view === 'profile') {
-    document.getElementById('profile-view')?.classList.remove('hidden');
-
-    const usageLimitEl = document.getElementById('profile-usage-limit');
-    const storageLimitEl = document.getElementById('profile-storage-limit');
-
-    const dailyLimit = state.dailyLimitFromAPI;
-    const saveLimit = state.maxSavedLimit;
-
-    if (usageLimitEl) usageLimitEl.textContent = `${dailyLimit} / day`;
-    if (storageLimitEl) {
-      storageLimitEl.textContent = `${saveLimit.toLocaleString()} items`;
-    }
-
-    const profileRows = document.querySelectorAll('#profile-view .profile-row');
-    profileRows.forEach((row) => {
-      const label = row.querySelector('.profile-label')?.textContent;
-      const value = row.querySelector('.profile-value');
-      if (label === 'Plan' && value) {
-        value.textContent = state.currentPlan.charAt(0).toUpperCase() + state.currentPlan.slice(1);
-      }
-    });
-  }
-
-  if (view === 'settings') {
-    document.getElementById('settings-view')?.classList.remove('hidden');
-  }
+  showView(view);
 }
 
 export async function updateUI(session) {
+  const { loginView, userInitialSpan, welcomeView } = getElements();
   if (session) {
     const isAlreadyLoggedIn = !welcomeView.classList.contains('hidden');
 
@@ -114,7 +67,7 @@ export async function updateUI(session) {
     applySettingsToUI(settings);
 
     if (state.currentView === 'analysis' && !state.isAnalysisLoading) {
-      setTimeout(extractWebsiteContent, 0);
+      setTimeout(() => showView('analysis'), 0);
     }
   } else {
     document.getElementById('limit-modal')?.classList.add('hidden');

@@ -1,0 +1,61 @@
+.u-flex {
+  display: flex;
+}
+
+.u-inline-flex {
+  display: inline-flex;
+}
+
+.u-align-center {
+  align-items: center;
+}
+
+.u-gap-8 {
+  gap: 8px;
+}
+
+.u-gap-12 {
+  gap: 12px;
+}
+
+.u-text-12 {
+  font-size: 12px;
+}
+
+.u-text-13 {
+  font-size: 13px;
+}
+
+.u-opacity-40 {
+  opacity: 0.4;
+}
+
+.u-opacity-70 {
+  opacity: 0.7;
+}
+
+.u-opacity-80 {
+  opacity: 0.8;
+}
+
+.u-opacity-85 {
+  opacity: 0.85;
+}
+
+.u-opacity-90 {
+  opacity: 0.9;
+}
+
+.u-hr {
+  margin: 10px 0;
+  border: 0;
+  border-top: 1px solid currentColor;
+  opacity: 0.25;
+}
+
+.u-hr-compact {
+  margin: 8px 0;
+  border: 0;
+  border-top: 1px solid currentColor;
+  opacity: 0.3;
+}
