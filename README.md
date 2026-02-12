@@ -72,8 +72,8 @@ The side panel is split into HTML partials and CSS modules for easier editing.
 
 ## 🧪 CI & Dev
 
-* Pull requests run `lint` + `format:check`
-* `npm run dev` starts esbuild watch and auto-reloads the extension (Chromium)
+- Pull requests run `lint` + `format:check`
+- `npm run dev` starts esbuild watch and auto-reloads the extension (Chromium)
 
 ## 🔒 Backend
 
