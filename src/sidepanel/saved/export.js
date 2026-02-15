@@ -59,9 +59,7 @@ function buildCsv(data) {
   };
 
   const headerRow = EXPORT_COLUMNS.map((col) => escapeCell(col.header)).join(',');
-  const rows = data.map((item) =>
-    EXPORT_COLUMNS.map((col) => escapeCell(item[col.key])).join(',')
-  );
+  const rows = data.map((item) => EXPORT_COLUMNS.map((col) => escapeCell(item[col.key])).join(','));
 
   return [headerRow, ...rows].join('\n');
 }
