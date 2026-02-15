@@ -1,20 +1,18 @@
-import { statusMsg } from './elements.js';
+import { getElements } from './elements.js';
 import { supabase } from './supabase.js';
 import { state } from './state.js';
 import { updateUI } from './ui.js';
 
 export async function signInWithGoogle() {
   try {
-    if (statusMsg) {
-      statusMsg.textContent = 'Logging in...';
-    }
+    const { statusMsg } = getElements();
+    if (statusMsg) statusMsg.textContent = 'Logging in...';
 
     chrome.runtime.sendMessage({ type: 'LOGIN_GOOGLE' });
   } catch (err) {
     console.error('Login failed:', err);
-    if (statusMsg) {
-      statusMsg.textContent = 'Login failed. Please try again.';
-    }
+    const { statusMsg } = getElements();
+    if (statusMsg) statusMsg.textContent = 'Login failed. Please try again.';
   }
 }
 

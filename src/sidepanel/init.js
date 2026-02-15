@@ -1,7 +1,7 @@
 import { signInWithGoogle, signOut, restoreSessionFromStorage } from './auth.js';
 import { buildCopyText, copyAnalysisText } from './clipboard.js';
 import { AUTO_ANALYZE_DEBOUNCE, IRRELEVANT_DOMAINS, PAGE_SIZE } from './constants.js';
-import { settingsMenu, signInBtn, signOutBtn } from './elements.js';
+import { getElements } from './elements.js';
 import { extractWebsiteContent, showIrrelevantDomainView, shouldAutoAnalyze } from './analysis.js';
 import { openCheckout, showLimitModal } from './modal.js';
 import { loadQuotaFromAPI, renderQuotaBanner } from './quota.js';
@@ -24,6 +24,8 @@ import { state } from './state.js';
 import { navigateTo, updateUI, isMenuOpen } from './ui.js';
 
 export function initSidepanel() {
+  const { signInBtn, signOutBtn, settingsMenu } = getElements();
+
   document.getElementById('start-analysis-btn')?.addEventListener('click', () => {
     navigateTo('analysis');
   });
@@ -40,7 +42,9 @@ export function initSidepanel() {
     if (resetBtn) {
       resetBtn.click();
     }
-    updateSavedEmptyState();
+    const savedList = document.getElementById('saved-list');
+    const savedCount = savedList ? savedList.querySelectorAll('.saved-item').length : 0;
+    updateSavedEmptyState(savedList, savedCount);
   });
 
   if (signInBtn) signInBtn.addEventListener('click', signInWithGoogle);

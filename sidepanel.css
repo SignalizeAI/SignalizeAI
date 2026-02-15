@@ -1,4 +1,5 @@
 @import url('sidepanel-styles/globals.css');
+@import url('sidepanel-styles/utilities.css');
 @import url('sidepanel-styles/auth.css');
 @import url('sidepanel-styles/dropdown.css');
 @import url('sidepanel-styles/analysis.css');
