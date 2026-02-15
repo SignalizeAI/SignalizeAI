@@ -1,0 +1,39 @@
+.content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #333;
+}
+
+.content-header svg {
+  stroke: rgba(255, 255, 255, 0.65);
+}
+
+.content-header button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.content-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.export-actions {
+  position: relative;
+  display: inline-block;
+}
+
+.header-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}

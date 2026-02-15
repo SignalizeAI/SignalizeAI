@@ -1,0 +1,44 @@
+.saved-url {
+  color: rgba(138, 180, 248, 0.85);
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.saved-url:hover {
+  color: rgba(174, 203, 250, 1);
+  text-decoration: underline;
+}
+
+.copy-btn {
+  background: none;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.copy-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.copy-icon {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.copy-btn.copy-saved-btn {
+  color: rgba(255, 255, 255, 0.65);
+  width: 34px;
+  height: 34px;
+  padding: 0;
+}
+
+.copy-btn.copy-saved-btn:hover {
+  color: #ffffff;
+}

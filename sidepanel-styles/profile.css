@@ -1,0 +1,43 @@
+#profile-view {
+  padding-bottom: 18px;
+}
+
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.profile-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+}
+
+.profile-label {
+  font-size: 13px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.profile-value {
+  font-size: 14px;
+  color: #ffffff;
+  font-weight: 600;
+  text-align: right;
+  max-width: 65%;
+  word-break: break-word;
+}
+
+.user-email-text {
+  opacity: 0.8;
+  margin-top: 5px;
+}
+
+.user-email-text:hover {
+  opacity: 1;
+}
