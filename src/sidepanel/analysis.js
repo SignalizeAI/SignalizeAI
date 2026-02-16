@@ -192,6 +192,13 @@ export async function extractWebsiteContent() {
       return;
     }
 
+    if (tab.url.includes('signalizeai.org/auth/callback')) {
+      endAnalysisLoading();
+      if (contentLoading) contentLoading.classList.add('hidden');
+      showContentBlocked('Login completed. Navigate to a website to analyze.');
+      return;
+    }
+
     if (
       tab.url.startsWith('chrome://') ||
       tab.url.startsWith('about:') ||
@@ -605,19 +612,20 @@ export function displayAIAnalysis(analysis) {
   if (refreshBtn) refreshBtn.disabled = false;
 
   const aiTitleEl = document.getElementById('ai-title-text');
-  if (aiTitleEl && state.lastExtractedMeta?.title) {
-    aiTitleEl.textContent = state.lastExtractedMeta.title || '—';
+  if (aiTitleEl) {
+    aiTitleEl.textContent = state.lastExtractedMeta?.title || '—';
   }
 
   const aiDescEl = document.getElementById('ai-description-text');
-  if (aiDescEl && state.lastExtractedMeta?.description) {
-    aiDescEl.textContent = state.lastExtractedMeta.description || '—';
+  if (aiDescEl) {
+    aiDescEl.textContent = state.lastExtractedMeta?.description || '—';
   }
 
   const aiUrlEl = document.getElementById('ai-url-text');
-  if (aiUrlEl && state.lastExtractedMeta?.url) {
-    aiUrlEl.href = state.lastExtractedMeta.url;
-    aiUrlEl.textContent = state.lastExtractedMeta.url;
+  if (aiUrlEl) {
+    const url = state.lastExtractedMeta?.url || '';
+    aiUrlEl.href = url || '#';
+    aiUrlEl.textContent = url || '—';
   }
 
   const whatEl = document.getElementById('ai-what-they-do');
