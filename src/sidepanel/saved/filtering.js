@@ -71,6 +71,7 @@ export async function toggleSearchMode(active) {
 
     filterBtn?.classList.remove('hidden');
     exportBtn?.classList.remove('hidden');
+    multiBtn?.classList.remove('hidden');
     updateSavedEmptyState();
 
     searchInput.value = '';
