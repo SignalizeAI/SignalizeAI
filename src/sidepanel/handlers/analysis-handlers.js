@@ -1,4 +1,4 @@
-import { extractWebsiteContent } from '../analysis.js';
+import { extractWebsiteContent } from '../analysis/index.js';
 import { state } from '../state.js';
 import { navigateTo } from '../ui.js';
 

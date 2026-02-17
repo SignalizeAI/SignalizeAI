@@ -1,6 +1,10 @@
 import { restoreSessionFromStorage } from '../auth.js';
 import { AUTO_ANALYZE_DEBOUNCE, IRRELEVANT_DOMAINS } from '../constants.js';
-import { extractWebsiteContent, shouldAutoAnalyze, showIrrelevantDomainView } from '../analysis.js';
+import {
+  extractWebsiteContent,
+  shouldAutoAnalyze,
+  showIrrelevantDomainView,
+} from '../analysis/index.js';
 import { loadQuotaFromAPI } from '../quota.js';
 import { supabase } from '../supabase.js';
 import { state } from '../state.js';
