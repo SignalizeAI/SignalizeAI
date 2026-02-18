@@ -18,6 +18,15 @@ import { showToast } from '../toast.js';
 import { cleanTitle, endAnalysisLoading } from './utils.js';
 import { showContentBlocked, displayAIAnalysis } from './display.js';
 
+function isHomepageUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.pathname === '/' || urlObj.pathname === '';
+  } catch {
+    return false;
+  }
+}
+
 export async function extractWebsiteContent() {
   if (state.isUserInteracting) {
     document.getElementById('ai-loading')?.classList.add('hidden');
@@ -327,7 +336,7 @@ export async function extractWebsiteContent() {
                 meta: state.lastExtractedMeta,
               });
 
-              if (existing) {
+              if (existing && isHomepageUrl(currentUrl)) {
                 const { error: updateError } = await supabase
                   .from('saved_analyses')
                   .update({
@@ -394,6 +403,88 @@ export async function extractWebsiteContent() {
   } catch (err) {
     endAnalysisLoading();
   }
+}
+
+export async function getHomepageAnalysisForSave(url) {
+  const { data } = await supabase.auth.getSession();
+  if (!data?.session) {
+    return { error: 'No active session' };
+  }
+
+  await loadQuotaFromAPI();
+
+  if (state.currentPlan === 'free' && state.remainingToday !== null && state.remainingToday <= 0) {
+    showLimitModal('analysis');
+    return { blocked: true };
+  }
+
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) {
+    return { error: 'No active tab' };
+  }
+
+  const response = await new Promise((resolve) => {
+    chrome.tabs.sendMessage(
+      tab.id,
+      {
+        type: 'EXTRACT_WEBSITE_CONTENT',
+        overrideUrl: url,
+      },
+      (result) => resolve(result)
+    );
+  });
+
+  if (!response?.ok || !response.content) {
+    return { error: 'Unable to analyze homepage.' };
+  }
+
+  const meta = {
+    title: cleanTitle(response.content.title),
+    description: response.content.metaDescription,
+    url: response.content.url,
+    domain: new URL(response.content.url).hostname,
+  };
+
+  const contentHash = await hashContent(response.content);
+  const urlObj = new URL(response.content.url);
+  const isInternal =
+    urlObj.hostname === 'signalizeai.org' ||
+    urlObj.hostname === 'www.signalizeai.org' ||
+    urlObj.hostname === 'signalizeaipay.lemonsqueezy.com';
+  const domainAnalyzedToday = await wasDomainAnalyzedToday(meta.domain);
+  const result = await analyzeWebsiteContent(response.content, isInternal, domainAnalyzedToday);
+
+  if (result.quota) {
+    state.currentPlan = result.quota.plan;
+    state.usedToday = result.quota.used_today;
+    state.remainingToday = result.quota.remaining_today;
+    state.dailyLimitFromAPI = result.quota.daily_limit;
+    state.maxSavedLimit = result.quota.max_saved;
+    state.totalSavedCount = result.quota.total_saved;
+    renderQuotaBanner();
+  }
+
+  if (result.blocked) {
+    showLimitModal('analysis');
+    return { blocked: true };
+  }
+
+  if (!result.analysis) {
+    return { error: 'Failed to generate analysis' };
+  }
+
+  const analysis = result.analysis;
+  markDomainAnalyzedToday(meta.domain);
+  setCachedAnalysis(meta.url, {
+    analysis,
+    meta,
+  });
+  setCachedAnalysisByDomain(meta.domain, {
+    analysis,
+    meta,
+  });
+
+  return { analysis, meta, contentHash };
 }
 
 export async function analyzeSpecificUrl(url) {

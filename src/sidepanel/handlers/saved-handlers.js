@@ -3,6 +3,7 @@ import { state } from '../state.js';
 import { renderQuotaBanner, loadQuotaFromAPI } from '../quota.js';
 import { showLimitModal } from '../modal.js';
 import { showToast } from '../toast.js';
+import { getHomepageAnalysisForSave } from '../analysis/extraction.js';
 import {
   loadSavedAnalyses,
   exitSelectionMode,
@@ -151,6 +152,11 @@ export function setupSavedHandlers() {
     const user = data?.session?.user;
     if (!user) return;
 
+    const currentUrl = state.lastExtractedMeta.url;
+    const urlObj = new URL(currentUrl);
+    const isHomepage = urlObj.pathname === '/' || urlObj.pathname === '';
+    const originUrl = urlObj.origin;
+
     if (saveButton.classList.contains('active')) {
       const savedId = saveButton.dataset.savedId;
       let deleteQuery = supabase.from('saved_analyses').delete().eq('user_id', user.id);
@@ -158,7 +164,7 @@ export function setupSavedHandlers() {
       if (savedId) {
         deleteQuery = deleteQuery.eq('id', savedId);
       } else {
-        deleteQuery = deleteQuery.eq('url', state.lastExtractedMeta.url);
+        deleteQuery = deleteQuery.eq('domain', state.lastExtractedMeta.domain);
       }
 
       const { error } = await deleteQuery;
@@ -194,27 +200,57 @@ export function setupSavedHandlers() {
         return;
       }
 
+      let saveAnalysis = state.lastAnalysis;
+      let saveMeta = state.lastExtractedMeta;
+      let saveContentHash = state.lastContentHash;
+
+      if (!isHomepage) {
+        saveButton.disabled = true;
+        let homepageResult = null;
+
+        try {
+          homepageResult = await getHomepageAnalysisForSave(originUrl);
+        } finally {
+          saveButton.disabled = false;
+        }
+
+        if (homepageResult?.blocked) {
+          return;
+        }
+
+        if (!homepageResult?.analysis || !homepageResult?.meta) {
+          showToast('Unable to save homepage analysis.');
+          return;
+        }
+
+        saveAnalysis = homepageResult.analysis;
+        saveMeta = homepageResult.meta;
+        saveContentHash = homepageResult.contentHash;
+      }
+
+      const saveUrl = originUrl;
+
       const { data: insertData, error } = await supabase
         .from('saved_analyses')
         .insert({
           user_id: user.id,
-          domain: state.lastExtractedMeta.domain,
-          url: state.lastExtractedMeta.url,
-          title: state.lastExtractedMeta.title,
-          description: state.lastExtractedMeta.description,
-          content_hash: state.lastContentHash,
+          domain: saveMeta.domain,
+          url: saveUrl,
+          title: saveMeta.title,
+          description: saveMeta.description,
+          content_hash: saveContentHash,
           last_analyzed_at: new Date().toISOString(),
-          what_they_do: state.lastAnalysis.whatTheyDo,
-          target_customer: state.lastAnalysis.targetCustomer,
-          value_proposition: state.lastAnalysis.valueProposition,
-          sales_angle: state.lastAnalysis.salesAngle,
-          sales_readiness_score: state.lastAnalysis.salesReadinessScore,
-          best_sales_persona: state.lastAnalysis.bestSalesPersona?.persona,
-          best_sales_persona_reason: state.lastAnalysis.bestSalesPersona?.reason,
-          recommended_outreach_persona: state.lastAnalysis.recommendedOutreach?.persona,
-          recommended_outreach_goal: state.lastAnalysis.recommendedOutreach?.goal,
-          recommended_outreach_angle: state.lastAnalysis.recommendedOutreach?.angle,
-          recommended_outreach_message: state.lastAnalysis.recommendedOutreach?.message,
+          what_they_do: saveAnalysis.whatTheyDo,
+          target_customer: saveAnalysis.targetCustomer,
+          value_proposition: saveAnalysis.valueProposition,
+          sales_angle: saveAnalysis.salesAngle,
+          sales_readiness_score: saveAnalysis.salesReadinessScore,
+          best_sales_persona: saveAnalysis.bestSalesPersona?.persona,
+          best_sales_persona_reason: saveAnalysis.bestSalesPersona?.reason,
+          recommended_outreach_persona: saveAnalysis.recommendedOutreach?.persona,
+          recommended_outreach_goal: saveAnalysis.recommendedOutreach?.goal,
+          recommended_outreach_angle: saveAnalysis.recommendedOutreach?.angle,
+          recommended_outreach_message: saveAnalysis.recommendedOutreach?.message,
         })
         .select('id')
         .single();
