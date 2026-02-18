@@ -209,8 +209,10 @@ export function setupSavedHandlers() {
         let homepageResult = null;
 
         try {
+          saveButton.classList.add('saving');
           homepageResult = await getHomepageAnalysisForSave(originUrl);
         } finally {
+          saveButton.classList.remove('saving');
           saveButton.disabled = false;
         }
 
