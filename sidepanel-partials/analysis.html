@@ -1,0 +1,115 @@
+<!-- AI Business Analysis -->
+<div id="ai-analysis" class="website-content-card hidden">
+  <div class="content-header">
+    <h3 class="content-title">Website Information</h3>
+    <div style="display: flex; gap: 8px">
+      <button class="copy-btn" id="copyButton" title="Copy website info">
+        <svg viewBox="0 0 24 24" class="copy-icon">
+          <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+      </button>
+      <button class="refresh-btn" id="refreshButton" title="Re-analyze">
+        <svg viewBox="0 0 24 24" class="refresh-icon">
+          <path d="M21 12a9 9 0 1 1-3-6.7" />
+          <polyline points="21 3 21 9 15 9" />
+        </svg>
+      </button>
+      <button class="save-btn" id="saveButton" title="Save">
+        <svg viewBox="0 0 24 24" class="save-icon">
+          <defs>
+            <clipPath id="save-fill-clip">
+              <rect class="save-fill-rect" x="0" y="0" width="24" height="24"></rect>
+            </clipPath>
+          </defs>
+          <path class="save-outline" d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+          <path
+            class="save-fill"
+            d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"
+            clip-path="url(#save-fill-clip)"
+          ></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="ai-loading" class="content-loading hidden">
+    <p>Analyzing business signals…</p>
+  </div>
+
+  <div id="content-error" class="content-error hidden"></div>
+
+  <div id="ai-data" class="content-data hidden">
+    <div class="content-section">
+      <h4 class="section-label">Title</h4>
+      <p id="ai-title-text" class="content-text">—</p>
+    </div>
+
+    <div class="content-section">
+      <h4 class="section-label">What they do</h4>
+      <p id="ai-what-they-do" class="content-text">—</p>
+    </div>
+
+    <div class="content-section">
+      <h4 class="section-label">Target customer</h4>
+      <p id="ai-target-customer" class="content-text">—</p>
+    </div>
+
+    <div class="content-section">
+      <h4 class="section-label">Value proposition</h4>
+      <p id="ai-value-prop" class="content-text">—</p>
+    </div>
+
+    <div class="content-section">
+      <h4 class="section-label">Sales readiness</h4>
+      <p id="ai-sales-score" class="content-text">—</p>
+    </div>
+
+    <div class="content-section">
+      <h4 class="section-label">Best sales persona recommendation</h4>
+      <p id="ai-sales-persona" class="content-text">—</p>
+      <p id="ai-sales-persona-reason" class="content-text" style="font-size: 13px; opacity: 0.8">
+        —
+      </p>
+    </div>
+
+    <div class="content-section">
+      <h4 class="section-label">Sales angle</h4>
+      <p id="ai-sales-angle" class="content-text">—</p>
+    </div>
+
+    <div class="content-section outreach-section">
+      <div class="outreach-section-title">Recommended outreach strategy</div>
+
+      <div class="outreach-row">
+        <span class="outreach-label">Who should reach out</span>
+        <span id="ai-outreach-persona" class="outreach-value">—</span>
+      </div>
+
+      <div class="outreach-row">
+        <span class="outreach-label">Goal</span>
+        <span id="ai-outreach-goal" class="outreach-value">—</span>
+      </div>
+
+      <div class="outreach-row">
+        <span class="outreach-label">Angle</span>
+        <span id="ai-outreach-angle" class="outreach-value">—</span>
+      </div>
+
+      <div class="outreach-message">
+        <div class="outreach-message-label">Suggested message</div>
+        <div id="ai-outreach-message" class="outreach-message-box">—</div>
+      </div>
+    </div>
+
+    <div class="content-section">
+      <h4 class="section-label">Company overview</h4>
+      <p id="ai-description-text" class="content-text">—</p>
+    </div>
+
+    <div class="content-section">
+      <h4 class="section-label">URL</h4>
+      <a id="ai-url-text" href="#" target="_blank" class="content-url">—</a>
+    </div>
+  </div>
+</div>

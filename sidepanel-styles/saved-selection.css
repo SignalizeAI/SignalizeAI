@@ -1,0 +1,38 @@
+.saved-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+}
+
+.saved-item-header:not(.selection-mode) {
+  cursor: pointer;
+}
+
+.saved-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.secondary-btn.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.saved-select-checkbox {
+  width: 14px;
+  height: 14px;
+  accent-color: #3b82f6;
+  cursor: pointer;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.selection-count-indicator {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 6px;
+}

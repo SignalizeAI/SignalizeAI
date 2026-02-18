@@ -1,0 +1,137 @@
+.save-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.save-icon {
+  width: 20px;
+  height: 20px;
+
+  fill: transparent;
+  stroke: #888888;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.save-btn:hover .save-icon {
+  stroke: #ffffff;
+  transform: scale(1.1);
+}
+
+.save-btn.active .save-icon {
+  stroke: #ffffff;
+}
+
+.save-outline {
+  fill: transparent;
+}
+
+.save-fill {
+  fill: #ffffff;
+  opacity: 0;
+}
+
+.save-btn.saving .save-icon,
+.save-btn.saving:hover .save-icon {
+  stroke: #ffffff;
+}
+
+.save-btn.saving .save-fill,
+.save-btn.active .save-fill {
+  opacity: 1;
+}
+
+.save-fill-rect {
+  transform-origin: top;
+  transform: scaleY(0);
+}
+
+.save-btn.saving .save-fill-rect {
+  animation: save-fill 1.1s linear infinite;
+}
+
+.save-btn.active .save-fill-rect {
+  animation: none;
+  transform: scaleY(1);
+}
+
+@keyframes save-fill {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes jelly {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.25) rotate(5deg);
+  }
+  50% {
+    transform: scale(0.9) rotate(-5deg);
+  }
+  75% {
+    transform: scale(1.1) rotate(3deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+.save-btn {
+  position: relative;
+}
+
+.refresh-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.refresh-icon {
+  width: 20px;
+  height: 20px;
+
+  fill: none;
+  stroke: #888888;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  transition: all 0.25s ease;
+}
+
+.refresh-btn:hover .refresh-icon {
+  stroke: #ffffff;
+  transform: rotate(30deg) scale(1.1);
+}
+
+.refresh-btn:disabled {
+  cursor: not-allowed;
+}
+
+.refresh-btn:disabled .refresh-icon {
+  animation: spin 0.9s linear infinite;
+  stroke: #ffffff;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
