@@ -2,8 +2,8 @@ import { headerSubtitle, loginView, userInitialSpan, welcomeView } from './eleme
 import { loadQuotaFromAPI } from './quota.js';
 import { loadSettings, applySettingsToUI } from './settings.js';
 import { state } from './state.js';
-import { extractWebsiteContent } from './analysis.js';
-import { exitSelectionMode, loadSavedAnalyses } from './saved.js';
+import { extractWebsiteContent } from './analysis/index.js';
+import { exitSelectionMode, loadSavedAnalyses } from './saved/index.js';
 
 export function navigateTo(view) {
   const prevView = state.currentView;
