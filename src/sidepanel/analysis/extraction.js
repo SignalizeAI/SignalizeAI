@@ -169,7 +169,9 @@ export async function extractWebsiteContent() {
               .from('saved_analyses')
               .select('*')
               .eq('user_id', user.id)
-              .eq('url', currentUrl)
+              .eq('domain', currentDomain)
+              .order('created_at', { ascending: false })
+              .limit(1)
               .maybeSingle();
 
             existing = data;

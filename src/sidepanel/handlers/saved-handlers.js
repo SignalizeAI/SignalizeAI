@@ -2,6 +2,7 @@ import { supabase } from '../supabase.js';
 import { state } from '../state.js';
 import { renderQuotaBanner, loadQuotaFromAPI } from '../quota.js';
 import { showLimitModal } from '../modal.js';
+import { showToast } from '../toast.js';
 import {
   loadSavedAnalyses,
   exitSelectionMode,
@@ -177,6 +178,22 @@ export function setupSavedHandlers() {
       loadSavedAnalyses();
       await loadQuotaFromAPI(true);
     } else {
+      const { data: existing } = await supabase
+        .from('saved_analyses')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('domain', state.lastExtractedMeta.domain)
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        saveButton.classList.add('active');
+        saveButton.title = 'Remove';
+        saveButton.dataset.savedId = existing.id;
+        showToast('Already saved for this domain.');
+        return;
+      }
+
       const { data: insertData, error } = await supabase
         .from('saved_analyses')
         .insert({
@@ -203,7 +220,12 @@ export function setupSavedHandlers() {
         .single();
 
       if (error) {
+        const message =
+          error.code === '23505' || /duplicate|unique/i.test(error.message || '')
+            ? 'Already saved for this domain.'
+            : 'Failed to save. Please try again.';
         console.error('Failed to save:', error);
+        showToast(message);
         return;
       }
 
