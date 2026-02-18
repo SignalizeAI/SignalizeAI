@@ -39,6 +39,7 @@ export function showUndoToast() {
 
   undoBtn.onclick = async () => {
     const { updateSavedEmptyState } = await import('./rendering.js');
+    const { refreshSaveButtonState } = await import('../analysis/extraction.js');
     state.isUndoToastActive = false;
     document.body.classList.remove('undo-active');
     clearTimeout(state.undoTimer);
@@ -52,6 +53,7 @@ export function showUndoToast() {
     state.pendingDeleteMap.clear();
     updateSavedEmptyState();
     await loadQuotaFromAPI(true);
+    await refreshSaveButtonState();
   };
 
   closeBtn.onclick = finalizePendingDeletes;

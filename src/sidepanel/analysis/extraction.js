@@ -27,6 +27,44 @@ function isHomepageUrl(url) {
   }
 }
 
+export async function refreshSaveButtonState() {
+  if (!state.lastExtractedMeta?.domain) return;
+
+  const btn = document.getElementById('saveButton');
+  if (!btn) return;
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData?.session?.user;
+
+  if (!user) {
+    btn.classList.remove('active');
+    btn.title = 'Save';
+    delete btn.dataset.savedId;
+    return;
+  }
+
+  const { data: existing } = await supabase
+    .from('saved_analyses')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('domain', state.lastExtractedMeta.domain)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const isPendingDelete = existing && state.pendingDeleteMap.has(existing.id);
+
+  if (existing && !isPendingDelete) {
+    btn.classList.add('active');
+    btn.title = 'Remove';
+    btn.dataset.savedId = existing.id;
+  } else {
+    btn.classList.remove('active');
+    btn.title = 'Save';
+    delete btn.dataset.savedId;
+  }
+}
+
 export async function extractWebsiteContent() {
   if (state.isUserInteracting) {
     document.getElementById('ai-loading')?.classList.add('hidden');
@@ -185,7 +223,9 @@ export async function extractWebsiteContent() {
 
             existing = data;
 
-            if (existing) {
+            const isPendingDelete = existing && state.pendingDeleteMap.has(existing.id);
+
+            if (existing && !isPendingDelete) {
               btn?.classList.add('active');
               if (btn) btn.title = 'Remove';
               if (btn) btn.dataset.savedId = existing.id;

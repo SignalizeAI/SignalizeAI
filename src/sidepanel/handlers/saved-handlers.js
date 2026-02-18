@@ -192,7 +192,9 @@ export function setupSavedHandlers() {
         .limit(1)
         .maybeSingle();
 
-      if (existing) {
+      const isPendingDelete = existing && state.pendingDeleteMap.has(existing.id);
+
+      if (existing && !isPendingDelete) {
         saveButton.classList.add('active');
         saveButton.title = 'Remove';
         saveButton.dataset.savedId = existing.id;
