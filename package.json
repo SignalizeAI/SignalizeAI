@@ -21,10 +21,17 @@
     "exceljs": "^4.4.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^9.2.1",
     "esbuild": "^0.27.2",
-    "eslint": "^8.57.0",
+    "eslint": "^10.0.0",
     "prettier": "^3.2.5",
-    "concurrently": "^8.2.2",
-    "web-ext": "^8.0.0"
+    "web-ext": "^9.3.0"
+  },
+  "overrides": {
+    "glob": "^10.5.0",
+    "minimatch": "^10.2.1",
+    "ajv": "^8.18.0",
+    "rimraf": "^4.4.1"
   }
 }
