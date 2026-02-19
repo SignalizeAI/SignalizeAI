@@ -7,7 +7,7 @@ export async function openCheckout(variantId) {
 
   const email = data.session.user.email;
   const userId = data.session.user.id;
-  const plan = variantId === '88e4933d-9fae-4a7a-8c3f-ee72d78018b0' ? 'team' : 'pro';
+  const plan = variantId === '56ab66c1-587f-453a-8d51-4cd2c3e61849' ? 'team' : 'pro';
   const successUrl = encodeURIComponent(`https://signalizeai.org/payment-success?plan=${plan}`);
 
   const checkoutUrl =
@@ -16,7 +16,7 @@ export async function openCheckout(variantId) {
     `&checkout[custom][user_id]=${encodeURIComponent(userId)}` +
     `&checkout[custom][plan]=${plan}` +
     `&checkout[success_url]=${successUrl}` +
-    `&media=0&discount=0`;
+    `&media=0&desc=0&discount=0`;
 
   chrome.tabs.create({ url: checkoutUrl });
 }
