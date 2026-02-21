@@ -8,10 +8,13 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "build": "esbuild src/sidepanel-entry.js --bundle --format=iife --minify --outfile=extension/supabase.bundle.js && esbuild sidepanel.js --bundle --platform=browser --format=esm --minify --tree-shaking=true --splitting --outdir=extension",
+    "build:chrome": "cp manifest.chrome.json manifest.json && npm run build",
+    "build:firefox": "cp manifest.firefox.json manifest.json && npm run build",
     "watch:supabase": "esbuild src/sidepanel-entry.js --bundle --format=iife --outfile=extension/supabase.bundle.js --watch",
     "watch:panel": "esbuild sidepanel.js --bundle --platform=browser --format=esm --minify --tree-shaking=true --splitting --outdir=extension --watch",
     "watch": "concurrently -k \"npm:watch:supabase\" \"npm:watch:panel\"",
-    "dev": "concurrently -k \"npm:watch\" \"web-ext run --chromium --source-dir . --watch-file sidepanel.html --watch-file sidepanel-loader.js --watch-file sidepanel.css --watch-file sidepanel-partials/** --watch-file sidepanel-styles/** --watch-file extension/**\""
+    "dev": "concurrently -k \"npm:watch\" \"web-ext run --chromium --source-dir . --watch-file sidepanel.html --watch-file sidepanel-loader.js --watch-file sidepanel.css --watch-file sidepanel-partials/** --watch-file sidepanel-styles/** --watch-file extension/**\"",
+    "dev:firefox": "cp manifest.firefox.json manifest.json && concurrently -k \"npm:watch\" \"web-ext run --firefox --source-dir . --watch-file sidepanel.html --watch-file sidepanel-loader.js --watch-file sidepanel.css --watch-file sidepanel-partials/** --watch-file sidepanel-styles/** --watch-file extension/**\""
   },
   "keywords": [],
   "author": "",

@@ -9,6 +9,7 @@ import { loadQuotaFromAPI } from '../quota.js';
 import { supabase } from '../supabase.js';
 import { state } from '../state.js';
 import { isMenuOpen, updateUI } from '../ui.js';
+import { getActiveTab } from '../utils.js';
 
 export function setupRuntimeHandlers() {
   chrome.runtime.onMessage.addListener(async (message) => {
@@ -18,8 +19,8 @@ export function setupRuntimeHandlers() {
         if (Date.now() - state.lastAutoAnalyzeAt < AUTO_ANALYZE_DEBOUNCE) return;
         state.lastAutoAnalyzeAt = Date.now();
 
-        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-        const url = tabs[0]?.url || '';
+        const tab = await getActiveTab();
+        const url = tab?.url || '';
         const enabled = await shouldAutoAnalyze(url);
 
         if (!enabled && state.currentView === 'analysis') {
@@ -69,10 +70,9 @@ export function setupRuntimeHandlers() {
   document.addEventListener('visibilitychange', () => {
     if (state.isUserInteracting || isMenuOpen() || state.isAnalysisLoading) return;
     if (!document.hidden) {
-      chrome.tabs
-        .query({ active: true, currentWindow: true })
-        .then((tabs) => {
-          const url = tabs[0]?.url || '';
+      getActiveTab()
+        .then((tab) => {
+          const url = tab?.url || '';
           return shouldAutoAnalyze(url).then((enabled) => ({ enabled, url }));
         })
         .then(({ enabled, url }) => {

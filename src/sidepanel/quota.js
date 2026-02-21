@@ -13,6 +13,8 @@ export async function loadQuotaFromAPI(force = false) {
   try {
     const res = await fetch('https://api.signalizeai.org/quota', {
       headers: { Authorization: `Bearer ${jwt}` },
+      credentials: 'omit',
+      mode: 'cors',
     });
 
     if (!res.ok) {

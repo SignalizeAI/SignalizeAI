@@ -18,6 +18,8 @@ export async function analyzeWebsiteContent(
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify({ extracted, isInternal, domainAnalyzedToday }),
+    credentials: 'omit',
+    mode: 'cors',
   });
 
   let data;
@@ -71,6 +73,8 @@ export async function fetchQuota() {
     headers: {
       Authorization: `Bearer ${token}`,
     },
+    credentials: 'omit',
+    mode: 'cors',
   });
 
   if (!res.ok) return null;

@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "SignalizeAI",
+  "version": "3.0.0",
+  "description": "AI-powered sales insights for any website.",
+  "permissions": ["activeTab", "sidePanel", "storage", "tabs", "scripting"],
+  "host_permissions": ["https://*.supabase.co/*", "https://api.signalizeai.org/*"],
+  "icons": {
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "SignalizeAI"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://signalizeai.org/*"],
+      "js": ["content-auth-bridge.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-extractor.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAkpAWQi22RnLcxNs03Epsy6w8V4Ml4DAE0fLYErTtApIMZwdRx7e6RA5kBajpbudWO5dOKsYbYNAq+gidK7zoocD8kcZK7FPGH5ut5Q/Ni3Qw4dywpf+QXWYHoGJWWNZ0YEo25Mx5mzxr71yquyF+YrAl9tinU+H7Xdb2pm4Kg07YZDJj/74vp9s6TTKA37DzOWtRnOuM48oVXMDi9/nW8N1QBhjCQi145DfmiC+ISypB6KZhjaEnsUYNmKWUDEu85zhH3p5YesaTvHIPbPY0byXkHFDb76V1GuH9+/aLOzfpPYC0qKz8Tejxjf14LJjTdp1uoMVQ5Q+UNk676kdu6wIDAQAB"
+}
