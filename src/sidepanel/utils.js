@@ -5,15 +5,15 @@
  */
 export async function getActiveTab() {
   let tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  
+
   if (!tabs || tabs.length === 0 || !tabs[0]?.url) {
     tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   }
-  
+
   if (!tabs || tabs.length === 0 || !tabs[0]?.url) {
     tabs = await chrome.tabs.query({ active: true });
   }
-  
+
   return tabs[0] || null;
 }
 
