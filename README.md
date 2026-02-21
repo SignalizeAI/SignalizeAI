@@ -10,7 +10,7 @@ With one click, it analyzes publicly available website content to identify:
 - Sales readiness score
 - Recommended sales persona
 
-The extension runs directly inside a Chrome side panel, allowing you to analyze websites without leaving the page or interrupting your workflow.
+The extension runs directly inside a Chrome or Firefox side panel, allowing you to analyze websites without leaving the page or interrupting your workflow.
 
 It is designed for sales professionals, founders, marketers, and business development teams who want faster insights before outreach, demos, or research.
 
@@ -47,7 +47,7 @@ Authentication and storage are handled securely using **Supabase**.
 
 ## 🔧 Tech Stack
 
-- Chrome Extension (Manifest V3)
+- Chrome & Firefox Extension (Manifest V3)
 - JavaScript
 - Supabase (Auth & Storage)
 - Cloudflare Workers (Backend)

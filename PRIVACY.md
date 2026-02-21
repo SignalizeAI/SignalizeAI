@@ -2,7 +2,7 @@
 
 **Last updated:** 31 December 2025
 
-SignalizeAI (“we”, “our”, or “the extension”) is a Chrome extension designed to help users analyze publicly available business websites and generate sales-related insights.
+SignalizeAI ("we", "our", or "the extension") is a Chrome and Firefox extension designed to help users analyze publicly available business websites and generate sales-related insights.
 
 We take user privacy seriously. This Privacy Policy explains what data we collect, how it is used, and how it is protected.
 
