@@ -17,6 +17,7 @@ import { showLimitModal } from '../modal.js';
 import { showToast } from '../toast.js';
 import { cleanTitle, endAnalysisLoading } from './utils.js';
 import { showContentBlocked, displayAIAnalysis } from './display.js';
+import { getActiveTab, ensureContentScriptLoaded } from '../utils.js';
 
 function isHomepageUrl(url) {
   try {
@@ -111,13 +112,7 @@ export async function extractWebsiteContent() {
   state.isAnalysisLoading = true;
 
   try {
-    let tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-
-    if (!tabs.length || !tabs[0]?.url) {
-      tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    }
-
-    const tab = tabs[0];
+    const tab = await getActiveTab();
 
     if (!tab?.id) {
       endAnalysisLoading();
@@ -160,6 +155,13 @@ export async function extractWebsiteContent() {
         emptyView.classList.remove('hidden');
       }
       console.info('Empty tab or browser system page:', tab.url);
+      return;
+    }
+
+    const scriptLoaded = await ensureContentScriptLoaded(tab.id);
+    if (!scriptLoaded) {
+      endAnalysisLoading();
+      showContentBlocked('Unable to load content script.');
       return;
     }
 
@@ -458,9 +460,14 @@ export async function getHomepageAnalysisForSave(url) {
     return { blocked: true };
   }
 
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tab = await getActiveTab();
   if (!tab?.id) {
     return { error: 'No active tab' };
+  }
+
+  const scriptLoaded = await ensureContentScriptLoaded(tab.id);
+  if (!scriptLoaded) {
+    return { error: 'Unable to load content script' };
   }
 
   const response = await new Promise((resolve) => {
@@ -544,8 +551,15 @@ export async function analyzeSpecificUrl(url) {
   if (contentError) contentError.classList.add('hidden');
   if (contentLoading) contentLoading.classList.remove('hidden');
 
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tab = await getActiveTab();
   if (!tab?.id) return;
+
+  const scriptLoaded = await ensureContentScriptLoaded(tab.id);
+  if (!scriptLoaded) {
+    if (contentLoading) contentLoading.classList.add('hidden');
+    showContentBlocked('Unable to load content script.');
+    return;
+  }
 
   chrome.tabs.sendMessage(
     tab.id,
