@@ -73,11 +73,13 @@ The side panel is split into HTML partials and CSS modules for easier editing.
 ## 🛠 Building
 
 1. Install dependencies:
+
    ```bash
    npm i
    ```
 
 2. Build for Chrome:
+
    ```bash
    npm run build:chrome
    ```
