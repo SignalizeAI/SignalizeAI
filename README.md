@@ -70,6 +70,25 @@ The side panel is split into HTML partials and CSS modules for easier editing.
 - `npm run format`
 - `npm run format:check`
 
+## 🛠 Building
+
+1. Install dependencies:
+
+   ```bash
+   npm i
+   ```
+
+2. Build for Chrome:
+
+   ```bash
+   npm run build:chrome
+   ```
+
+3. Build for Firefox:
+   ```bash
+   npm run build:firefox
+   ```
+
 ## 🧪 CI & Dev
 
 - Pull requests run `lint` + `format:check`
