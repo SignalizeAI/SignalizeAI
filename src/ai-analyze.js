@@ -1,5 +1,7 @@
+import { supabase } from './sidepanel/supabase.js';
+
 async function getAccessToken() {
-  const { data, error } = await window.supabase.auth.getSession();
+  const { data, error } = await supabase.auth.getSession();
   if (error || !data.session) return null;
   return data.session.access_token;
 }

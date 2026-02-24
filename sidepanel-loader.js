@@ -28,7 +28,6 @@ const loadPartials = async () => {
 
 const boot = async () => {
   await loadPartials();
-  await loadScript('extension/supabase.bundle.js');
   await import('./extension/sidepanel.js');
 };
 

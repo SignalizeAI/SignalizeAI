@@ -1,7 +1,3 @@
-if (!window.supabase) {
-  throw new Error(
-    'Supabase client not initialized. Make sure extension/supabase.bundle.js is loaded.'
-  );
-}
+import { supabase as supabaseClient } from '../sidepanel-entry.js';
 
-export const supabase = window.supabase;
+export const supabase = supabaseClient;
