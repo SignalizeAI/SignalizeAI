@@ -18,4 +18,8 @@ export function setupModalHandlers() {
   document.getElementById('upgrade-btn')?.addEventListener('click', () => {
     showLimitModal('upgrade');
   });
+
+  document.getElementById('plan-limit-upgrade-btn')?.addEventListener('click', () => {
+    showLimitModal('upgrade');
+  });
 }
