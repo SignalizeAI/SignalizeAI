@@ -111,7 +111,7 @@ SignalizeAI respects user privacy.
 - No browsing activity is tracked
 - No ads or data selling
 
-See [`privacy.md`](./PRIVACY.md) for full details.
+See [`PRIVACY.md`](./PRIVACY.md) for full details.
 
 ## 📬 Contact
 
