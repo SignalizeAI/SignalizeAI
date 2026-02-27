@@ -1,7 +1,7 @@
 import { supabase } from '../supabase.js';
 import { state } from '../state.js';
 import { showToast } from '../toast.js';
-import { loadQuotaFromAPI } from '../quota.js';
+import { loadQuotaFromAPI, renderQuotaBanner } from '../quota.js';
 
 export function showUndoToast() {
   state.isUndoToastActive = true;
@@ -76,6 +76,8 @@ export async function finalizePendingDeletes() {
     return;
   }
 
+  const deletedCount = state.pendingDeleteMap.size;
+
   while (state.pendingDeleteMap.size > 0) {
     const batch = Array.from(state.pendingDeleteMap.values());
     state.pendingDeleteMap.clear();
@@ -97,10 +99,15 @@ export async function finalizePendingDeletes() {
   const { fetchAndRenderPage } = await import('./data.js');
   const { updateFilterBanner } = await import('./filtering.js');
 
+  if (Number.isFinite(state.totalSavedCount) && state.totalSavedCount > 0) {
+    state.totalSavedCount = Math.max(0, state.totalSavedCount - deletedCount);
+  }
+
   state.isFinalizingDeletes = false;
   state.isUndoToastActive = false;
   document.body.classList.remove('undo-active');
   await fetchAndRenderPage();
   updateFilterBanner();
-  await loadQuotaFromAPI();
+  renderQuotaBanner();
+  await loadQuotaFromAPI(true);
 }

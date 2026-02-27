@@ -1,6 +1,6 @@
 {
   "name": "signalize",
-  "version": "1.0.0",
+  "version": "3.6.0",
   "description": "Cursor for sales pages 🚀",
   "main": "background.js",
   "scripts": {
