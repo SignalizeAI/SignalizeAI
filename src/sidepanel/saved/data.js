@@ -2,9 +2,10 @@ import { supabase } from '../supabase.js';
 import { state } from '../state.js';
 import { PAGE_SIZE } from '../constants.js';
 import { exitSelectionMode } from './selection.js';
-import { updateSavedEmptyState, renderSavedItem } from './rendering.js';
+import { updateSavedEmptyState, renderSavedItem, updatePlanLimitBanner } from './rendering.js';
 import { renderPagination } from './pagination.js';
 import { updateFilterBanner } from './filtering.js';
+import { loadQuotaFromAPI } from '../quota.js';
 
 export async function loadSavedAnalyses() {
   state.currentPage = 1;
@@ -18,6 +19,8 @@ export async function loadSavedAnalyses() {
   listEl.innerHTML = '';
   loadingEl.classList.remove('hidden');
   emptyEl.classList.add('hidden');
+
+  await loadQuotaFromAPI();
 
   await fetchAndRenderPage();
 }
@@ -150,13 +153,23 @@ export async function fetchAndRenderPage() {
     return;
   }
 
-  data.forEach((row) => {
+  const visibleItems = data.slice(0, Math.min(data.length, state.maxSavedLimit));
+  const hasExceededLimit = state.totalFilteredCount > state.maxSavedLimit;
+
+  visibleItems.forEach((row) => {
     listEl.appendChild(renderSavedItem(row));
   });
 
-  updateSavedEmptyState(data.length);
-  renderPagination(Math.ceil(state.totalFilteredCount / PAGE_SIZE));
+  updateSavedEmptyState(visibleItems.length);
+  renderPagination(Math.ceil(Math.min(state.totalFilteredCount, state.maxSavedLimit) / PAGE_SIZE));
   updateFilterBanner();
+  updatePlanLimitBanner();
+
+  window.signalizeAnalysisLimitInfo = {
+    visibleCount: visibleItems.length,
+    totalCount: state.totalSavedCount,
+    hasExceededLimit: hasExceededLimit,
+  };
 }
 
 export async function fetchSavedAnalysesData() {

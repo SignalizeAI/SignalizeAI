@@ -9,6 +9,24 @@ import { showUndoToast } from './delete.js';
 const exportToggle = document.getElementById('export-menu-toggle');
 const filterToggle = document.getElementById('filter-toggle');
 
+export function updatePlanLimitBanner() {
+  const banner = document.getElementById('plan-limit-banner');
+  const visibleCountEl = document.getElementById('visible-count');
+  const totalCountEl = document.getElementById('total-count');
+
+  if (!banner) return;
+
+  const hasExceededLimit = state.totalSavedCount > state.maxSavedLimit;
+
+  if (hasExceededLimit) {
+    if (visibleCountEl) visibleCountEl.textContent = state.maxSavedLimit;
+    if (totalCountEl) totalCountEl.textContent = state.totalSavedCount;
+    banner.classList.remove('hidden');
+  } else {
+    banner.classList.add('hidden');
+  }
+}
+
 export function updateSavedActionsVisibility(count) {
   const searchToggleBtn = document.getElementById('search-toggle');
   const multiSelectToggle = document.getElementById('multi-select-toggle');
