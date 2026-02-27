@@ -1,8 +1,8 @@
 # Privacy Policy for SignalizeAI
 
-**Last updated:** 31 December 2025
+**Last updated:** 27 February 2026
 
-SignalizeAI (“we”, “our”, or “the extension”) is a Chrome extension designed to help users analyze publicly available business websites and generate sales-related insights.
+SignalizeAI (“we”, “our”, or “the extension”) is a Chrome and Firefox extension designed to help users analyze publicly available business websites and generate sales-related insights.
 
 We take user privacy seriously. This Privacy Policy explains what data we collect, how it is used, and how it is protected.
 
@@ -17,7 +17,7 @@ SignalizeAI processes **publicly available content** from the currently active b
 - Headings
 - Visible text content
 
-This data is used **only to generate on-screen analysis for the user**.
+This data is used **only to generate on-screen analysis for the user**. To do this, we may inject a content script into the active tab using the browser's `scripting` capability.
 
 We do **not** collect:
 
@@ -82,10 +82,12 @@ SignalizeAI uses a third-party AI API to generate insights.
 
 SignalizeAI requests the following permissions:
 
-- **Tabs**: To read the active tab’s URL and content
-- **Side Panel**: To display analysis results
-- **Storage**: To save user settings and preferences
-- **Identity**: To support Google sign-in
+- **activeTab**: To access the currently active tab when the user runs an analysis
+- **tabs**: To identify the active tab and read its URL for analysis context
+- **scripting**: To inject the content extraction script into the active tab on demand
+- **storage**: To save user settings and preferences
+- **sidePanel / sidebar_action**: To display analysis results (Chrome uses Side Panel; Firefox uses the sidebar)
+- **Host permissions**: `https://*.supabase.co/*` and `https://api.signalizeai.org/*` for authentication and API requests
 
 These permissions are used **only for core functionality**.
 
@@ -119,6 +121,6 @@ Any changes will be reflected on this page with an updated date.
 
 If you have any questions or concerns regarding privacy, you may contact us at:
 
-📧 **[signalizeaiorg@gmail.com](mailto:signalizeaiorg@gmail.com)**
+📧 **[privacy@signalizeai.org](mailto:privacy@signalizeai.org)**
 
 ---
