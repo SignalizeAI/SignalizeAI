@@ -8,7 +8,7 @@ const { execSync } = require('child_process');
 const envPath = path.join(__dirname, '.env.local');
 if (fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, 'utf-8');
-  envContent.split('\n').forEach(line => {
+  envContent.split('\n').forEach((line) => {
     const [key, ...valueParts] = line.split('=');
     const value = valueParts.join('=');
     if (key && value) {
