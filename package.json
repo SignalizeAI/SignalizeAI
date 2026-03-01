@@ -1,6 +1,6 @@
 {
-  "name": "signalize",
-  "version": "3.6.5",
+  "name": "signalizeai",
+  "version": "3.7.0",
   "description": "Cursor for sales pages 🚀",
   "main": "background.js",
   "scripts": {
