@@ -11,5 +11,17 @@
     "chrome": "readonly"
   },
   "ignorePatterns": ["extension/**", "node_modules/**"],
-  "extends": ["eslint:recommended"]
+  "extends": ["eslint:recommended"],
+  "overrides": [
+    {
+      "files": ["build.js", "scripts/**/*.js"],
+      "env": {
+        "node": true,
+        "browser": false
+      },
+      "parserOptions": {
+        "sourceType": "commonjs"
+      }
+    }
+  ]
 }
