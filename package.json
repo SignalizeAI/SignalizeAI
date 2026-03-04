@@ -7,7 +7,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "build": "node build.js",
+    "build": "tsx build.ts",
     "build:chrome": "cp manifest.chrome.json manifest.json && npm run build",
     "build:firefox": "cp manifest.firefox.json manifest.json && npm run build",
     "watch:supabase": "esbuild src/sidepanel-entry.ts --bundle --format=iife --outfile=extension/supabase.bundle.js --watch",
@@ -25,11 +25,13 @@
   },
   "devDependencies": {
     "@types/chrome": "^0.0.268",
+    "@types/node": "^25.3.3",
+    "concurrently": "^8.2.2",
     "esbuild": "^0.27.2",
     "eslint": "^8.57.0",
     "prettier": "^3.2.5",
-    "concurrently": "^8.2.2",
-    "web-ext": "^8.0.0",
-    "typescript": "^5.4.5"
+    "tsx": "^4.21.0",
+    "typescript": "^5.4.5",
+    "web-ext": "^8.0.0"
   }
 }

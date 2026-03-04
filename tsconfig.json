@@ -17,7 +17,7 @@
     "noUnusedParameters": false,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["chrome"],
+    "types": ["node", "chrome"],
     "allowImportingTsExtensions": true,
     "noEmit": true
   },

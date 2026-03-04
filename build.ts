@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename);
 const envPath = path.join(__dirname, '.env.local');
 if (fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, 'utf-8');
-  envContent.split('\n').forEach((line) => {
+  envContent.split('\n').forEach((line: string) => {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) return;
 
@@ -58,18 +58,18 @@ const cmd2 = `esbuild sidepanel.ts --bundle --platform=browser --format=esm --mi
 execSync(cmd2, { stdio: 'inherit' });
 
 // Build background script from TypeScript
-const cmd3 = `esbuild background.ts --bundle --format=iife --minify --outfile=background.js`;
+const cmd3 = `esbuild background.ts --bundle --format=iife --minify --outfile=extension/background.js`;
 execSync(cmd3, { stdio: 'inherit' });
 
 // Build content scripts from TypeScript
-const cmd4 = `esbuild content-auth-bridge.ts --bundle --format=iife --minify --outfile=content-auth-bridge.js`;
+const cmd4 = `esbuild content-auth-bridge.ts --bundle --format=iife --minify --outfile=extension/content-auth-bridge.js`;
 execSync(cmd4, { stdio: 'inherit' });
 
-const cmd5 = `esbuild content-extractor.ts --bundle --format=iife --minify --outfile=content-extractor.js`;
+const cmd5 = `esbuild content-extractor.ts --bundle --format=iife --minify --outfile=extension/content-extractor.js`;
 execSync(cmd5, { stdio: 'inherit' });
 
 // Build sidepanel-loader from TypeScript
-const cmd6 = `esbuild sidepanel-loader.ts --bundle --format=iife --minify --outfile=sidepanel-loader.js`;
+const cmd6 = `esbuild sidepanel-loader.ts --bundle --format=iife --minify --outfile=extension/sidepanel-loader.js`;
 execSync(cmd6, { stdio: 'inherit' });
 
 console.log('✅ All TypeScript files compiled successfully!');

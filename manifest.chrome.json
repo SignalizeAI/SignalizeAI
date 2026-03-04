@@ -11,7 +11,7 @@
     "128": "icons/128.png"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "extension/background.js"
   },
   "action": {
     "default_title": "SignalizeAI"
@@ -22,12 +22,12 @@
   "content_scripts": [
     {
       "matches": ["https://signalizeai.org/*"],
-      "js": ["content-auth-bridge.js"],
+      "js": ["extension/content-auth-bridge.js"],
       "run_at": "document_start"
     },
     {
       "matches": ["<all_urls>"],
-      "js": ["content-extractor.js"],
+      "js": ["extension/content-extractor.js"],
       "run_at": "document_idle"
     }
   ],
