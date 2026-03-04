@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+import * as fs from 'fs';
+import * as path from 'path';
+import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load .env.local
 const envPath = path.join(__dirname, '.env.local');
@@ -30,7 +34,7 @@ if (!key) {
   );
 }
 
-// Write config file that will be imported (TypeScript version)
+// Write config file that will be imported
 const configContent = `export const SUPABASE_URL = ${JSON.stringify(url)};
 export const SUPABASE_ANON_KEY = ${JSON.stringify(key)};
 
