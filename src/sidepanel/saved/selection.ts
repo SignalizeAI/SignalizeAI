@@ -14,9 +14,9 @@ export function updateDeleteState(): void {
   const countIndicator = document.getElementById('selection-count-indicator');
   const count = state.selectedSavedIds.size;
 
-  const totalVisible = Array.from(document.querySelectorAll<HTMLElement>('#saved-list .saved-item')).filter(
-    (item) => !item.classList.contains('pending-delete')
-  ).length;
+  const totalVisible = Array.from(
+    document.querySelectorAll<HTMLElement>('#saved-list .saved-item')
+  ).filter((item) => !item.classList.contains('pending-delete')).length;
 
   if (countIndicator) {
     if (state.selectionMode && count > 0) {
@@ -143,18 +143,18 @@ export function exitSelectionMode(): void {
     .querySelectorAll<HTMLElement>('.saved-item.selected')
     .forEach((el) => el.classList.remove('selected'));
 
-  const visibleCount = Array.from(document.querySelectorAll<HTMLElement>('#saved-list .saved-item')).filter(
-    (item) => !item.classList.contains('pending-delete')
-  ).length;
+  const visibleCount = Array.from(
+    document.querySelectorAll<HTMLElement>('#saved-list .saved-item')
+  ).filter((item) => !item.classList.contains('pending-delete')).length;
   updateSelectionUI();
   updateDeleteState();
   updateSavedActionsVisibility(visibleCount);
 }
 
 export function toggleSelectAllVisible(): void {
-  const items = Array.from(document.querySelectorAll<HTMLElement>('#saved-list .saved-item')).filter(
-    (item) => !item.classList.contains('pending-delete')
-  );
+  const items = Array.from(
+    document.querySelectorAll<HTMLElement>('#saved-list .saved-item')
+  ).filter((item) => !item.classList.contains('pending-delete'));
 
   if (!items.length) return;
 
@@ -186,9 +186,9 @@ export function toggleSelectAllVisible(): void {
 export function updateSelectAllIcon(): void {
   if (!selectAllBtn || !state.selectionMode) return;
 
-  const items = Array.from(document.querySelectorAll<HTMLElement>('#saved-list .saved-item')).filter(
-    (item) => !item.classList.contains('pending-delete')
-  );
+  const items = Array.from(
+    document.querySelectorAll<HTMLElement>('#saved-list .saved-item')
+  ).filter((item) => !item.classList.contains('pending-delete'));
 
   if (!items.length) {
     selectAllBtn.innerHTML = SELECT_ALL_ICON;

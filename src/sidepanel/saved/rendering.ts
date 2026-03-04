@@ -66,9 +66,9 @@ export function updateSavedActionsVisibility(count: number): void {
 
 export function updateSavedEmptyState(visibleCount: number | null = null): void {
   if (visibleCount === null) {
-    visibleCount = Array.from(document.querySelectorAll<HTMLElement>('#saved-list .saved-item')).filter(
-      (item) => !item.classList.contains('pending-delete')
-    ).length;
+    visibleCount = Array.from(
+      document.querySelectorAll<HTMLElement>('#saved-list .saved-item')
+    ).filter((item) => !item.classList.contains('pending-delete')).length;
   }
   const emptyEl = document.getElementById('saved-empty');
   const filterEmptyEl = document.getElementById('filter-empty');
@@ -100,7 +100,7 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
           '>': '&gt;',
           '"': '&quot;',
           "'": '&#39;',
-        }[char] || char)
+        })[char] || char
     );
 
   const escapedTitle = escapeHtml(item.title || item.domain || '');
@@ -225,9 +225,9 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
   });
 
   const handleSelection = (isShift: boolean, forceState: boolean | null = null): void => {
-    const items = Array.from(document.querySelectorAll<HTMLElement>('#saved-list .saved-item')).filter(
-      (i) => !i.classList.contains('pending-delete')
-    );
+    const items = Array.from(
+      document.querySelectorAll<HTMLElement>('#saved-list .saved-item')
+    ).filter((i) => !i.classList.contains('pending-delete'));
 
     const currentIndex = items.indexOf(wrapper);
     const shouldSelect = forceState !== null ? forceState : checkbox.checked;
@@ -264,33 +264,35 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
     handleSelection(e.shiftKey);
   });
 
-  wrapper.querySelector<HTMLButtonElement>('.delete-saved-btn')!.addEventListener('click', (e: MouseEvent) => {
-    if (state.selectionMode || state.isUndoToastActive) return;
-    e.stopPropagation();
+  wrapper
+    .querySelector<HTMLButtonElement>('.delete-saved-btn')!
+    .addEventListener('click', (e: MouseEvent) => {
+      if (state.selectionMode || state.isUndoToastActive) return;
+      e.stopPropagation();
 
-    const itemId = item.id;
+      const itemId = item.id;
 
-    wrapper.dataset.isPendingDelete = 'true';
-    wrapper.classList.add('pending-delete');
+      wrapper.dataset.isPendingDelete = 'true';
+      wrapper.classList.add('pending-delete');
 
-    state.pendingDeleteMap.set(itemId, {
-      element: wrapper,
-      finalize: async () => {
-        const { data } = await supabase.auth.getSession();
-        if (!data?.session?.user) return;
+      state.pendingDeleteMap.set(itemId, {
+        element: wrapper,
+        finalize: async () => {
+          const { data } = await supabase.auth.getSession();
+          if (!data?.session?.user) return;
 
-        await supabase
-          .from('saved_analyses')
-          .delete()
-          .eq('user_id', data.session.user.id)
-          .eq('id', itemId);
+          await supabase
+            .from('saved_analyses')
+            .delete()
+            .eq('user_id', data.session.user.id)
+            .eq('id', itemId);
 
-        wrapper.remove();
-      },
+          wrapper.remove();
+        },
+      });
+
+      showUndoToast();
     });
-
-    showUndoToast();
-  });
 
   let pressTimer: ReturnType<typeof setTimeout>;
   let preventNextClick = false;
@@ -298,7 +300,9 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
   const startPress = (e: MouseEvent | TouchEvent): void => {
     if (state.selectionMode || (e instanceof MouseEvent && e.button !== 0)) return;
 
-    const visibleItems = Array.from(document.querySelectorAll<HTMLElement>('#saved-list .saved-item')).filter(
+    const visibleItems = Array.from(
+      document.querySelectorAll<HTMLElement>('#saved-list .saved-item')
+    ).filter(
       (item) =>
         !item.classList.contains('pending-delete') && item.dataset.isPendingDelete !== 'true'
     );
@@ -348,7 +352,10 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
         return;
       }
 
-      if ((e.target as HTMLElement).closest('.delete-saved-btn') || (e.target as HTMLElement).closest('.copy-saved-btn')) {
+      if (
+        (e.target as HTMLElement).closest('.delete-saved-btn') ||
+        (e.target as HTMLElement).closest('.copy-saved-btn')
+      ) {
         return;
       }
 

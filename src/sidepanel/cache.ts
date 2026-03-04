@@ -144,7 +144,10 @@ export function setCachedAnalysis(url: string, payload: { analysis: any; meta: a
   chrome.storage.local.set({ [key]: value });
 }
 
-export function setCachedAnalysisByDomain(domain: string, payload: { analysis: any; meta: any }): void {
+export function setCachedAnalysisByDomain(
+  domain: string,
+  payload: { analysis: any; meta: any }
+): void {
   const key = makeDomainCacheKey(domain);
   const value = {
     analysis: payload.analysis,

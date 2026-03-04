@@ -13,15 +13,21 @@ export function saveSettings(partial: Partial<Settings>): void {
 }
 
 export function applySettingsToUI(settings: Settings): void {
-  const autoReanalysis = document.getElementById('setting-auto-reanalysis') as HTMLInputElement | null;
+  const autoReanalysis = document.getElementById(
+    'setting-auto-reanalysis'
+  ) as HTMLInputElement | null;
   if (autoReanalysis) {
     autoReanalysis.checked = settings.autoReanalysis;
   }
 
   document
-    .querySelector<HTMLInputElement>(`input[name="reanalysis-mode"][value="${settings.reanalysisMode}"]`)
+    .querySelector<HTMLInputElement>(
+      `input[name="reanalysis-mode"][value="${settings.reanalysisMode}"]`
+    )
     ?.click();
-  document.querySelector<HTMLInputElement>(`input[name="copy-format"][value="${settings.copyFormat}"]`)?.click();
+  document
+    .querySelector<HTMLInputElement>(`input[name="copy-format"][value="${settings.copyFormat}"]`)
+    ?.click();
 
   updateReanalysisUI(settings);
 }

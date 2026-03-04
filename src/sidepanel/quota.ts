@@ -39,7 +39,7 @@ export async function loadQuotaFromAPI(force = false): Promise<void> {
       return;
     }
 
-    const dataJson = await res.json() as QuotaResponse;
+    const dataJson = (await res.json()) as QuotaResponse;
 
     if (dataJson.plan) {
       state.currentPlan = dataJson.plan;

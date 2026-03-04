@@ -9,7 +9,9 @@ export function setupSettingsHandlers(): void {
     navigateTo('settings');
   });
 
-  const autoReanalysisCheckbox = document.getElementById('setting-auto-reanalysis') as HTMLInputElement | null;
+  const autoReanalysisCheckbox = document.getElementById(
+    'setting-auto-reanalysis'
+  ) as HTMLInputElement | null;
 
   autoReanalysisCheckbox?.addEventListener('change', async (e: Event) => {
     const target = e.target as HTMLInputElement;

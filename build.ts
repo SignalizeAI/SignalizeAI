@@ -19,7 +19,7 @@ if (fs.existsSync(envPath)) {
     const [key, ...valueParts] = trimmed.split('=');
     const value = valueParts.join('=');
     if (key && value) {
-      process.env[key.trim()] = value.trim().replace(/^['\"]|['\"]$/g, '');
+      process.env[key.trim()] = value.trim().replace(/^['"]|['"]$/g, '');
     }
   });
 }
@@ -29,9 +29,7 @@ const key = process.env.VITE_SUPABASE_ANON_KEY;
 const env = process.env.API_ENV || 'production'; // Set API_ENV=dev in .env.local for dev API
 
 if (!key) {
-  throw new Error(
-    'Missing VITE_SUPABASE_ANON_KEY. Add it to .env.local before building.'
-  );
+  throw new Error('Missing VITE_SUPABASE_ANON_KEY. Add it to .env.local before building.');
 }
 
 // Write config file that will be imported

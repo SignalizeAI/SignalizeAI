@@ -38,31 +38,33 @@ function notifySidePanel(): void {
 }
 
 // Handle messages from side panel and website
-chrome.runtime.onMessage.addListener((msg: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
-  // Start Google OAuth login
-  if (msg.type === 'LOGIN_GOOGLE') {
-    const authUrl =
-      'https://qcvnfvbzxbnrquxtjihp.supabase.co/auth/v1/authorize' +
-      '?provider=google' +
-      '&redirect_to=' +
-      encodeURIComponent('https://signalizeai.org/auth/callback');
+chrome.runtime.onMessage.addListener(
+  (msg: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
+    // Start Google OAuth login
+    if (msg.type === 'LOGIN_GOOGLE') {
+      const authUrl =
+        'https://qcvnfvbzxbnrquxtjihp.supabase.co/auth/v1/authorize' +
+        '?provider=google' +
+        '&redirect_to=' +
+        encodeURIComponent('https://signalizeai.org/auth/callback');
 
-    chrome.tabs.create({ url: authUrl });
+      chrome.tabs.create({ url: authUrl });
 
-    sendResponse({ ok: true });
-    return true;
-  }
-
-  if (msg.type === 'AUTH_SUCCESS_FROM_WEBSITE') {
-    if (!msg.session?.access_token || !msg.session?.refresh_token) {
-      console.error('Missing session in AUTH_SUCCESS_FROM_WEBSITE');
-      return;
+      sendResponse({ ok: true });
+      return true;
     }
 
-    chrome.storage.local.set({ supabaseSession: msg.session }, () => {
-      chrome.runtime.sendMessage({ type: 'SESSION_UPDATED' });
-    });
-    sendResponse({ ok: true });
-    return true;
+    if (msg.type === 'AUTH_SUCCESS_FROM_WEBSITE') {
+      if (!msg.session?.access_token || !msg.session?.refresh_token) {
+        console.error('Missing session in AUTH_SUCCESS_FROM_WEBSITE');
+        return;
+      }
+
+      chrome.storage.local.set({ supabaseSession: msg.session }, () => {
+        chrome.runtime.sendMessage({ type: 'SESSION_UPDATED' });
+      });
+      sendResponse({ ok: true });
+      return true;
+    }
   }
-});
+);

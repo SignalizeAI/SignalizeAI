@@ -12,7 +12,7 @@ import {
 import { loadSettings } from '../settings.js';
 import { loadQuotaFromAPI, renderQuotaBanner } from '../quota.js';
 import { supabase } from '../supabase.js';
-import { state, type Analysis, type ExtractedMeta } from '../state.js';
+import { state, type ExtractedMeta } from '../state.js';
 import { showLimitModal } from '../modal.js';
 import { showToast } from '../toast.js';
 import { cleanTitle, endAnalysisLoading } from './utils.js';
@@ -24,12 +24,6 @@ interface ContentResponse {
   content?: any;
   reason?: string;
   error?: string;
-}
-
-interface AnalysisResult {
-  analysis?: Analysis;
-  quota?: any;
-  blocked?: boolean;
 }
 
 function isHomepageUrl(url: string): boolean {
@@ -185,276 +179,280 @@ export async function extractWebsiteContent(): Promise<void> {
         resolve();
       }, 15000);
 
-      chrome.tabs.sendMessage(tab.id!, { type: 'EXTRACT_WEBSITE_CONTENT' }, async (response: ContentResponse) => {
-        clearTimeout(timeoutId);
-        if (chrome.runtime.lastError) {
-          endAnalysisLoading();
-          showContentBlocked('Failed to extract page content. This page may not be accessible.');
-          resolve();
-          return;
-        }
-
-        if (!response) {
-          endAnalysisLoading();
-          showContentBlocked('No response from content script');
-          resolve();
-          return;
-        }
-
-        if (response?.ok && response.content) {
-          const previousUrl = state.lastExtractedMeta?.url || null;
-
-          state.lastExtractedMeta = {
-            title: cleanTitle(response.content.title),
-            description: response.content.metaDescription,
-            url: response.content.url,
-            domain: new URL(response.content.url).hostname,
-          };
-
-          const currentDomain = state.lastExtractedMeta.domain;
-          const currentUrl = state.lastExtractedMeta.url;
-          const previousContentHash = state.lastContentHash;
-          state.lastContentHash = await hashContent(response.content);
-
-          const btn = document.getElementById('saveButton') as HTMLButtonElement | null;
-          btn?.classList.remove('active');
-          if (btn) btn.title = 'Save';
-
-          const { data: sessionData } = await supabase.auth.getSession();
-          const user = sessionData?.session?.user;
-
-          let existing = null;
-          let cached = null;
-
-          if (user) {
-            const { data } = await supabase
-              .from('saved_analyses')
-              .select('*')
-              .eq('user_id', user.id)
-              .eq('domain', currentDomain)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
-            existing = data;
-
-            const isPendingDelete = existing && state.pendingDeleteMap.has(existing.id);
-
-            if (existing && !isPendingDelete) {
-              btn?.classList.add('active');
-              if (btn) btn.title = 'Remove';
-              if (btn) btn.dataset.savedId = existing.id;
-            } else if (btn) {
-              delete btn.dataset.savedId;
-            }
-          }
-
-          cached = await getCachedAnalysis(currentUrl);
-
-          try {
-            const aiCard = document.getElementById('ai-analysis');
-            const aiLoading = document.getElementById('ai-loading');
-            const aiData = document.getElementById('ai-data');
-
-            if (aiCard) aiCard.classList.remove('hidden');
-
-            const reuseAllowed =
-              settings.reanalysisMode === 'content-change' && !state.forceRefresh;
-            const canReuseExisting =
-              reuseAllowed &&
-              existing &&
-              existing.content_hash === state.lastContentHash &&
-              existing.url === currentUrl;
-            const canReuseCached = reuseAllowed && cached && cached.meta?.url === currentUrl;
-
-            const shouldReuse = canReuseExisting || canReuseCached;
-
-            if (shouldReuse) {
-              if (aiLoading) aiLoading.classList.add('hidden');
-
-              if (canReuseExisting) {
-                state.lastAnalysis = {
-                  whatTheyDo: existing.what_they_do,
-                  targetCustomer: existing.target_customer,
-                  valueProposition: existing.value_proposition,
-                  salesAngle: existing.sales_angle,
-                  salesReadinessScore: existing.sales_readiness_score,
-                  bestSalesPersona: {
-                    persona: existing.best_sales_persona,
-                    reason: existing.best_sales_persona_reason,
-                  },
-                  recommendedOutreach: {
-                    persona: existing?.recommended_outreach_persona || '',
-                    goal: existing?.recommended_outreach_goal || '',
-                    angle: existing?.recommended_outreach_angle || '',
-                    message: existing?.recommended_outreach_message || '',
-                  },
-                };
-
-                state.lastExtractedMeta = {
-                  title: cleanTitle(existing.title),
-                  description: existing.description,
-                  url: existing.url,
-                  domain: existing.domain,
-                };
-              } else if (canReuseCached) {
-                state.lastAnalysis = cached!.analysis;
-                state.lastExtractedMeta = cached!.meta;
-              }
-
-              displayAIAnalysis(state.lastAnalysis!);
-              endAnalysisLoading();
-
-              state.lastAnalyzedDomain = currentDomain;
-
-              resolve();
-            } else {
-              const rootDomain = extractRootDomain(currentDomain);
-              const lastRootDomain = state.lastAnalyzedDomain
-                ? extractRootDomain(state.lastAnalyzedDomain)
-                : null;
-
-              const isNewRootDomain = !lastRootDomain || lastRootDomain !== rootDomain;
-              const isNewUrl = previousUrl !== currentUrl;
-              const contentChanged =
-                previousContentHash && previousContentHash !== state.lastContentHash;
-              if (!state.forceRefresh && !isNewRootDomain && !isNewUrl && !contentChanged) {
-                if (aiLoading) aiLoading.classList.add('hidden');
-                if (aiData) aiData.classList.add('hidden');
-                showContentBlocked('Click the refresh button to analyze this page.');
-                resolve();
-                return;
-              }
-
-              if (aiLoading) aiLoading.classList.remove('hidden');
-              if (aiData) aiData.classList.add('hidden');
-
-              if (!response.content.paragraphs?.length && !response.content.headings?.length) {
-                showContentBlocked('Not enough readable content to analyze.');
-                resolve();
-                return;
-              }
-
-              const urlObj = new URL(response.content.url);
-              const isInternal =
-                urlObj.hostname === 'signalizeai.org' ||
-                urlObj.hostname === 'www.signalizeai.org' ||
-                urlObj.hostname === 'signalizeaipay.lemonsqueezy.com';
-
-              const domainAnalyzedToday = await wasDomainAnalyzedToday(currentDomain);
-
-              const result = await analyzeWebsiteContent(
-                response.content,
-                isInternal,
-                domainAnalyzedToday
-              );
-
-              if (result.quota) {
-                state.currentPlan = result.quota.plan;
-                state.usedToday = result.quota.used_today;
-                state.remainingToday = result.quota.remaining_today;
-                state.dailyLimitFromAPI = result.quota.daily_limit;
-                state.maxSavedLimit = result.quota.max_saved;
-                state.totalSavedCount = result.quota.total_saved;
-                renderQuotaBanner();
-              }
-
-              if (result.blocked) {
-                document.getElementById('ai-loading')?.classList.add('hidden');
-                document.getElementById('ai-data')?.classList.add('hidden');
-                endAnalysisLoading();
-                showLimitModal('analysis');
-                resolve();
-                return;
-              }
-
-              if (!result.analysis) {
-                showContentBlocked('Failed to generate analysis');
-                endAnalysisLoading();
-                resolve();
-                return;
-              }
-
-              const analysis = result.analysis;
-              state.lastAnalysis = analysis;
-              displayAIAnalysis(analysis);
-              state.lastAnalyzedDomain = currentDomain;
-              markDomainAnalyzedToday(currentDomain);
-
-              setCachedAnalysis(currentUrl, {
-                analysis,
-                meta: state.lastExtractedMeta,
-              });
-              setCachedAnalysisByDomain(currentDomain, {
-                analysis,
-                meta: state.lastExtractedMeta,
-              });
-
-              if (existing && isHomepageUrl(currentUrl)) {
-                const { error: updateError } = await supabase
-                  .from('saved_analyses')
-                  .update({
-                    content_hash: state.lastContentHash,
-                    last_analyzed_at: new Date().toISOString(),
-                    title: state.lastExtractedMeta.title,
-                    description: state.lastExtractedMeta.description,
-                    url: state.lastExtractedMeta.url,
-                    what_they_do: analysis.whatTheyDo,
-                    target_customer: analysis.targetCustomer,
-                    value_proposition: analysis.valueProposition,
-                    sales_angle: analysis.salesAngle,
-                    sales_readiness_score: analysis.salesReadinessScore,
-                    best_sales_persona: analysis.bestSalesPersona?.persona,
-                    best_sales_persona_reason: analysis.bestSalesPersona?.reason,
-                    recommended_outreach_persona: analysis.recommendedOutreach?.persona,
-                    recommended_outreach_goal: analysis.recommendedOutreach?.goal,
-                    recommended_outreach_angle: analysis.recommendedOutreach?.angle,
-                    recommended_outreach_message: analysis.recommendedOutreach?.message,
-                  })
-                  .eq('id', existing.id);
-
-                if (updateError) {
-                  console.error('Failed to update saved analysis:', updateError);
-                  showToast('Failed to update saved analysis. Try again.');
-                }
-              }
-              resolve();
-            }
-          } catch (err: any) {
-            showContentBlocked('Failed to analyze page: ' + err.message);
+      chrome.tabs.sendMessage(
+        tab.id!,
+        { type: 'EXTRACT_WEBSITE_CONTENT' },
+        async (response: ContentResponse) => {
+          clearTimeout(timeoutId);
+          if (chrome.runtime.lastError) {
             endAnalysisLoading();
+            showContentBlocked('Failed to extract page content. This page may not be accessible.');
             resolve();
+            return;
           }
-        } else if (response?.reason === 'THIN_CONTENT') {
-          endAnalysisLoading();
-          showContentBlocked('This page has limited public content.', {
-            allowHomepageFallback: true,
-            originalUrl: tab.url,
-          });
-          resolve();
-          return;
-        } else if (response?.reason === 'RESTRICTED') {
-          endAnalysisLoading();
-          showContentBlocked(
-            'This page requires login or consent before content can be analyzed.',
-            {
+
+          if (!response) {
+            endAnalysisLoading();
+            showContentBlocked('No response from content script');
+            resolve();
+            return;
+          }
+
+          if (response?.ok && response.content) {
+            const previousUrl = state.lastExtractedMeta?.url || null;
+
+            state.lastExtractedMeta = {
+              title: cleanTitle(response.content.title),
+              description: response.content.metaDescription,
+              url: response.content.url,
+              domain: new URL(response.content.url).hostname,
+            };
+
+            const currentDomain = state.lastExtractedMeta.domain;
+            const currentUrl = state.lastExtractedMeta.url;
+            const previousContentHash = state.lastContentHash;
+            state.lastContentHash = await hashContent(response.content);
+
+            const btn = document.getElementById('saveButton') as HTMLButtonElement | null;
+            btn?.classList.remove('active');
+            if (btn) btn.title = 'Save';
+
+            const { data: sessionData } = await supabase.auth.getSession();
+            const user = sessionData?.session?.user;
+
+            let existing = null;
+            let cached = null;
+
+            if (user) {
+              const { data } = await supabase
+                .from('saved_analyses')
+                .select('*')
+                .eq('user_id', user.id)
+                .eq('domain', currentDomain)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              existing = data;
+
+              const isPendingDelete = existing && state.pendingDeleteMap.has(existing.id);
+
+              if (existing && !isPendingDelete) {
+                btn?.classList.add('active');
+                if (btn) btn.title = 'Remove';
+                if (btn) btn.dataset.savedId = existing.id;
+              } else if (btn) {
+                delete btn.dataset.savedId;
+              }
+            }
+
+            cached = await getCachedAnalysis(currentUrl);
+
+            try {
+              const aiCard = document.getElementById('ai-analysis');
+              const aiLoading = document.getElementById('ai-loading');
+              const aiData = document.getElementById('ai-data');
+
+              if (aiCard) aiCard.classList.remove('hidden');
+
+              const reuseAllowed =
+                settings.reanalysisMode === 'content-change' && !state.forceRefresh;
+              const canReuseExisting =
+                reuseAllowed &&
+                existing &&
+                existing.content_hash === state.lastContentHash &&
+                existing.url === currentUrl;
+              const canReuseCached = reuseAllowed && cached && cached.meta?.url === currentUrl;
+
+              const shouldReuse = canReuseExisting || canReuseCached;
+
+              if (shouldReuse) {
+                if (aiLoading) aiLoading.classList.add('hidden');
+
+                if (canReuseExisting) {
+                  state.lastAnalysis = {
+                    whatTheyDo: existing.what_they_do,
+                    targetCustomer: existing.target_customer,
+                    valueProposition: existing.value_proposition,
+                    salesAngle: existing.sales_angle,
+                    salesReadinessScore: existing.sales_readiness_score,
+                    bestSalesPersona: {
+                      persona: existing.best_sales_persona,
+                      reason: existing.best_sales_persona_reason,
+                    },
+                    recommendedOutreach: {
+                      persona: existing?.recommended_outreach_persona || '',
+                      goal: existing?.recommended_outreach_goal || '',
+                      angle: existing?.recommended_outreach_angle || '',
+                      message: existing?.recommended_outreach_message || '',
+                    },
+                  };
+
+                  state.lastExtractedMeta = {
+                    title: cleanTitle(existing.title),
+                    description: existing.description,
+                    url: existing.url,
+                    domain: existing.domain,
+                  };
+                } else if (canReuseCached) {
+                  state.lastAnalysis = cached!.analysis;
+                  state.lastExtractedMeta = cached!.meta;
+                }
+
+                displayAIAnalysis(state.lastAnalysis!);
+                endAnalysisLoading();
+
+                state.lastAnalyzedDomain = currentDomain;
+
+                resolve();
+              } else {
+                const rootDomain = extractRootDomain(currentDomain);
+                const lastRootDomain = state.lastAnalyzedDomain
+                  ? extractRootDomain(state.lastAnalyzedDomain)
+                  : null;
+
+                const isNewRootDomain = !lastRootDomain || lastRootDomain !== rootDomain;
+                const isNewUrl = previousUrl !== currentUrl;
+                const contentChanged =
+                  previousContentHash && previousContentHash !== state.lastContentHash;
+                if (!state.forceRefresh && !isNewRootDomain && !isNewUrl && !contentChanged) {
+                  if (aiLoading) aiLoading.classList.add('hidden');
+                  if (aiData) aiData.classList.add('hidden');
+                  showContentBlocked('Click the refresh button to analyze this page.');
+                  resolve();
+                  return;
+                }
+
+                if (aiLoading) aiLoading.classList.remove('hidden');
+                if (aiData) aiData.classList.add('hidden');
+
+                if (!response.content.paragraphs?.length && !response.content.headings?.length) {
+                  showContentBlocked('Not enough readable content to analyze.');
+                  resolve();
+                  return;
+                }
+
+                const urlObj = new URL(response.content.url);
+                const isInternal =
+                  urlObj.hostname === 'signalizeai.org' ||
+                  urlObj.hostname === 'www.signalizeai.org' ||
+                  urlObj.hostname === 'signalizeaipay.lemonsqueezy.com';
+
+                const domainAnalyzedToday = await wasDomainAnalyzedToday(currentDomain);
+
+                const result = await analyzeWebsiteContent(
+                  response.content,
+                  isInternal,
+                  domainAnalyzedToday
+                );
+
+                if (result.quota) {
+                  state.currentPlan = result.quota.plan;
+                  state.usedToday = result.quota.used_today;
+                  state.remainingToday = result.quota.remaining_today;
+                  state.dailyLimitFromAPI = result.quota.daily_limit;
+                  state.maxSavedLimit = result.quota.max_saved;
+                  state.totalSavedCount = result.quota.total_saved;
+                  renderQuotaBanner();
+                }
+
+                if (result.blocked) {
+                  document.getElementById('ai-loading')?.classList.add('hidden');
+                  document.getElementById('ai-data')?.classList.add('hidden');
+                  endAnalysisLoading();
+                  showLimitModal('analysis');
+                  resolve();
+                  return;
+                }
+
+                if (!result.analysis) {
+                  showContentBlocked('Failed to generate analysis');
+                  endAnalysisLoading();
+                  resolve();
+                  return;
+                }
+
+                const analysis = result.analysis;
+                state.lastAnalysis = analysis;
+                displayAIAnalysis(analysis);
+                state.lastAnalyzedDomain = currentDomain;
+                markDomainAnalyzedToday(currentDomain);
+
+                setCachedAnalysis(currentUrl, {
+                  analysis,
+                  meta: state.lastExtractedMeta,
+                });
+                setCachedAnalysisByDomain(currentDomain, {
+                  analysis,
+                  meta: state.lastExtractedMeta,
+                });
+
+                if (existing && isHomepageUrl(currentUrl)) {
+                  const { error: updateError } = await supabase
+                    .from('saved_analyses')
+                    .update({
+                      content_hash: state.lastContentHash,
+                      last_analyzed_at: new Date().toISOString(),
+                      title: state.lastExtractedMeta.title,
+                      description: state.lastExtractedMeta.description,
+                      url: state.lastExtractedMeta.url,
+                      what_they_do: analysis.whatTheyDo,
+                      target_customer: analysis.targetCustomer,
+                      value_proposition: analysis.valueProposition,
+                      sales_angle: analysis.salesAngle,
+                      sales_readiness_score: analysis.salesReadinessScore,
+                      best_sales_persona: analysis.bestSalesPersona?.persona,
+                      best_sales_persona_reason: analysis.bestSalesPersona?.reason,
+                      recommended_outreach_persona: analysis.recommendedOutreach?.persona,
+                      recommended_outreach_goal: analysis.recommendedOutreach?.goal,
+                      recommended_outreach_angle: analysis.recommendedOutreach?.angle,
+                      recommended_outreach_message: analysis.recommendedOutreach?.message,
+                    })
+                    .eq('id', existing.id);
+
+                  if (updateError) {
+                    console.error('Failed to update saved analysis:', updateError);
+                    showToast('Failed to update saved analysis. Try again.');
+                  }
+                }
+                resolve();
+              }
+            } catch (err: any) {
+              showContentBlocked('Failed to analyze page: ' + err.message);
+              endAnalysisLoading();
+              resolve();
+            }
+          } else if (response?.reason === 'THIN_CONTENT') {
+            endAnalysisLoading();
+            showContentBlocked('This page has limited public content.', {
               allowHomepageFallback: true,
               originalUrl: tab.url,
-            }
-          );
-          resolve();
-          return;
-        } else {
-          if (response.error) {
-            showContentBlocked(`Error: ${response.error}`);
+            });
+            resolve();
+            return;
+          } else if (response?.reason === 'RESTRICTED') {
+            endAnalysisLoading();
+            showContentBlocked(
+              'This page requires login or consent before content can be analyzed.',
+              {
+                allowHomepageFallback: true,
+                originalUrl: tab.url,
+              }
+            );
+            resolve();
+            return;
           } else {
-            showContentBlocked('Unable to analyze this page.');
+            if (response.error) {
+              showContentBlocked(`Error: ${response.error}`);
+            } else {
+              showContentBlocked('Unable to analyze this page.');
+            }
           }
+          resolve();
         }
-        resolve();
-      });
+      );
     });
-  } catch (err) {
+  } catch {
     endAnalysisLoading();
   }
 }

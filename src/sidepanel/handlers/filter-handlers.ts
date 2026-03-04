@@ -75,7 +75,9 @@ export function setupFilterHandlers(): void {
     if (personaInput) personaInput.value = '';
     if (scoreLabel) scoreLabel.textContent = '0 – 100';
 
-    document.querySelector<HTMLInputElement>('input[name="sort"][value="created_at_desc"]')?.click();
+    document
+      .querySelector<HTMLInputElement>('input[name="sort"][value="created_at_desc"]')
+      ?.click();
 
     filterPanel?.classList.add('hidden');
     filterToggle?.setAttribute('aria-expanded', 'false');
@@ -86,7 +88,7 @@ export function setupFilterHandlers(): void {
 
   function updateScoreFilter(): void {
     let minVal = Number(minSlider!.value);
-    let maxVal = Number(maxSlider!.value);
+    const maxVal = Number(maxSlider!.value);
 
     if (minVal > maxVal) {
       minSlider!.value = String(maxVal);
@@ -120,7 +122,9 @@ export function setupFilterHandlers(): void {
 
     if (searchInput) searchInput.value = '';
 
-    document.querySelector<HTMLInputElement>('input[name="sort"][value="created_at_desc"]')?.click();
+    document
+      .querySelector<HTMLInputElement>('input[name="sort"][value="created_at_desc"]')
+      ?.click();
 
     state.currentPage = 1;
     await fetchAndRenderPage();

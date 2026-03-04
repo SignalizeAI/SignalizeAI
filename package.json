@@ -26,6 +26,8 @@
   "devDependencies": {
     "@types/chrome": "^0.0.268",
     "@types/node": "^25.3.3",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
     "concurrently": "^8.2.2",
     "esbuild": "^0.27.2",
     "eslint": "^8.57.0",

@@ -104,60 +104,66 @@ interface ExtractionMessage {
     };
   }
 
-  chrome.runtime.onMessage.addListener((msg: ExtractionMessage, _: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
-    if ((msg as any)?.type === '__PING__') {
-      sendResponse({ ok: true });
-      return false;
-    }
+  chrome.runtime.onMessage.addListener(
+    (
+      msg: ExtractionMessage,
+      _: chrome.runtime.MessageSender,
+      sendResponse: (response?: any) => void
+    ) => {
+      if ((msg as any)?.type === '__PING__') {
+        sendResponse({ ok: true });
+        return false;
+      }
 
-    if (msg?.type !== 'EXTRACT_WEBSITE_CONTENT') return;
+      if (msg?.type !== 'EXTRACT_WEBSITE_CONTENT') return;
 
-    try {
-      const targetUrl = msg.overrideUrl || window.location.href;
+      try {
+        const targetUrl = msg.overrideUrl || window.location.href;
 
-      if (msg.overrideUrl && msg.overrideUrl !== window.location.href) {
-        fetch(targetUrl)
-          .then((res) => res.text())
-          .then((html) => {
-            const doc = new DOMParser().parseFromString(html, 'text/html');
-            const content = extractContent(doc, targetUrl);
+        if (msg.overrideUrl && msg.overrideUrl !== window.location.href) {
+          fetch(targetUrl)
+            .then((res) => res.text())
+            .then((html) => {
+              const doc = new DOMParser().parseFromString(html, 'text/html');
+              const content = extractContent(doc, targetUrl);
 
-            if (isThinContent(content)) {
-              sendResponse({ ok: false, reason: 'THIN_CONTENT' });
-              return;
-            }
+              if (isThinContent(content)) {
+                sendResponse({ ok: false, reason: 'THIN_CONTENT' });
+                return;
+              }
 
-            sendResponse({ ok: true, content });
-          })
-          .catch((err: Error) => {
-            sendResponse({ ok: false, error: err.message });
+              sendResponse({ ok: true, content });
+            })
+            .catch((err: Error) => {
+              sendResponse({ ok: false, error: err.message });
+            });
+
+          return true;
+        }
+
+        const restriction = detectRestriction();
+        if (restriction) {
+          sendResponse({
+            ok: false,
+            reason: 'RESTRICTED',
+            details: restriction,
           });
+          return false;
+        }
 
-        return true;
-      }
+        const content = extractContent(document, window.location.href);
 
-      const restriction = detectRestriction();
-      if (restriction) {
-        sendResponse({
-          ok: false,
-          reason: 'RESTRICTED',
-          details: restriction,
-        });
+        if (isThinContent(content)) {
+          sendResponse({ ok: false, reason: 'THIN_CONTENT' });
+          return false;
+        }
+
+        sendResponse({ ok: true, content });
+        return false;
+      } catch (err) {
+        sendResponse({ ok: false, error: (err as Error).message });
         return false;
       }
-
-      const content = extractContent(document, window.location.href);
-
-      if (isThinContent(content)) {
-        sendResponse({ ok: false, reason: 'THIN_CONTENT' });
-        return false;
-      }
-
-      sendResponse({ ok: true, content });
-      return false;
-    } catch (err) {
-      sendResponse({ ok: false, error: (err as Error).message });
-      return false;
     }
-  });
+  );
 })();

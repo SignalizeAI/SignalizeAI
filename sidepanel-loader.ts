@@ -13,7 +13,7 @@ const loadPartials = async (): Promise<void> => {
     for (const node of nodes) {
       const partialPath = node.getAttribute('data-include');
       if (!partialPath) continue;
-      
+
       try {
         const response = await fetch(partialPath);
         if (!response.ok) {
