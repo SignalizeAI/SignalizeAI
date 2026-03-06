@@ -38,7 +38,7 @@ export const SUPABASE_ANON_KEY = ${JSON.stringify(key)};
 
 // API Configuration
 // To test with dev API, change this to 'dev' or set API_ENV=dev in .env.local
-export const ENV = ${JSON.stringify(env)}; // 'production' | 'dev'
+export const ENV: 'production' | 'dev' = ${JSON.stringify(env)};
 
 export const API_BASE_URL = ENV === 'dev' 
   ? 'https://dev-api.signalizeai.org' 

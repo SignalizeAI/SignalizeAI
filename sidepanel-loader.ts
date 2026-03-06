@@ -1,7 +1,8 @@
-const loadScript = (src: string): Promise<void> =>
+const loadScript = (src: string, type: 'module' | 'text/javascript' = 'text/javascript'): Promise<void> =>
   new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = src;
+    script.type = type;
     script.onload = () => resolve();
     script.onerror = () => reject(new Error(`Failed to load ${src}`));
     document.body.appendChild(script);
@@ -31,7 +32,7 @@ const loadPartials = async (): Promise<void> => {
 const boot = async (): Promise<void> => {
   await loadPartials();
   await loadScript('extension/supabase.bundle.js');
-  await import('./extension/sidepanel.js');
+  await loadScript('extension/sidepanel.js', 'module');
 };
 
 boot();
