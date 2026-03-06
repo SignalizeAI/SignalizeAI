@@ -1,4 +1,7 @@
-const loadScript = (src: string, type: 'module' | 'text/javascript' = 'text/javascript'): Promise<void> =>
+const loadScript = (
+  src: string,
+  type: 'module' | 'text/javascript' = 'text/javascript'
+): Promise<void> =>
   new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = src;
