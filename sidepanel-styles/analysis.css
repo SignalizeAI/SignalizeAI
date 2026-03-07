@@ -1,10 +1,10 @@
 .website-content-card {
-  background-color: #111111;
+  background-color: var(--bg-tertiary);
   width: 100%;
   border-radius: 24px;
   padding: 16px;
-  border: 1px solid #333333;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--card-shadow);
   margin-top: 16px;
   animation: fadeIn 0.3s ease-in-out;
 }
@@ -12,20 +12,74 @@
 .content-title {
   font-size: 18px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .content-loading,
 .content-error {
-  text-align: center;
   padding: 20px;
-  color: #888888;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
+.skeleton-group {
+  margin-bottom: 24px;
+}
+
+.skeleton-label {
+  height: 12px;
+  width: 30%;
+  background: var(--bg-hover-strong);
+  border-radius: 4px;
+  margin-bottom: 8px;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.skeleton-line {
+  height: 14px;
+  background: var(--bg-surface-border);
+  border-radius: 4px;
+  margin-bottom: 6px;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.skeleton-line.full {
+  width: 100%;
+}
+
+.skeleton-line.medium {
+  width: 75%;
+}
+
+.skeleton-line.short {
+  width: 40%;
+}
+
+.skeleton-box {
+  height: 80px;
+  width: 100%;
+  background: var(--bg-surface-border);
+  border-radius: 8px;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.5;
+  }
+}
+
 .content-error {
-  color: #ff6b6b;
+  color: var(--danger-light);
 }
 
 .blocked-message {
@@ -59,7 +113,7 @@
 .section-label {
   font-size: 12px;
   font-weight: 600;
-  color: #888888;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin: 0;
@@ -67,7 +121,7 @@
 
 .content-text {
   font-size: 14px;
-  color: #cccccc;
+  color: var(--text-tertiary);
   line-height: 1.6;
   margin: 0;
   word-wrap: break-word;
@@ -84,23 +138,23 @@
 
 .content-list li {
   font-size: 14px;
-  color: #cccccc;
+  color: var(--text-tertiary);
   line-height: 1.6;
   padding: 8px 12px;
-  background-color: #1a1a1a;
+  background-color: var(--bg-secondary);
   border-radius: 8px;
-  border-left: 3px solid #4285f4;
+  border-left: 3px solid var(--accent-color);
 }
 
 .content-url {
   font-size: 13px;
-  color: #4285f4;
+  color: var(--accent-color);
   text-decoration: none;
   word-break: break-all;
   transition: color 0.2s ease;
 }
 
 .content-url:hover {
-  color: #5a9fff;
+  color: var(--accent-light);
   text-decoration: underline;
 }

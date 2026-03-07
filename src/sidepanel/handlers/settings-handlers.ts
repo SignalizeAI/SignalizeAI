@@ -1,4 +1,4 @@
-import { loadSettings, saveSettings, updateReanalysisUI } from '../settings.js';
+import { loadSettings, saveSettings, updateReanalysisUI, applyTheme } from '../settings.js';
 import { settingsMenu } from '../elements.js';
 import { navigateTo } from '../ui.js';
 import { state } from '../state.js';
@@ -55,5 +55,21 @@ export function setupSettingsHandlers(): void {
       const target = e.target as HTMLInputElement;
       saveSettings({ copyFormat: target.value as 'full' | 'short' });
     });
+  });
+
+  document.querySelectorAll<HTMLInputElement>('input[name="theme"]').forEach((radio) => {
+    radio.addEventListener('change', (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      const theme = target.value as 'light' | 'dark' | 'system';
+      saveSettings({ theme });
+      applyTheme(theme);
+    });
+  });
+
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', async () => {
+    const settings = await loadSettings();
+    if (settings.theme === 'system') {
+      applyTheme('system');
+    }
   });
 }

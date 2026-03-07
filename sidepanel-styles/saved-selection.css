@@ -24,7 +24,7 @@
 .saved-select-checkbox {
   width: 14px;
   height: 14px;
-  accent-color: #3b82f6;
+  accent-color: var(--accent-color);
   cursor: pointer;
   margin-left: 8px;
   flex-shrink: 0;

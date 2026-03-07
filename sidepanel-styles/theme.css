@@ -1,0 +1,85 @@
+@import url('globals.css');
+/* Ensuring it plays nicely, we won't put theme in globals directly but as a new file, or we can replace globals.css background but theme.css is better */
+
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg-primary: #000000;
+  --bg-secondary: #0a0a0a;
+  --bg-tertiary: #111111;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-hover-strong: rgba(255, 255, 255, 0.1);
+  --bg-active: rgba(255, 255, 255, 0.15);
+  --bg-surface: rgba(255, 255, 255, 0.04);
+  --bg-surface-border: rgba(255, 255, 255, 0.06);
+
+  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --dropdown-shadow: 0 12px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--bg-hover);
+
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --text-tertiary: rgba(255, 255, 255, 0.6);
+  --text-muted: rgba(255, 255, 255, 0.3);
+
+  --border-color: #333333;
+  --border-light: rgba(255, 255, 255, 0.1);
+  --border-medium: rgba(255, 255, 255, 0.15);
+  --border-strong: rgba(255, 255, 255, 0.2);
+
+  --accent-color: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-light: #60a5fa;
+  --accent-blue: #4dabf7;
+  --accent-blue-hover: #339af0;
+  --accent-blue-bg: rgba(77, 171, 247, 0.1);
+
+  --danger-color: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-light: #ff4b4b;
+  --danger-bg: rgba(239, 68, 68, 0.1);
+
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --brand-ai: #00e5ff;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --bg-primary: #f9fafb;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f3f4f6;
+  --bg-hover: rgba(0, 0, 0, 0.05);
+  --bg-hover-strong: rgba(0, 0, 0, 0.08);
+  --bg-active: rgba(0, 0, 0, 0.1);
+  --bg-surface: #ffffff;
+  --bg-surface-border: rgba(0, 0, 0, 0.1);
+
+  --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  --dropdown-shadow: 0 12px 28px rgba(0, 0, 0, 0.1), 0 0 0 1px var(--border-light);
+
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-tertiary: rgba(0, 0, 0, 0.6);
+  --text-muted: rgba(0, 0, 0, 0.4);
+
+  --border-color: #e5e7eb;
+  --border-light: rgba(0, 0, 0, 0.05);
+  --border-medium: rgba(0, 0, 0, 0.1);
+  --border-strong: rgba(0, 0, 0, 0.2);
+
+  --accent-color: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-light: #3b82f6;
+  --accent-blue: #228be6;
+  --accent-blue-hover: #1c7ed6;
+  --accent-blue-bg: rgba(34, 139, 230, 0.1);
+
+  --danger-color: #dc2626;
+  --danger-hover: #b91c1c;
+  --danger-light: #ef4444;
+  --danger-bg: rgba(220, 38, 38, 0.1);
+
+  --success-color: #059669;
+  --warning-color: #d97706;
+  --brand-ai: #1a237e;
+}

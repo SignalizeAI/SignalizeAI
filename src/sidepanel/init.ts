@@ -7,8 +7,10 @@ import { setupNavigationHandlers } from './handlers/navigation-handlers.js';
 import { setupRuntimeHandlers } from './handlers/runtime-handlers.js';
 import { setupSavedHandlers } from './handlers/saved-handlers.js';
 import { setupSettingsHandlers } from './handlers/settings-handlers.js';
+import { loadSettings, applyTheme } from './settings.js';
 
 export function initSidepanel(): void {
+  loadSettings().then((settings) => applyTheme(settings.theme));
   setupAnalysisHandlers();
   setupAuthHandlers();
   setupSavedHandlers();

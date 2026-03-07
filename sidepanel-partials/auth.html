@@ -1,13 +1,39 @@
 <div id="login-view">
-  <div class="login-header">
-    <h1>SignalizeAI</h1>
-    <p>Please sign in to access your extension features.</p>
+  <div class="login-center-wrapper">
+    <div class="login-header">
+      <a href="https://signalizeai.org" target="_blank" class="brand-link">
+        <img src="icons/128.png" alt="SignalizeAI Logo" class="login-logo dark-logo" />
+        <img src="icons/128(light).png" alt="SignalizeAI Logo" class="login-logo light-logo" />
+        <h1>Signalize<span class="brand-ai">AI</span></h1>
+      </a>
+      <h2 class="login-title-sub">Understand <span class="highlight-accent">any</span> page</h2>
+      <p class="login-value-prop">AI insights and outreach strategies</p>
+    </div>
+
+    <div class="login-action-group">
+      <button id="google-signin">
+        <img src="icons/google.svg" alt="Google" class="google-icon" />
+        Sign in with Google
+      </button>
+      <p class="login-subtitle">Access your extension features</p>
+
+      <button id="cancel-signin" class="cancel-link hidden">Cancel Sign in</button>
+      <p id="auth-error-msg" class="hidden"></p>
+    </div>
   </div>
 
-  <button id="google-signin">
-    <img src="icons/google.svg" alt="Google" class="google-icon" />
-    Sign in with Google
-  </button>
-
-  <p id="status-msg"></p>
+  <div class="login-footer">
+    <p class="security-notice">Your data is secure and never shared.</p>
+    <div class="footer-links">
+      <a href="https://github.com/SignalizeAI/SignalizeAI" target="_blank">GitHub</a>
+      <span class="dot-separator">&bull;</span>
+      <a href="https://signalizeai.org/privacy" target="_blank">Privacy Policy</a>
+      <span class="dot-separator">&bull;</span>
+      <a href="https://signalizeai.org/pricing" target="_blank">Pricing</a>
+    </div>
+    <div class="footer-meta">
+      <span>SignalizeAI v5.0.0</span>
+      <span>&copy; 2026</span>
+    </div>
+  </div>
 </div>

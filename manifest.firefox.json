@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "SignalizeAI",
-  "version": "4.0.0",
-  "description": "AI-powered sales insights for any website.",
+  "version": "5.0.0",
+  "description": "Understand any page. AI insights and outreach strategies.",
   "permissions": ["activeTab", "storage", "tabs", "scripting"],
   "host_permissions": [
     "https://*.supabase.co/*",
