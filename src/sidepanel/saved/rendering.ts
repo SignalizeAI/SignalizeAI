@@ -152,10 +152,14 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
     <p><strong>Value proposition:</strong> ${item.value_proposition || '—'}</p>
     <p>
       <strong>Best sales persona:</strong> ${item.best_sales_persona || '—'}
-      ${item.best_sales_persona_reason ? `<br />
+      ${
+        item.best_sales_persona_reason
+          ? `<br />
       <span style="opacity:0.7; font-size:13px">
         (${item.best_sales_persona_reason})
-      </span>` : ''}
+      </span>`
+          : ''
+      }
     </p>
     <p><strong>Sales angle:</strong> ${item.sales_angle || '—'}</p>
 
@@ -190,8 +194,9 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
       ${escapedDescription}
     </p>
 
-    ${item.url
-      ? `
+    ${
+      item.url
+        ? `
           <p>
             <strong>URL:</strong>
             <a
@@ -203,7 +208,7 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
             </a>
           </p>
         `
-      : ''
+        : ''
     }
   </div>
 `;

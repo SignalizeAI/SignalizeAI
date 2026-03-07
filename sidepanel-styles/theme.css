@@ -2,7 +2,7 @@
 /* Ensuring it plays nicely, we won't put theme in globals directly but as a new file, or we can replace globals.css background but theme.css is better */
 
 :root,
-[data-theme="dark"] {
+[data-theme='dark'] {
   color-scheme: dark;
   --bg-primary: #000000;
   --bg-secondary: #0a0a0a;
@@ -43,7 +43,7 @@
   --brand-ai: #00e5ff;
 }
 
-[data-theme="light"] {
+[data-theme='light'] {
   color-scheme: light;
   --bg-primary: #f9fafb;
   --bg-secondary: #ffffff;

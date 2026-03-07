@@ -120,7 +120,7 @@ export function copyAnalysisText(text: string, anchorEl: HTMLElement, formatLabe
         pointerEvents: 'none',
         zIndex: '9999',
         opacity: '0',
-        transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
+        transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
       });
 
       anchorEl.style.position = 'relative';

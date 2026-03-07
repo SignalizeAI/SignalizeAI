@@ -65,7 +65,6 @@
 }
 
 @keyframes floatIcon {
-
   0%,
   100% {
     transform: translateY(0px);
@@ -83,11 +82,11 @@
   opacity: 0.4;
 }
 
-[data-theme="dark"] .empty-tab-icon img {
+[data-theme='dark'] .empty-tab-icon img {
   filter: brightness(0) invert(1);
 }
 
-[data-theme="light"] .empty-tab-icon img {
+[data-theme='light'] .empty-tab-icon img {
   filter: brightness(0) invert(0);
 }
 
@@ -138,11 +137,11 @@
   height: 20px;
 }
 
-[data-theme="dark"] .tip-item .tip-icon {
+[data-theme='dark'] .tip-item .tip-icon {
   filter: brightness(0) invert(0.6);
 }
 
-[data-theme="light"] .tip-item .tip-icon {
+[data-theme='light'] .tip-item .tip-icon {
   filter: brightness(0) invert(0.4);
 }
 

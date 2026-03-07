@@ -24,7 +24,7 @@ export function setupNavigationHandlers(): void {
   }
 
   const menuLists = document.querySelectorAll<HTMLUListElement>('.menu-list');
-  menuLists.forEach(list => {
+  menuLists.forEach((list) => {
     const glider = document.createElement('li');
     glider.className = 'menu-glider';
     list.appendChild(glider);
@@ -132,9 +132,17 @@ export function setupNavigationHandlers(): void {
         if (span) span.textContent = 'Copy';
         outreachQuickCopy.classList.remove('success');
         if (svg) {
-          svg.innerHTML = '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>';
+          svg.innerHTML =
+            '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>';
         }
       }, 2000);
-    } catch (err) { }
+    } catch {
+      const span = outreachQuickCopy.querySelector('span');
+      if (span) span.textContent = 'Copy failed';
+
+      setTimeout(() => {
+        if (span) span.textContent = 'Copy';
+      }, 2000);
+    }
   });
 }

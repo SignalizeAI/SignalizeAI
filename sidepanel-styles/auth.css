@@ -38,11 +38,11 @@
   display: none;
 }
 
-[data-theme="light"] .dark-logo {
+[data-theme='light'] .dark-logo {
   display: none;
 }
 
-[data-theme="light"] .light-logo {
+[data-theme='light'] .light-logo {
   display: block;
   box-shadow: none;
   background: transparent;

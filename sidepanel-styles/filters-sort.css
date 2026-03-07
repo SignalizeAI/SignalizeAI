@@ -49,7 +49,7 @@
   user-select: none;
 }
 
-.filter-sort-option input:checked+.filter-sort-label {
+.filter-sort-option input:checked + .filter-sort-label {
   color: var(--text-primary);
 }
 

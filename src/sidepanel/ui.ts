@@ -120,7 +120,8 @@ export async function updateUI(session: Session | null): Promise<void> {
     const signInBtn = document.getElementById('google-signin') as HTMLButtonElement | null;
     if (signInBtn) {
       signInBtn.disabled = false;
-      signInBtn.innerHTML = '<img src="icons/google.svg" alt="Google" class="google-icon" /> Sign in with Google';
+      signInBtn.innerHTML =
+        '<img src="icons/google.svg" alt="Google" class="google-icon" /> Sign in with Google';
     }
 
     await loadQuotaFromAPI();
@@ -154,7 +155,8 @@ export async function updateUI(session: Session | null): Promise<void> {
     const signInBtn = document.getElementById('google-signin') as HTMLButtonElement | null;
     if (signInBtn) {
       signInBtn.disabled = false;
-      signInBtn.innerHTML = '<img src="icons/google.svg" alt="Google" class="google-icon" /> Sign in with Google';
+      signInBtn.innerHTML =
+        '<img src="icons/google.svg" alt="Google" class="google-icon" /> Sign in with Google';
     }
   }
 }

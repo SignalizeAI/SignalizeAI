@@ -50,7 +50,8 @@ export async function signInWithGoogle(): Promise<void> {
     }
     if (signInBtn) {
       (signInBtn as HTMLButtonElement).disabled = false;
-      signInBtn.innerHTML = '<img src="icons/google.svg" alt="Google" class="google-icon" /> Sign in with Google';
+      signInBtn.innerHTML =
+        '<img src="icons/google.svg" alt="Google" class="google-icon" /> Sign in with Google';
     }
     if (cancelBtn) {
       cancelBtn.classList.add('hidden');
@@ -72,7 +73,8 @@ export function cancelSignIn(): void {
   if (subtitle) subtitle.classList.add('hidden');
   if (signInBtn) {
     (signInBtn as HTMLButtonElement).disabled = false;
-    signInBtn.innerHTML = '<img src="icons/google.svg" alt="Google" class="google-icon" /> Sign in with Google';
+    signInBtn.innerHTML =
+      '<img src="icons/google.svg" alt="Google" class="google-icon" /> Sign in with Google';
   }
   if (errorMsg) {
     errorMsg.textContent = 'Sign-in cancelled. Try again.';

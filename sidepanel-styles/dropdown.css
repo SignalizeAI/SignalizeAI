@@ -118,7 +118,10 @@
   width: 100%;
   background-color: var(--bg-hover-strong);
   border-radius: 12px;
-  transition: transform 0.25s cubic-bezier(0.2, 0.85, 0.32, 1.2), opacity 0.2s ease, height 0.25s cubic-bezier(0.2, 0.85, 0.32, 1.2);
+  transition:
+    transform 0.25s cubic-bezier(0.2, 0.85, 0.32, 1.2),
+    opacity 0.2s ease,
+    height 0.25s cubic-bezier(0.2, 0.85, 0.32, 1.2);
   opacity: 0;
   pointer-events: none;
   z-index: 0;
@@ -154,17 +157,19 @@
   width: 20px;
   height: 20px;
   margin-right: 12px;
-  transition: opacity 0.2s ease, filter 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    filter 0.2s ease;
   flex-shrink: 0;
   display: block;
   opacity: 0.7;
 }
 
-[data-theme="dark"] .menu-icon {
+[data-theme='dark'] .menu-icon {
   filter: brightness(0) invert(1);
 }
 
-[data-theme="light"] .menu-icon {
+[data-theme='light'] .menu-icon {
   filter: brightness(0) invert(0);
 }
 
