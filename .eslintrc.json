@@ -10,11 +10,27 @@
   "globals": {
     "chrome": "readonly"
   },
-  "ignorePatterns": ["extension/**", "node_modules/**"],
+  "ignorePatterns": ["extension/**", "node_modules/**", "dist/**"],
   "extends": ["eslint:recommended"],
   "overrides": [
     {
-      "files": ["build.js", "scripts/**/*.js"],
+      "files": ["**/*.ts"],
+      "parser": "@typescript-eslint/parser",
+      "parserOptions": {
+        "ecmaVersion": 2022,
+        "sourceType": "module"
+      },
+      "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/no-unused-vars": [
+          "error",
+          { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
+        ]
+      }
+    },
+    {
+      "files": ["extension/build.js", "scripts/**/*.js"],
       "env": {
         "node": true,
         "browser": false
