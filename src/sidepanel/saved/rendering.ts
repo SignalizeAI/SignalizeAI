@@ -51,12 +51,14 @@ export function updateSavedActionsVisibility(count: number): void {
   const searchToggleBtn = document.getElementById('search-toggle');
   const multiSelectToggle = document.getElementById('multi-select-toggle');
 
-  const showBasicActions = count > 0 ? '' : 'none';
+  const isFreePlan = (state.currentPlan || '').toLowerCase() === 'free';
+
+  const showBasicActions = count > 0 && !isFreePlan ? '' : 'none';
   if (filterToggle) filterToggle.style.display = showBasicActions;
   if (exportToggle) exportToggle.style.display = showBasicActions;
 
   if (searchToggleBtn) {
-    searchToggleBtn.style.display = count > 1 ? '' : 'none';
+    searchToggleBtn.style.display = count > 1 && !isFreePlan ? '' : 'none';
   }
 
   if (multiSelectToggle) {
