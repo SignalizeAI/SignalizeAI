@@ -15,6 +15,10 @@ export function setupExportHandlers(): void {
   exportToggle?.addEventListener('click', (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    document.getElementById('filter-panel')?.classList.add('hidden');
+    document.getElementById('filter-toggle')?.setAttribute('aria-expanded', 'false');
+
     exportMenu?.classList.toggle('hidden');
     const expanded = exportToggle.getAttribute('aria-expanded') === 'true';
     exportToggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
@@ -22,7 +26,7 @@ export function setupExportHandlers(): void {
 
   document.addEventListener('click', () => {
     if (!exportMenu?.classList.contains('hidden')) {
-      exportMenu.classList.add('hidden');
+      exportMenu?.classList.add('hidden');
       exportToggle?.setAttribute('aria-expanded', 'false');
     }
   });

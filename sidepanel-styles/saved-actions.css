@@ -1,11 +1,11 @@
 .saved-url {
-  color: rgba(138, 180, 248, 0.85);
+  color: var(--accent-color);
   text-decoration: none;
   word-break: break-all;
 }
 
 .saved-url:hover {
-  color: rgba(174, 203, 250, 1);
+  color: var(--accent-hover);
   text-decoration: underline;
 }
 
@@ -19,7 +19,7 @@
 }
 
 .copy-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--bg-hover);
 }
 
 .copy-icon {
@@ -33,12 +33,12 @@
 }
 
 .copy-btn.copy-saved-btn {
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--text-tertiary);
   width: 34px;
   height: 34px;
   padding: 0;
 }
 
 .copy-btn.copy-saved-btn:hover {
-  color: #ffffff;
+  color: var(--text-primary);
 }

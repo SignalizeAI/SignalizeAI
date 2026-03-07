@@ -1,9 +1,9 @@
 #saved-analyses {
-  background-color: #1a1a1a;
-  color: #e0e0e0;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
   border-radius: 8px;
   padding: 20px;
-  border: 1px solid #333;
+  border: 1px solid var(--border-color);
   max-width: 400px;
   font-family:
     system-ui,
@@ -12,8 +12,8 @@
 }
 
 .saved-item {
-  background-color: #252525;
-  border: 1px solid #333;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   margin-bottom: 10px;
   overflow: visible;
@@ -21,13 +21,13 @@
 }
 
 .saved-item:hover {
-  border-color: #555;
+  border-color: var(--border-strong);
 }
 
 .delete-saved-btn {
   background: transparent;
   border: none;
-  color: #fff;
+  color: var(--text-primary);
   width: 34px;
   height: 34px;
   display: flex;
@@ -40,7 +40,7 @@
 
 .delete-saved-btn:hover {
   background-color: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
+  color: var(--danger-color);
   transform: scale(1.1);
 }
 
@@ -50,8 +50,8 @@
 
 .saved-item-body {
   padding: 16px;
-  background-color: #1f1f1f;
-  border-top: 1px solid #333;
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -62,7 +62,7 @@
 
 .saved-item-body p {
   margin: 0 0 12px 0;
-  color: #ccc;
+  color: var(--text-tertiary);
 }
 
 .saved-item-body p:last-child {
@@ -70,7 +70,7 @@
 }
 
 .saved-item-body strong {
-  color: #fff;
+  color: var(--text-primary);
   font-weight: 600;
   margin-right: 4px;
 }
@@ -82,7 +82,7 @@
 }
 
 .toggle-icon {
-  color: #888;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   transition: transform 0.3s ease;
@@ -90,7 +90,7 @@
 
 .saved-item:has(.saved-item-body:not(.hidden)) .toggle-icon {
   transform: rotate(180deg);
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .toggle-icon svg,
@@ -104,28 +104,28 @@
   align-items: center;
   padding: 14px 16px;
   cursor: pointer;
-  background-color: #252525;
+  background-color: var(--bg-tertiary);
   transition: background-color 0.2s;
 }
 
 .saved-item-header:hover {
-  background-color: #2f2f2f;
+  background-color: var(--bg-hover-strong);
 }
 
 .saved-item-header strong {
   display: block;
   font-size: 15px;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: 2px;
 }
 
 .saved-item-header:active {
-  background-color: #2a2a2a;
+  background-color: var(--bg-active);
 }
 
 .plan-limit-banner {
-  background-color: #2a2a3a;
-  border: 1px solid #3d3d5c;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
@@ -154,19 +154,19 @@
 .banner-title {
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 4px 0;
 }
 
 .banner-subtitle {
   font-size: 12px;
-  color: #a0a0a0;
+  color: var(--text-secondary);
   margin: 0;
 }
 
 .banner-upgrade-btn {
   padding: 8px 16px;
-  background-color: #6366f1;
+  background-color: var(--accent-light);
   color: white;
   border: none;
   border-radius: 6px;
@@ -178,7 +178,7 @@
 }
 
 .banner-upgrade-btn:hover {
-  background-color: #4f46e5;
+  background-color: var(--accent-color);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
 }

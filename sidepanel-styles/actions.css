@@ -11,7 +11,7 @@
   height: 20px;
 
   fill: transparent;
-  stroke: #888888;
+  stroke: var(--text-secondary);
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -20,12 +20,12 @@
 }
 
 .save-btn:hover .save-icon {
-  stroke: #ffffff;
+  stroke: var(--text-primary);
   transform: scale(1.1);
 }
 
 .save-btn.active .save-icon {
-  stroke: #ffffff;
+  stroke: var(--text-primary);
 }
 
 .save-outline {
@@ -33,13 +33,13 @@
 }
 
 .save-fill {
-  fill: #ffffff;
+  fill: var(--text-primary);
   opacity: 0;
 }
 
 .save-btn.saving .save-icon,
 .save-btn.saving:hover .save-icon {
-  stroke: #ffffff;
+  stroke: var(--text-primary);
 }
 
 .save-btn.saving .save-fill,
@@ -105,7 +105,7 @@
   height: 20px;
 
   fill: none;
-  stroke: #888888;
+  stroke: var(--text-secondary);
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -114,7 +114,7 @@
 }
 
 .refresh-btn:hover .refresh-icon {
-  stroke: #ffffff;
+  stroke: var(--text-primary);
   transform: rotate(30deg) scale(1.1);
 }
 
@@ -124,7 +124,7 @@
 
 .refresh-btn:disabled .refresh-icon {
   animation: spin 0.9s linear infinite;
-  stroke: #ffffff;
+  stroke: var(--text-primary);
 }
 
 @keyframes spin {

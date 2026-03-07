@@ -1,7 +1,7 @@
 {
   "name": "signalizeai",
-  "version": "4.0.0",
-  "description": "Cursor for sales pages 🚀",
+  "version": "5.0.0",
+  "description": "Understand any page. AI insights and outreach strategies.",
   "main": "background.js",
   "scripts": {
     "lint": "eslint .",
