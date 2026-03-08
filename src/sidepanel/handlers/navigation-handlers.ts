@@ -71,6 +71,13 @@ export function setupNavigationHandlers(): void {
     navigateTo('saved');
   });
 
+  const batchMenu = document.getElementById('menu-batch-analysis');
+
+  batchMenu?.addEventListener('click', (e: MouseEvent) => {
+    e.preventDefault();
+    navigateTo('batch');
+  });
+
   const subscriptionMenu = document.getElementById('menu-subscription');
 
   subscriptionMenu?.addEventListener('click', (e: MouseEvent) => {
@@ -121,7 +128,6 @@ export function setupNavigationHandlers(): void {
       await navigator.clipboard.writeText(outreachMessage);
       const span = outreachQuickCopy.querySelector('span');
       if (span) span.textContent = 'Copied!';
-      outreachQuickCopy.classList.add('success');
 
       const svg = outreachQuickCopy.querySelector('svg');
       if (svg) {
@@ -130,7 +136,6 @@ export function setupNavigationHandlers(): void {
 
       setTimeout(() => {
         if (span) span.textContent = 'Copy';
-        outreachQuickCopy.classList.remove('success');
         if (svg) {
           svg.innerHTML =
             '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>';

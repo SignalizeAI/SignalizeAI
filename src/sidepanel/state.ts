@@ -46,7 +46,7 @@ export interface State {
   lastExtractedMeta: ExtractedMeta | null;
   lastAnalyzedDomain: string | null;
   forceRefresh: boolean;
-  currentView: 'analysis' | 'saved' | 'profile' | 'settings' | null;
+  currentView: 'analysis' | 'saved' | 'batch' | 'profile' | 'settings' | null;
   selectionMode: boolean;
   lastSelectedIndex: number | null;
   selectedSavedIds: Set<string>;

@@ -68,7 +68,6 @@ export function renderQuotaBanner(): void {
   const text = document.getElementById('quota-text');
   const btn = document.getElementById('upgrade-btn');
   const badge = document.getElementById('plan-badge');
-  const progressBar = document.getElementById('quota-progress-fill') as HTMLElement | null;
 
   if (badge && state.currentPlan) {
     badge.textContent = state.currentPlan.toUpperCase();
@@ -81,39 +80,45 @@ export function renderQuotaBanner(): void {
   banner.classList.remove('hidden');
   const used = Number(state.usedToday ?? 0);
   const totalLimit = Math.max(1, Number(state.dailyLimitFromAPI ?? 0));
-  const percentage = Math.min(100, (used / totalLimit) * 100);
-
-  if (progressBar) {
-    progressBar.style.width = `${percentage}%`;
-
-    if (state.remainingToday === null) {
-      progressBar.classList.remove('danger');
-    } else if (Number(state.remainingToday ?? 0) <= 0) {
-      progressBar.classList.add('danger');
-    } else {
-      progressBar.classList.remove('danger');
-    }
-  }
 
   const savedText = `${Number(state.totalSavedCount ?? 0)} / ${Number(
     state.maxSavedLimit ?? 0
   )} saved`;
 
   if (state.remainingToday === null) {
-    text.textContent = `Usage unavailable, ${savedText}`;
+    text.textContent = `Usage unavailable • ${savedText}`;
     btn.classList.add('hidden');
   } else if (Number(state.remainingToday ?? 0) > 0) {
-    text.textContent = `${used} / ${totalLimit} analyses, ${savedText}`;
+    text.textContent = `${used} / ${totalLimit} analyses • ${savedText}`;
 
     if (state.currentPlan === 'team') {
       btn.classList.add('hidden');
     } else {
       btn.classList.remove('hidden');
-      btn.textContent = state.currentPlan === 'pro' ? 'Upgrade to Team' : 'Upgrade';
+      btn.textContent = 'Upgrade';
     }
   } else {
-    text.textContent = `Daily limit reached, ${savedText}`;
-    btn.classList.remove('hidden');
-    btn.textContent = state.currentPlan === 'pro' ? 'Upgrade to Team' : 'Upgrade to continue';
+    text.textContent = `Daily limit reached • ${savedText}`;
+    if (state.currentPlan === 'team') {
+      btn.classList.add('hidden');
+    } else {
+      btn.classList.remove('hidden');
+      btn.textContent = 'Upgrade';
+    }
+  }
+
+  const quotaLeft = banner.querySelector('.quota-left') as HTMLElement | null;
+  if (btn.classList.contains('hidden')) {
+    banner.style.justifyContent = 'center';
+    if (quotaLeft) quotaLeft.style.justifyContent = 'center';
+  } else {
+    banner.style.justifyContent = 'space-between';
+    if (quotaLeft) quotaLeft.style.justifyContent = 'flex-start';
+  }
+
+  const batchMenuBtn = document.getElementById('menu-batch-analysis');
+  if (batchMenuBtn) {
+    const isFreePlan = (state.currentPlan || '').toLowerCase() === 'free';
+    batchMenuBtn.style.display = isFreePlan ? 'none' : 'flex';
   }
 }

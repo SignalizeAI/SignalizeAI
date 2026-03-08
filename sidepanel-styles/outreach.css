@@ -99,8 +99,3 @@
   border-color: var(--border-medium);
 }
 
-.outreach-quick-copy.success {
-  background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
-  border-color: rgba(34, 197, 94, 0.4);
-}

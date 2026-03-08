@@ -1,0 +1,351 @@
+<div
+  id="batch-view"
+  class="website-content-card hidden"
+  style="display: flex; flex-direction: column; flex: 1"
+>
+  <div class="content-header">
+    <h3 class="content-title">Batch Analysis</h3>
+    <div id="batch-header-actions" class="header-actions-right hidden">
+      <button id="batch-search-toggle" class="secondary-btn hidden" title="Search results">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </button>
+
+      <button id="batch-selection-back-btn" class="secondary-btn hidden" title="Back" aria-label="Back">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 19l-7-7 7-7"></path>
+          <path d="M3 12h18"></path>
+        </svg>
+      </button>
+
+      <button id="batch-multi-select-toggle" class="secondary-btn" title="Select multiple">
+        <svg class="multi-select-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+          <path d="M9 12l2 2 4-4"></path>
+        </svg>
+      </button>
+
+      <button id="batch-select-all-btn" class="secondary-btn hidden" title="Select all">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+          <path d="M7 12l3 3 7-7"></path>
+        </svg>
+      </button>
+      <button id="batch-save-all-btn" class="secondary-btn" title="Save all results">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2-2z"></path>
+        </svg>
+      </button>
+
+      <button id="batch-save-selected-btn" class="secondary-btn hidden" title="Save selected items">
+         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+           <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2-2z"></path>
+         </svg>
+      </button>
+
+      <div class="export-actions">
+        <button
+          id="batch-export-menu-toggle"
+          class="secondary-btn"
+          aria-haspopup="true"
+          aria-expanded="false"
+          aria-label="Export options"
+          title="Export analyses"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            class="export-toggle-icon"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+            <polyline points="16 6 12 2 8 6"></polyline>
+            <line x1="12" y1="2" x2="12" y2="15"></line>
+          </svg>
+        </button>
+        <div
+          id="batch-export-menu"
+          class="export-menu hidden"
+          role="menu"
+          aria-labelledby="batch-export-menu-toggle"
+        >
+          <ul class="menu-list">
+            <li>
+              <button id="batch-export-csv" class="menu-item" role="menuitem">CSV (.csv)</button>
+            </li>
+            <li>
+              <button id="batch-export-xlsx" class="menu-item" role="menuitem">Excel (.xlsx)</button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    id="batch-upload-container"
+    style="display: flex; flex-direction: column; gap: 16px; padding: 12px 0"
+  >
+    <!-- How it works -->
+    <div style="background: var(--bg-primary); padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);">
+      <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">How batch analysis works</div>
+      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; color: var(--text-secondary);">
+        <div style="display: flex; gap: 10px; align-items: flex-start;">
+          <span style="background: var(--accent-blue-bg); color: var(--accent-light); width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 1px;">1</span>
+          <span style="line-height: 1.4;">Upload a CSV or paste URLs</span>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: flex-start;">
+          <span style="background: var(--accent-blue-bg); color: var(--accent-light); width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 1px;">2</span>
+          <span style="line-height: 1.4;">We analyze each URL for you</span>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: flex-start;">
+          <span style="background: var(--accent-blue-bg); color: var(--accent-light); width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 1px;">3</span>
+          <span style="line-height: 1.4;">Review and save the ones you want</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px; background: var(--bg-hover-strong); padding: 4px; border-radius: 8px; margin-bottom: 4px;">
+      <button id="batch-tab-csv" style="flex: 1; padding: 6px; font-size: 12px; font-weight: 600; background: var(--bg-primary); color: var(--text-primary); border: none; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.2s;">Upload CSV</button>
+      <button id="batch-tab-paste" style="flex: 1; padding: 6px; font-size: 12px; font-weight: 500; background: transparent; color: var(--text-secondary); border: none; border-radius: 6px; cursor: pointer; transition: all 0.2s;">Paste URLs</button>
+    </div>
+
+    <!-- Dropzone -->
+    <div
+      id="csv-drop-zone"
+      class="csv-drop-zone"
+    >
+      <div class="drop-zone-icon-wrapper">
+        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 19V5M5 12l7-7 7 7"/>
+        </svg>
+      </div>
+      <div id="drop-zone-title" style="font-weight: 600; font-size: 14px; color: var(--text-primary); margin-bottom: 2px">Upload CSV file</div>
+      <div id="drop-zone-desc" style="font-size: 12.5px; color: var(--text-secondary); margin-bottom: 12px;">Drag & drop or click</div>
+      <div style="display: inline-flex; align-items: center; justify-content: center; padding: 4px 10px; background: var(--bg-hover-strong); border-radius: 999px; font-size: 10px; color: var(--text-secondary); font-weight: 700; letter-spacing: 0.5px;">
+        <span id="batch-limit-display">PLAN: 10 URLs per batch</span>
+      </div>
+      <input type="file" id="batch-csv-upload" accept=".csv" style="display: none" />
+    </div>
+
+    <div id="csv-submit-zone" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+      <button
+        id="batch-csv-submit-btn"
+        style="
+          height: 36px;
+          padding: 0 24px;
+          font-size: 13px;
+          border-radius: 8px;
+          cursor: not-allowed;
+          background: var(--bg-hover-strong);
+          color: var(--text-muted);
+          border: none;
+          font-weight: 600;
+          transition: all 0.2s;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0.5;
+          pointer-events: none;
+        "
+      >
+        Analyze CSV
+      </button>
+      <div id="batch-csv-limit-warning" class="hidden" style="font-size: 11px; color: var(--text-tertiary); text-align: center; max-width: 280px; line-height: 1.4;"></div>
+    </div>
+
+    <!-- Paste Zone -->
+    <div id="paste-url-zone" class="hidden" style="display: flex; flex-direction: column; gap: 12px;">
+      <textarea id="batch-paste-input" placeholder="stripe.com&#10;notion.so&#10;hubspot.com" style="width: 100%; height: 160px; padding: 12px; border-radius: 12px; border: 1px solid var(--border-medium); background: var(--bg-primary); color: var(--text-primary); font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; resize: none; outline: none; box-sizing: border-box; transition: all 0.2s;"></textarea>
+      
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+        <button
+          id="batch-paste-submit-btn"
+          style="
+            height: 36px;
+            padding: 0 24px;
+            font-size: 13px;
+            border-radius: 8px;
+            cursor: pointer;
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            border: none;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+          "
+        >
+          Analyze URLs
+        </button>
+        <div style="display: inline-flex; align-items: center; justify-content: center; padding: 4px 12px; background: var(--bg-hover-strong); border-radius: 999px; font-size: 10px; color: var(--text-secondary); font-weight: 700; letter-spacing: 0.5px;">
+          <span id="batch-paste-limit-display">PLAN: 10 URLs per batch</span>
+        </div>
+        <div id="batch-paste-limit-warning" class="hidden" style="font-size: 11px; color: var(--text-tertiary); text-align: center; max-width: 280px; line-height: 1.4;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    id="batch-error-container"
+    class="hidden"
+    style="
+      padding: 16px;
+      border-radius: 8px;
+      background: var(--bg-hover);
+      border: 1px solid #ef4444;
+      margin: 12px 0;
+      font-size: 13px;
+      line-height: 1.6;
+    "
+  >
+    <div id="batch-error-message" style="margin-bottom: 12px; color: #ef4444"></div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap">
+      <button
+        id="batch-process-anyway-btn"
+        class="secondary-btn"
+        style="
+          padding: 6px 12px;
+          font-size: 12px;
+          height: auto;
+          background: var(--text-primary);
+          color: var(--bg-primary);
+          border: none;
+        "
+      >
+        Process first rows
+      </button>
+      <button
+        id="batch-error-close-btn"
+        class="secondary-btn"
+        style="padding: 6px 12px; font-size: 12px; height: auto"
+      >
+        Upload new CSV
+      </button>
+    </div>
+  </div>
+
+  <div
+    id="batch-progress-container"
+    class="hidden"
+    style="display: flex; flex-direction: column; gap: 16px; padding: 12px 0"
+  >
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <div style="font-size: 13px; font-weight: 500">
+        Analyzing URLs... (<span id="batch-progress-count">0</span>/<span id="batch-total-count"
+          >0</span
+        >)
+      </div>
+      <button
+        id="batch-cancel-btn"
+        class="secondary-btn"
+        style="padding: 4px 8px; font-size: 12px; height: auto"
+      >
+        Cancel
+      </button>
+    </div>
+
+    <div
+      style="
+        width: 100%;
+        height: 6px;
+        background: var(--bg-hover);
+        border-radius: 3px;
+        overflow: hidden;
+      "
+    >
+      <div
+        id="batch-progress-bar"
+        style="
+          height: 100%;
+          width: 0%;
+          background: var(--text-primary);
+          transition: width 0.3s ease;
+        "
+      ></div>
+    </div>
+
+    <div
+      id="batch-results-list"
+      style="
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 200px;
+        overflow-y: auto;
+        padding-right: 4px;
+      "
+    >
+      <!-- Results populated here during processing -->
+    </div>
+  </div>
+
+  <div
+    id="batch-review-container"
+    class="hidden"
+    style="display: flex; flex-direction: column; gap: 16px; padding: 0 0 12px 0; flex: 1; border-top: none; margin-top: 0"
+  >
+
+    <div id="batch-search-bar-container" class="search-bar-container hidden">
+      <div class="search-input-wrapper">
+        <div class="input-relative">
+          <svg class="search-icon-inner" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="batch-search-input" placeholder="Search batch results..." autocomplete="off">
+        </div>
+        <button id="batch-search-close-btn" class="search-close-link" title="Close search">
+           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </div>
+
+
+    <div
+      id="batch-review-list"
+      style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; overflow-x: hidden; flex: 1"
+    >
+      <!-- Detailed review cards will go here -->
+    </div>
+
+    <!-- Pagination -->
+    <div id="batch-pagination-bar" class="pagination-bar hidden" style="margin-top: auto; padding-top: 12px;">
+      <button id="batch-page-prev" class="page-btn" aria-label="Previous page">
+        <svg viewBox="0 0 24 24" width="14" height="14">
+          <path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div id="batch-page-numbers" class="page-numbers"></div>
+
+      <button id="batch-page-next" class="page-btn" aria-label="Next page">
+        <svg viewBox="0 0 24 24" width="14" height="14">
+          <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; padding-top: 12px">
+      <button 
+        id="batch-review-done-btn" 
+        style="
+          padding: 8px 16px;
+          border-radius: 8px;
+          cursor: pointer;
+          background: var(--text-primary);
+          color: var(--bg-primary);
+          border: none;
+          font-weight: 600;
+          font-size: 13px;
+          transition: opacity 0.2s;
+        "
+      >
+        Upload new CSV
+      </button>
+    </div>
+  </div>
+</div>

@@ -91,6 +91,56 @@ ${item.recommended_outreach_message || '—'}
   return text.trim();
 }
 
+export function showActionTooltip(anchorEl: HTMLElement, message: string): void {
+  if (!anchorEl || !message) return;
+
+  const existingTooltip = anchorEl.querySelector('.copy-tooltip');
+  if (existingTooltip) existingTooltip.remove();
+
+  const tooltip = document.createElement('span');
+  tooltip.className = 'copy-tooltip';
+  tooltip.textContent = message;
+
+  Object.assign(tooltip.style, {
+    position: 'absolute',
+    top: '-36px',
+    left: '50%',
+    transform: 'translateX(-50%) translateY(4px)',
+    background: 'var(--text-primary)',
+    color: 'var(--bg-primary)',
+    fontSize: '12px',
+    fontWeight: '600',
+    padding: '6px 12px',
+    borderRadius: '8px',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+    whiteSpace: 'nowrap',
+    pointerEvents: 'none',
+    zIndex: '9999',
+    opacity: '0',
+    transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+  });
+
+  anchorEl.style.position = 'relative';
+  anchorEl.appendChild(tooltip);
+
+  const clippingAncestor = findClippingAncestor(anchorEl);
+  const tooltipRect = tooltip.getBoundingClientRect();
+  const ancestorRect = clippingAncestor?.getBoundingClientRect();
+  if (ancestorRect && tooltipRect.top < ancestorRect.top + 4) {
+    tooltip.style.top = 'calc(100% + 8px)';
+  }
+
+  void tooltip.offsetWidth;
+  tooltip.style.opacity = '1';
+  tooltip.style.transform = 'translateX(-50%) translateY(0)';
+
+  setTimeout(() => {
+    tooltip.style.opacity = '0';
+    tooltip.style.transform = 'translateX(-50%) translateY(4px)';
+    setTimeout(() => tooltip.remove(), 200);
+  }, 1200);
+}
+
 export function copyAnalysisText(text: string, anchorEl: HTMLElement, formatLabel = ''): void {
   if (!text || !anchorEl) return;
 
@@ -126,6 +176,14 @@ export function copyAnalysisText(text: string, anchorEl: HTMLElement, formatLabe
       anchorEl.style.position = 'relative';
       anchorEl.appendChild(tooltip);
 
+      // If the tooltip would be clipped at the top (first visible row, scroll containers), flip it below.
+      const clippingAncestor = findClippingAncestor(anchorEl);
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const ancestorRect = clippingAncestor?.getBoundingClientRect();
+      if (ancestorRect && tooltipRect.top < ancestorRect.top + 4) {
+        tooltip.style.top = 'calc(100% + 8px)';
+      }
+
       // Trigger reflow for transition
       void tooltip.offsetWidth;
 
@@ -155,4 +213,26 @@ export function copyAnalysisText(text: string, anchorEl: HTMLElement, formatLabe
     .catch((err) => {
       console.error('Copy failed:', err);
     });
+}
+
+function findClippingAncestor(el: HTMLElement): HTMLElement | null {
+  let current: HTMLElement | null = el.parentElement;
+
+  while (current && current !== document.body) {
+    const style = window.getComputedStyle(current);
+    const overflowY = style.overflowY;
+    const overflow = style.overflow;
+    const canClip =
+      overflowY === 'auto' ||
+      overflowY === 'scroll' ||
+      overflowY === 'hidden' ||
+      overflow === 'auto' ||
+      overflow === 'scroll' ||
+      overflow === 'hidden';
+
+    if (canClip) return current;
+    current = current.parentElement;
+  }
+
+  return null;
 }

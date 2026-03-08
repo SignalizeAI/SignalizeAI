@@ -1,8 +1,14 @@
 <div class="dropdown-card">
   <div class="dropdown-header" id="dropdown-header">
-    <div class="user-details">
-      <span class="user-name-text">SignalizeAI</span>
-      <span class="user-email-text">Cursor for sales pages</span>
+    <div class="user-details" style="display: flex; flex-direction: row; align-items: center; gap: 10px;">
+      <div style="display: flex; align-items: center; flex-shrink: 0;">
+        <img src="icons/128.png" alt="" class="dark-logo" style="width: 28px; height: 28px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+        <img src="icons/128(light).png" alt="" class="light-logo" style="width: 28px; height: 28px; border-radius: 6px;" />
+      </div>
+      <div style="display: flex; flex-direction: column;">
+        <span class="user-name-text">Signalize<span class="brand-ai" style="color: var(--brand-ai);">AI</span></span>
+        <span class="user-email-text">Understand any page</span>
+      </div>
     </div>
     <div style="display: flex; align-items: center; gap: 12px">
       <div id="user-initial" class="user-avatar-placeholder">U</div>
@@ -15,6 +21,28 @@
         <a href="#" class="menu-item" id="menu-profile">
           <img src="icons/profile.svg" alt="" class="menu-icon" />
           Profile
+        </a>
+      </li>
+
+      <li>
+        <a href="#" class="menu-item" id="menu-batch-analysis" style="display: none">
+          <svg
+            class="menu-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          Batch analysis
         </a>
       </li>
       <li>

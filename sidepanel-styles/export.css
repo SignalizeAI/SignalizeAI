@@ -1,6 +1,6 @@
 .secondary-btn {
   background: transparent;
-  border: 1px solid var(--bg-secondary);
+  border: none;
   border-radius: 6px;
   padding: 6px;
   cursor: pointer;

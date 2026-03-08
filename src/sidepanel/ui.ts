@@ -6,8 +6,13 @@ import { extractWebsiteContent } from './analysis/index.js';
 import { exitSelectionMode, loadSavedAnalyses } from './saved/index.js';
 import type { Session } from '@supabase/supabase-js';
 
-export function navigateTo(view: 'analysis' | 'saved' | 'profile' | 'settings'): void {
+export function navigateTo(view: 'analysis' | 'saved' | 'batch' | 'profile' | 'settings'): void {
   const prevView = state.currentView;
+
+  if (prevView === 'analysis' && view !== 'analysis') {
+    const manualUrlInput = document.getElementById('manual-url-input') as HTMLInputElement | null;
+    if (manualUrlInput) manualUrlInput.value = '';
+  }
 
   if (view !== 'saved' && state.selectionMode) {
     exitSelectionMode();
@@ -22,8 +27,10 @@ export function navigateTo(view: 'analysis' | 'saved' | 'profile' | 'settings'):
     state.isUserInteracting = false;
   }
   document.getElementById('ai-analysis')?.classList.add('hidden');
+  document.getElementById('manual-url-container')?.classList.add('hidden');
   document.getElementById('empty-tab-view')?.classList.add('hidden');
   document.getElementById('saved-analyses')?.classList.add('hidden');
+  document.getElementById('batch-view')?.classList.add('hidden');
   document.getElementById('profile-view')?.classList.add('hidden');
   document.getElementById('settings-view')?.classList.add('hidden');
 
@@ -32,11 +39,11 @@ export function navigateTo(view: 'analysis' | 'saved' | 'profile' | 'settings'):
 
   if (headerSubtitle) {
     if (view === 'analysis') {
-      headerSubtitle.textContent = 'Cursor for sales pages';
+      headerSubtitle.textContent = 'Understand any page';
       headerSubtitle.style.cursor = 'default';
       headerSubtitle.onclick = null;
     } else {
-      headerSubtitle.textContent = 'Back to Website Information';
+      headerSubtitle.innerHTML = '<div style="display:flex; align-items:center; gap:4px; margin-left:-2px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> <span>Back</span></div>';
       headerSubtitle.style.cursor = 'pointer';
       headerSubtitle.onclick = (e: MouseEvent) => {
         e.stopPropagation();
@@ -46,6 +53,7 @@ export function navigateTo(view: 'analysis' | 'saved' | 'profile' | 'settings'):
   }
 
   if (view === 'analysis') {
+    document.getElementById('manual-url-container')?.classList.remove('hidden');
     document.getElementById('ai-analysis')?.classList.remove('hidden');
     requestAnimationFrame(() => {
       extractWebsiteContent();
@@ -57,6 +65,10 @@ export function navigateTo(view: 'analysis' | 'saved' | 'profile' | 'settings'):
     requestAnimationFrame(() => {
       loadSavedAnalyses();
     });
+  }
+
+  if (view === 'batch') {
+    document.getElementById('batch-view')?.classList.remove('hidden');
   }
 
   if (view === 'profile') {

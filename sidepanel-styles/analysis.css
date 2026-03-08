@@ -158,3 +158,20 @@
   color: var(--accent-light);
   text-decoration: underline;
 }
+
+#manual-url-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+#manual-url-input:not(:placeholder-shown)+#manual-url-btn {
+  background: var(--accent-light) !important;
+  color: #fff !important;
+  box-shadow: 0 0 12px var(--accent-blue-bg) !important;
+}
+
+#manual-url-input:not(:placeholder-shown)+#manual-url-btn:hover {
+  background: var(--accent-color) !important;
+  box-shadow: 0 4px 16px var(--accent-blue-bg) !important;
+  transform: translateY(-2px);
+}

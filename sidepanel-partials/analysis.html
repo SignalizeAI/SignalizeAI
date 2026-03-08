@@ -1,3 +1,61 @@
+<!-- Manual URL Input -->
+<div
+  id="manual-url-container"
+  class="website-content-card"
+  style="margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; padding: 16px;"
+>
+  <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; margin-left: 4px;">
+     Quick Website Check
+  </div>
+  <div style="display: flex; gap: 8px; align-items: center;">
+    <input
+      type="url"
+      id="manual-url-input"
+      placeholder="Paste URL here..."
+      style="
+        flex: 1;
+        min-width: 0;
+        width: 100%;
+        box-sizing: border-box;
+        height: 40px;
+        padding: 0 14px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-size: 13px;
+        outline: none;
+        transition: all 0.2s ease;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+      "
+      onfocus="this.style.borderColor='var(--accent-color)'; this.style.boxShadow='0 0 0 2px var(--accent-light)';"
+      onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='inset 0 1px 2px rgba(0, 0, 0, 0.04)';"
+    />
+    <button
+      id="manual-url-btn"
+      style="
+        height: 36px;
+        padding: 0 14px;
+        font-size: 13px;
+        border-radius: 8px;
+        cursor: pointer;
+        background: var(--text-primary);
+        color: var(--bg-primary);
+        border: none;
+        font-weight: 600;
+        transition: transform 0.1s, box-shadow 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      "
+      onmousedown="this.style.transform='translateY(1px)';"
+      onmouseup="this.style.transform='translateY(-1px)';"
+    >
+      Analyze
+    </button>
+  </div>
+</div>
+
 <!-- AI Business Analysis -->
 <div id="ai-analysis" class="website-content-card hidden">
   <div class="content-header">
@@ -34,6 +92,21 @@
   </div>
 
   <div id="ai-loading" class="content-loading hidden">
+    <div
+      id="ai-loading-message"
+      style="
+        margin-bottom: 24px;
+        font-size: 14px;
+        color: var(--text-primary);
+        font-weight: 500;
+        text-align: center;
+        line-height: 1.5;
+        padding: 0 10px;
+      "
+    >
+      Hold on, we're opening the site in the background, analyzing it, then we'll show you the
+      results...
+    </div>
     <div class="skeleton-group">
       <div class="skeleton-label"></div>
       <div class="skeleton-line full"></div>

@@ -1,0 +1,171 @@
+interface ExtractedContent {
+  url: string;
+  title: string;
+  metaDescription: string;
+  headings: string[];
+  paragraphs: string[];
+}
+
+function cleanText(text: string): string {
+  return text
+    .replace(/\s+/g, ' ')
+    .replace(/\u00a0/g, ' ')
+    .trim();
+}
+
+function isMeaningful(text: string): boolean {
+  if (!text) return false;
+
+  const length = text.length;
+  // Reduced minimum length to 8 to capture shorter business slogans/values
+  if (length < 8 || length > 6000) return false;
+
+  const lower = text.toLowerCase();
+
+  // Only apply the blacklist to very short strings
+  if (length < 40) {
+    const blacklist = [
+      'cookie',
+      'privacy',
+      'terms',
+      'subscribe',
+      'sign up',
+      'login',
+      'accept all',
+      '©',
+      'home',
+      'menu',
+      'legal',
+    ];
+    if (blacklist.some((word) => lower.includes(word))) return false;
+  }
+
+  return true;
+}
+
+function isThinContent(content: ExtractedContent): boolean {
+  // If the user provided a URL, we should try to analyze it even if content seems light.
+  // AI can often gain context from just the URL and Title.
+  if (content.title && content.title.length > 3) return false;
+
+  const totalTextLength =
+    (content.title?.length || 0) +
+    (content.metaDescription?.length || 0) +
+    content.headings.join('').length +
+    content.paragraphs.join('').length;
+
+  return totalTextLength < 50;
+}
+
+function extractHeadings(doc: Document): string[] {
+  return Array.from(doc.querySelectorAll('h1, h2, h3'))
+    .map((h) => cleanText(h.textContent || ''))
+    .filter(Boolean)
+    .slice(0, 15);
+}
+
+function extractParagraphs(doc: Document): string[] {
+  // We look everywhere in the body if no semantic tags are found
+  const container =
+    doc.querySelector('main') ||
+    doc.querySelector('article') ||
+    doc.querySelector('#content') ||
+    doc.querySelector('.content') ||
+    doc.body;
+
+  if (!container) return [];
+
+  // Capture almost all text-bearing elements
+  const elements = Array.from(container.querySelectorAll('p, div, span, li, section, h4, h5'));
+  const texts = elements.map((el) => cleanText(el.textContent || '')).filter(isMeaningful);
+
+  // High-performance unique filter
+  const unique = Array.from(new Set(texts));
+
+  // Return more content items for AI to have better context
+  return unique.slice(0, 50);
+}
+
+function extractContentFromDoc(doc: Document, url: string): ExtractedContent {
+  // Capture various types of description tags
+  const description =
+    doc.querySelector("meta[name='description']")?.getAttribute('content') ||
+    doc.querySelector("meta[property='og:description']")?.getAttribute('content') ||
+    doc.querySelector("meta[name='twitter:description']")?.getAttribute('content') ||
+    doc.querySelector("meta[name='Description']")?.getAttribute('content') ||
+    '';
+
+  return {
+    url,
+    title: doc.title || '',
+    metaDescription: description,
+    headings: extractHeadings(doc),
+    paragraphs: extractParagraphs(doc),
+  };
+}
+
+export async function fetchAndExtractContent(
+  url: string
+): Promise<{ ok: boolean; content?: ExtractedContent; reason?: string; error?: string }> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      if (res.status === 403 || res.status === 401) {
+        return { ok: false, reason: 'RESTRICTED', error: `HTTP Error: ${res.status}` };
+      }
+      return { ok: false, error: `HTTP error: ${res.status}` };
+    }
+
+    let html = await res.text();
+
+    // 1. Extract the "Essence": Title and Description
+    const titleMatch = html.match(/<title[\s\S]*?>([\s\S]*?)<\/title>/i);
+    const title = titleMatch ? titleMatch[1] : '';
+
+    // Improved meta description extraction
+    const metaDescMatch =
+      html.match(/<meta[^>]*?name=["']description["'][^>]*?content=["']([\s\S]*?)["'][^>]*?>/i) ||
+      html.match(/<meta[^>]*?content=["']([\s\S]*?)["'][^>]*?name=["']description["'][^>]*?>/i);
+    const metaDesc = metaDescMatch ? metaDescMatch[1] : '';
+
+    // 2. Extract the Body content (everything between <body> tags or the whole thing if no tags)
+    const bodyMatch = html.match(/<body[\s\S]*?>([\s\S]*?)<\/body>/i);
+    let bodyContent = bodyMatch ? bodyMatch[1] : html;
+
+    // 3. Nuclear Sanitization of the extracted body
+    // This wipes EVERY link, script, style, and iframe from the string
+    bodyContent = bodyContent
+      .replace(
+        /<(?:script|style|noscript|iframe|svg|canvas|video|audio|object|embed)[\s\S]*?<\/(?:script|style|noscript|iframe|svg|canvas|video|audio|object|embed)>/gi,
+        ''
+      )
+      .replace(/<(?:link|base|img|source|input|button|hr|br)\b[^>]*>/gi, '')
+      .replace(/\s+on\w+="[^"]*"/gi, ''); // Remove inline event handlers (onclick, etc)
+
+    // 4. Rebuild a "Clean Room" HTML structure for the parser
+    // This ensures no preloads or headers can EVER trigger browser warnings
+    const cleanHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${title}</title>
+          <meta name="description" content="${metaDesc}">
+        </head>
+        <body>
+          ${bodyContent}
+        </body>
+      </html>
+    `;
+
+    const doc = new DOMParser().parseFromString(cleanHtml, 'text/html');
+    const content = extractContentFromDoc(doc, url);
+
+    if (isThinContent(content)) {
+      return { ok: false, reason: 'THIN_CONTENT' };
+    }
+
+    return { ok: true, content };
+  } catch (err: any) {
+    return { ok: false, error: err.message };
+  }
+}

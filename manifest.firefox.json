@@ -7,7 +7,8 @@
   "host_permissions": [
     "https://*.supabase.co/*",
     "https://api.signalizeai.org/*",
-    "https://dev-api.signalizeai.org/*"
+    "https://dev-api.signalizeai.org/*",
+    "<all_urls>"
   ],
   "icons": {
     "16": "icons/16.png",
