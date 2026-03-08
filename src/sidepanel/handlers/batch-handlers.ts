@@ -1,57 +1,23 @@
 import { state } from '../state.js';
-import { supabase } from '../supabase.js';
-import { loadQuotaFromAPI, renderQuotaBanner } from '../quota.js';
-import { analyzeWebsiteContent } from '../../ai-analyze.js';
-import { hashContent } from '../cache.js';
-import { fetchAndExtractContent } from '../analysis/fetcher.js';
 import { showToast } from '../toast.js';
-import { showActionTooltip } from '../clipboard.js';
-import type { BatchResult, BatchStage, BatchTelemetryEntry } from './batch/types.js';
 import {
-  buildDegradedAnalysis,
-  buildUrlOnlyContent,
-  cleanTitle,
-  isQuotaError,
-  isRetryableError,
   mapBatchResultToExportItem,
-  normalizeErrorMessage,
   parseUrlsFromCsv,
   parseUrlsFromText,
-  shouldUseUrlOnlyFallback,
-  trimContentForAnalyze,
 } from './batch/helpers.js';
-import {
-  getErrorStage,
-  getOrCreateTelemetryEntry,
-  logBatchTelemetrySummary,
-  markTelemetryFailure,
-  markTelemetrySuccess,
-} from './batch/telemetry.js';
+import { batchState } from './batch/state.js';
+import { createBatchRenderFlow } from './batch/render-flow.js';
+import { createBatchSaveFlow } from './batch/save-flow.js';
+import { startBatchProcess as startBatchProcessFlow } from './batch/process-flow.js';
+import { BATCH_PAGE_SIZE } from './batch/constants.js';
 
-let isBatchCancelled = false;
-let tempBatchResults: BatchResult[] = [];
-let pendingCsvUrls: string[] = [];
-let batchSearchQuery = '';
-let batchCurrentPage = 1;
-let isBatchSelectionMode = false;
-let lastBatchInputMode: 'csv' | 'paste' = 'csv';
-const BATCH_PAGE_SIZE = 10;
-const BATCH_CONCURRENCY = 2; // Process 2 URLs at a time
-const BATCH_ENABLE_TELEMETRY_LOG = false;
-const BATCH_DELAY_BETWEEN_GROUPS = 500; // low default pacing; adaptive cooldown handles unstable windows
-const RETRY_ATTEMPTS = 2; // Retry failed requests
-const ANALYZE_RETRY_ATTEMPTS = 4;
-const ANALYZE_RETRY_ATTEMPTS_LARGE_BATCH = 2;
-const LARGE_BATCH_THRESHOLD = 30;
-const RETRY_BASE_DELAY_MS = 1200;
-const RETRY_JITTER_MS = 300;
-const ANALYZE_RETRY_BASE_DELAY_MS = 1800;
-const MAX_BACKOFF_MS = 5000;
-const ANALYZE_FAILURE_COOLDOWN_MS = 2500;
-const ANALYZE_CIRCUIT_COOLDOWN_MS = 15000;
-let analyzeQueue: Promise<void> = Promise.resolve();
-let currentBatchSize = 0;
-let analyzeCircuitOpenUntil = 0;
+let saveFlow: ReturnType<typeof createBatchSaveFlow> | null = null;
+const renderFlow = createBatchRenderFlow({
+  saveSingleResult: (index, btn) => saveFlow?.saveSingleResult(index, btn),
+});
+saveFlow = createBatchSaveFlow({
+  renderBatchResultsPage: () => renderFlow.renderBatchResultsPage(),
+});
 
 export function setupBatchHandlers() {
   const dropZone = document.getElementById('csv-drop-zone');
@@ -68,13 +34,13 @@ export function setupBatchHandlers() {
   const csvSubmitBtn = document.getElementById('batch-csv-submit-btn');
 
   csvSubmitBtn?.addEventListener('click', () => {
-    if (pendingCsvUrls.length === 0) return;
+    if (batchState.pendingCsvUrls.length === 0) return;
 
     const isTeamPlan = (state.currentPlan || '').toLowerCase() === 'team';
     const limit = isTeamPlan ? 100 : 10;
 
-    const urlsToProcess = pendingCsvUrls.length > limit ? pendingCsvUrls.slice(0, limit) : pendingCsvUrls;
-    lastBatchInputMode = 'csv';
+    const urlsToProcess = batchState.pendingCsvUrls.length > limit ? batchState.pendingCsvUrls.slice(0, limit) : batchState.pendingCsvUrls;
+    batchState.lastBatchInputMode = 'csv';
     startBatchProcess(urlsToProcess);
   });
 
@@ -163,7 +129,7 @@ export function setupBatchHandlers() {
     const limit = isTeamPlan ? 100 : 10;
 
     const urlsToProcess = urls.length > limit ? urls.slice(0, limit) : urls;
-    lastBatchInputMode = 'paste';
+    batchState.lastBatchInputMode = 'paste';
     startBatchProcess(urlsToProcess);
   });
 
@@ -191,7 +157,7 @@ export function setupBatchHandlers() {
   });
 
   cancelBtn?.addEventListener('click', () => {
-    isBatchCancelled = true;
+    batchState.isBatchCancelled = true;
     cancelBtn.textContent = 'Cancelling...';
     cancelBtn.setAttribute('disabled', 'true');
   });
@@ -205,12 +171,12 @@ export function setupBatchHandlers() {
   const saveSelectedBtn = document.getElementById('batch-save-selected-btn');
 
   multiSelectToggle?.addEventListener('click', () => {
-    isBatchSelectionMode = true;
+    batchState.isBatchSelectionMode = true;
     renderBatchResultsPage();
   });
 
   selectionBackBtn?.addEventListener('click', () => {
-    isBatchSelectionMode = false;
+    batchState.isBatchSelectionMode = false;
     renderBatchResultsPage();
   });
 
@@ -230,7 +196,7 @@ export function setupBatchHandlers() {
     }
 
     // Switch back from selection mode on save selected
-    isBatchSelectionMode = false;
+    batchState.isBatchSelectionMode = false;
     await saveSpecificBatchSelection(indicesToSave, saveSelectedBtn as HTMLButtonElement);
   });
 
@@ -276,14 +242,14 @@ export function setupBatchHandlers() {
   searchCloseBtn?.addEventListener('click', () => {
     searchBarContainer?.classList.add('hidden');
     if (searchInput) searchInput.value = '';
-    batchSearchQuery = '';
-    batchCurrentPage = 1;
+    batchState.batchSearchQuery = '';
+    batchState.batchCurrentPage = 1;
     renderBatchResultsPage();
   });
 
   searchInput?.addEventListener('input', (e) => {
-    batchSearchQuery = (e.target as HTMLInputElement).value.toLowerCase().trim();
-    batchCurrentPage = 1;
+    batchState.batchSearchQuery = (e.target as HTMLInputElement).value.toLowerCase().trim();
+    batchState.batchCurrentPage = 1;
     renderBatchResultsPage();
   });
 
@@ -291,8 +257,8 @@ export function setupBatchHandlers() {
   const pageNext = document.getElementById('batch-page-next');
 
   pagePrev?.addEventListener('click', () => {
-    if (batchCurrentPage > 1) {
-      batchCurrentPage--;
+    if (batchState.batchCurrentPage > 1) {
+      batchState.batchCurrentPage--;
       renderBatchResultsPage();
     }
   });
@@ -301,8 +267,8 @@ export function setupBatchHandlers() {
     const isTeamPlan = (state.currentPlan || '').toLowerCase() === 'team';
     const totalFiltered = getFilteredBatchResults().length;
     const totalPages = Math.ceil(totalFiltered / BATCH_PAGE_SIZE);
-    if (batchCurrentPage < totalPages) {
-      batchCurrentPage++;
+    if (batchState.batchCurrentPage < totalPages) {
+      batchState.batchCurrentPage++;
       renderBatchResultsPage();
     }
   });
@@ -314,14 +280,14 @@ export function setupBatchHandlers() {
     if (reviewContainer) reviewContainer.classList.add('hidden');
     if (headerActions) headerActions.classList.add('hidden');
     if (uploadContainer) uploadContainer.style.display = 'flex';
-    tempBatchResults = [];
+    batchState.tempBatchResults = [];
     if (pasteInput) pasteInput.value = '';
     if (pasteSubmit) pasteSubmit.classList.remove('has-content');
 
     const pasteWarning = document.getElementById('batch-paste-limit-warning');
     if (pasteWarning) pasteWarning.classList.add('hidden');
 
-    pendingCsvUrls = [];
+    batchState.pendingCsvUrls = [];
     const dropZoneTitle = document.getElementById('drop-zone-title');
     const dropZoneDesc = document.getElementById('drop-zone-desc');
     const submitBtn = document.getElementById('batch-csv-submit-btn');
@@ -354,7 +320,7 @@ async function handleFileUpload(file: File) {
     showErrorToast('Please upload a CSV file');
     return;
   }
-  isBatchCancelled = false;
+  batchState.isBatchCancelled = false;
   const text = await file.text();
   const urls = parseUrlsFromCsv(text);
 
@@ -364,7 +330,7 @@ async function handleFileUpload(file: File) {
     return;
   }
 
-  pendingCsvUrls = urls;
+  batchState.pendingCsvUrls = urls;
 
   const dropZoneTitle = document.getElementById('drop-zone-title');
   const dropZoneDesc = document.getElementById('drop-zone-desc');
@@ -408,7 +374,7 @@ function showBatchLimitError(urls: string[], limit: number, isTeamPlan: boolean)
 
   processAnywayBtn.onclick = () => {
     errorContainer.classList.add('hidden');
-    lastBatchInputMode = 'csv';
+    batchState.lastBatchInputMode = 'csv';
     startBatchProcess(urls.slice(0, limit));
   };
 
@@ -463,760 +429,42 @@ function appendResultItem(url: string, statusText: string, isError: boolean) {
   list.scrollTop = list.scrollHeight;
 }
 
+
 async function startBatchProcess(urls: string[]) {
   const uploadContainer = document.getElementById('batch-upload-container');
-  const progressContainer = document.getElementById('batch-progress-container');
-  const resultsPhase = document.getElementById('batch-results-list');
-  const cancelBtn = document.getElementById('batch-cancel-btn');
-
   if (uploadContainer) uploadContainer.style.display = 'none';
-  if (progressContainer) progressContainer.classList.remove('hidden');
-  if (resultsPhase) resultsPhase.innerHTML = '';
-  if (cancelBtn) {
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.removeAttribute('disabled');
-  }
 
-  isBatchCancelled = false;
-  currentBatchSize = urls.length;
-  analyzeCircuitOpenUntil = 0;
-  tempBatchResults = [];
-  updateProgress(0, urls.length);
-  await loadQuotaFromAPI();
-  if (state.currentPlan === 'free' && state.remainingToday !== null && state.remainingToday <= 0) {
-    appendResultItem('Batch stopped', 'Daily limit reached', true);
-    setTimeout(() => {
-      if (progressContainer) progressContainer.classList.add('hidden');
-      showBatchReviewScreen();
-    }, 700);
-    return;
-  }
-
-  let processedCount = 0;
-  let stopDueToQuota = false;
-  const telemetry = new Map<string, BatchTelemetryEntry>();
-  let sawTransientAnalyzeFailureInBatch = false;
-
-  // Process URLs in concurrent batches
-  for (let i = 0; i < urls.length; i += BATCH_CONCURRENCY) {
-    if (isBatchCancelled) {
-      appendResultItem('Batch cancelled', 'Stopped', true);
-      break;
-    }
-
-    const batchUrls = urls.slice(i, i + BATCH_CONCURRENCY);
-    
-    // Process batch concurrently
-    const batchPromises = batchUrls.map(url =>
-      processSingleUrlWithRetry(url, telemetry).catch(err => ({ url, error: err }))
-    );
-
-    const batchResults = await Promise.all(batchPromises);
-
-    // Handle results
-    for (const result of batchResults) {
-      if ('error' in result && result.error) {
-        markTelemetryFailure(telemetry, result.url, result.error);
-        const errMessage = normalizeErrorMessage(result.error);
-        appendResultItem(result.url, errMessage, true);
-        if (isQuotaError(result.error)) {
-          stopDueToQuota = true;
-        }
-        if (isTransientAnalyzeFailure(result.error)) {
-          sawTransientAnalyzeFailureInBatch = true;
-        }
-      } else {
-        markTelemetrySuccess(telemetry, result.url);
-        tempBatchResults.push({
-          url: result.url,
-          domain: new URL(result.url).hostname,
-          content: result.content,
-          analysis: result.analysis,
-          contentHash: result.contentHash,
-          status: 'ready',
-        });
-        appendResultItem(result.url, 'Analyzed', false);
-      }
-    }
-
-    processedCount += batchUrls.length;
-    updateProgress(Math.min(processedCount, urls.length), urls.length);
-
-    if (stopDueToQuota) {
-      appendResultItem('Batch stopped', 'Daily limit reached', true);
-      break;
-    }
-
-    // Add delay between batches (except after last batch)
-    if (i + BATCH_CONCURRENCY < urls.length && !isBatchCancelled && !stopDueToQuota) {
-      if (sawTransientAnalyzeFailureInBatch) {
-        await new Promise(resolve => setTimeout(resolve, ANALYZE_FAILURE_COOLDOWN_MS));
-        sawTransientAnalyzeFailureInBatch = false;
-      }
-      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_BETWEEN_GROUPS));
-    }
-  }
-
-  // Done analyzing, move to Review
-  if (BATCH_ENABLE_TELEMETRY_LOG) {
-    logBatchTelemetrySummary(telemetry, urls);
-  }
-  setTimeout(() => {
-    if (progressContainer) progressContainer.classList.add('hidden');
-    currentBatchSize = 0;
-    showBatchReviewScreen();
-  }, 1000);
+  await startBatchProcessFlow(urls, {
+    updateProgress,
+    appendResultItem,
+    onDone: () => showBatchReviewScreen(),
+  });
 }
 
 function getFilteredBatchResults() {
-  if (!batchSearchQuery) return tempBatchResults;
-  return tempBatchResults.filter(res => {
-    return res.domain.toLowerCase().includes(batchSearchQuery) ||
-      res.url.toLowerCase().includes(batchSearchQuery) ||
-      (res.content.title && res.content.title.toLowerCase().includes(batchSearchQuery));
-  });
+  return renderFlow.getFilteredBatchResults();
 }
 
-
 async function showBatchReviewScreen() {
-  const reviewContainer = document.getElementById('batch-review-container');
-  const headerActions = document.getElementById('batch-header-actions');
-  const reviewDoneBtn = document.getElementById('batch-review-done-btn');
-
-  if (!reviewContainer) return;
-  reviewContainer.classList.remove('hidden');
-  if (headerActions) headerActions.classList.remove('hidden');
-  if (reviewDoneBtn) {
-    reviewDoneBtn.textContent = lastBatchInputMode === 'paste' ? 'Paste new URLs' : 'Upload new CSV';
-  }
-
-  const isTeamPlan = (state.currentPlan || '').toLowerCase() === 'team';
-  const searchToggle = document.getElementById('batch-search-toggle');
-  if (isTeamPlan && searchToggle) {
-    searchToggle.classList.remove('hidden');
-  } else if (searchToggle) {
-    searchToggle.classList.add('hidden');
-  }
-
-  isBatchSelectionMode = false;
-  batchCurrentPage = 1;
-  batchSearchQuery = '';
-  const searchInput = document.getElementById('batch-search-input') as HTMLInputElement | null;
-  if (searchInput) searchInput.value = '';
-  const searchBarContainer = document.getElementById('batch-search-bar-container');
-  if (searchBarContainer) searchBarContainer.classList.add('hidden');
-
-  await syncBatchSavedStatuses();
-
-  renderBatchResultsPage();
+  await renderFlow.showBatchReviewScreen();
 }
 
 async function syncBatchSavedStatuses() {
-  if (tempBatchResults.length === 0) return;
-
-  try {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData?.session?.user;
-    if (!user) return;
-
-    const uniqueDomains = Array.from(new Set(tempBatchResults.map((r) => r.domain)));
-    if (uniqueDomains.length === 0) return;
-
-    const { data, error } = await supabase
-      .from('saved_analyses')
-      .select('domain')
-      .eq('user_id', user.id)
-      .in('domain', uniqueDomains);
-
-    if (error) throw error;
-
-    const savedDomains = new Set((data || []).map((row: any) => row.domain));
-    tempBatchResults.forEach((result) => {
-      result.status = savedDomains.has(result.domain) ? 'saved' : 'ready';
-    });
-  } catch (err) {
-    console.warn('Failed to sync saved batch statuses:', err);
-  }
+  await renderFlow.syncBatchSavedStatuses();
 }
 
 function renderBatchResultsPage() {
-  const reviewList = document.getElementById('batch-review-list');
-  const readyCount = document.getElementById('batch-ready-count');
-  const paginationBar = document.getElementById('batch-pagination-bar');
-  const pageNumbers = document.getElementById('batch-page-numbers');
-
-  const multiSelectToggle = document.getElementById('batch-multi-select-toggle');
-  const selectionBackBtn = document.getElementById('batch-selection-back-btn');
-  const selectAllBtn = document.getElementById('batch-select-all-btn');
-  const saveSelectedBtn = document.getElementById('batch-save-selected-btn');
-  const searchToggle = document.getElementById('batch-search-toggle');
-  const saveAllBtn = document.getElementById('batch-save-all-btn');
-  const exportMenuToggle = document.getElementById('batch-export-menu-toggle');
-
-  if (isBatchSelectionMode) {
-    // In selection mode: show back, select all, save selected; hide export, save all, multi-select, search
-    selectionBackBtn?.classList.remove('hidden');
-    selectAllBtn?.classList.remove('hidden');
-    saveSelectedBtn?.classList.remove('hidden');
-    multiSelectToggle?.classList.add('hidden');
-    exportMenuToggle?.classList.add('hidden');
-    saveAllBtn?.classList.add('hidden');
-    searchToggle?.classList.add('hidden');
-  } else {
-    // Normal mode: show multi-select, save all, export, possibly search; hide selection buttons
-    selectionBackBtn?.classList.add('hidden');
-    selectAllBtn?.classList.add('hidden');
-    saveSelectedBtn?.classList.add('hidden');
-    multiSelectToggle?.classList.remove('hidden');
-    saveAllBtn?.classList.remove('hidden');
-    exportMenuToggle?.classList.remove('hidden');
-
-    const isTeamPlan = (state.currentPlan || '').toLowerCase() === 'team';
-    const hasEnoughResults = tempBatchResults.length > 10;
-    if (isTeamPlan && hasEnoughResults && searchToggle) {
-      searchToggle.classList.remove('hidden');
-    } else if (searchToggle) {
-      searchToggle.classList.add('hidden');
-    }
-
-    const allSaved = tempBatchResults.length > 0 && tempBatchResults.every(r => r.status === 'saved');
-    if (allSaved) {
-      if (saveAllBtn) {
-        saveAllBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2-2z"></path></svg>`;
-        saveAllBtn.style.color = 'var(--text-primary)';
-        saveAllBtn.title = 'Unsave all results';
-      }
-      multiSelectToggle?.classList.add('hidden');
-    } else {
-      if (saveAllBtn) {
-        saveAllBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2-2z"></path></svg>`;
-        saveAllBtn.style.color = '';
-        saveAllBtn.title = 'Save all results';
-      }
-    }
-  }
-
-  if (!reviewList) return;
-  reviewList.innerHTML = '';
-
-  const readyItems = tempBatchResults.filter(r => r.status === 'ready').length;
-  if (readyCount) readyCount.textContent = readyItems.toString();
-
-  const filtered = getFilteredBatchResults();
-  const totalFiltered = filtered.length;
-  const totalPages = Math.ceil(totalFiltered / BATCH_PAGE_SIZE);
-
-  if (totalFiltered > 10) {
-    if (paginationBar) paginationBar.classList.remove('hidden');
-    if (pageNumbers) {
-      pageNumbers.textContent = `Page ${batchCurrentPage} of ${totalPages || 1}`;
-    }
-    const pagePrev = document.getElementById('batch-page-prev') as HTMLButtonElement | null;
-    const pageNext = document.getElementById('batch-page-next') as HTMLButtonElement | null;
-    if (pagePrev) pagePrev.disabled = batchCurrentPage === 1;
-    if (pageNext) pageNext.disabled = batchCurrentPage === totalPages || totalPages === 0;
-  } else {
-    if (paginationBar) paginationBar.classList.add('hidden');
-  }
-
-  const startIdx = (batchCurrentPage - 1) * BATCH_PAGE_SIZE;
-  const pageResults = filtered.slice(startIdx, startIdx + BATCH_PAGE_SIZE);
-
-  pageResults.forEach((res) => {
-    // Find absolute index of res in tempBatchResults
-    const index = tempBatchResults.indexOf(res);
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'saved-item';
-    wrapper.style.margin = '0 0 10px 0';
-
-    const headerRow = document.createElement('div');
-    headerRow.className = 'saved-item-header';
-
-    const info = document.createElement('div');
-    info.className = 'header-info';
-    info.style.flex = '1';
-    info.style.overflow = 'hidden';
-
-    const actionsContainer = document.createElement('div');
-    actionsContainer.className = 'header-actions';
-
-    // Conditionally Add Checkbox for this row
-    if (isBatchSelectionMode) {
-      actionsContainer.style.display = 'none'; // hide save/copy actions
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.className = 'batch-item-checkbox';
-      checkbox.dataset.index = index.toString();
-      checkbox.style.margin = '0 12px 0 0';
-      checkbox.style.width = '16px';
-      checkbox.style.height = '16px';
-      checkbox.style.accentColor = 'var(--text-primary)';
-      checkbox.style.cursor = 'pointer';
-      if (res.status === 'saved') checkbox.disabled = true;
-
-      // Stop header click from expanding if we click checkbox
-      checkbox.addEventListener('click', (e) => e.stopPropagation());
-      info.style.display = 'flex';
-      info.style.alignItems = 'center';
-      info.appendChild(checkbox);
-    } else {
-      actionsContainer.style.display = 'flex';
-    }
-
-    const titleWrap = document.createElement('div');
-    titleWrap.style.overflow = 'hidden';
-    const title = document.createElement('strong');
-    title.textContent = res.content.title || res.domain;
-    title.style.whiteSpace = 'nowrap';
-    title.style.overflow = 'hidden';
-    title.style.textOverflow = 'ellipsis';
-    title.style.display = 'block';
-
-    const url = document.createElement('div');
-    url.textContent = res.url;
-    url.style.fontSize = '12px';
-    url.style.opacity = '0.7';
-    url.style.whiteSpace = 'nowrap';
-    url.style.overflow = 'hidden';
-    url.style.textOverflow = 'ellipsis';
-
-    titleWrap.appendChild(title);
-    titleWrap.appendChild(url);
-    info.appendChild(titleWrap);
-
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'copy-btn copy-saved-btn';
-    copyBtn.title = 'Copy analysis';
-    copyBtn.innerHTML = `
-      <svg viewBox="0 0 24 24" class="copy-icon">
-        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-      </svg>
-    `;
-
-    copyBtn.onclick = async (e) => {
-      e.stopPropagation();
-      const { buildSavedCopyText, copyAnalysisText } = await import('../clipboard.js');
-      const { loadSettings } = await import('../settings.js');
-      const settings = await loadSettings();
-      const formatLabel = settings.copyFormat === 'short' ? 'short' : 'full';
-      const itemToCopy = mapBatchResultToExportItem(res);
-      const text = await buildSavedCopyText(itemToCopy as any);
-      copyAnalysisText(text, copyBtn, formatLabel);
-    };
-
-    const saveBtn = document.createElement('button');
-    saveBtn.className = 'copy-btn copy-saved-btn'; // use same padding/hover base
-    saveBtn.title = 'Save';
-
-    const updateSaveIcon = () => {
-      if (res.status === 'saved') {
-        saveBtn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2-2z"></path></svg>`;
-        saveBtn.style.color = 'var(--text-primary)';
-      } else {
-        saveBtn.innerHTML = `
-           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-           </svg>
-         `;
-      }
-    };
-    updateSaveIcon();
-
-    saveBtn.onclick = (e) => {
-      e.stopPropagation();
-      saveSingleResult(index, saveBtn);
-    };
-
-    actionsContainer.appendChild(copyBtn);
-    actionsContainer.appendChild(saveBtn);
-
-    headerRow.appendChild(info);
-    headerRow.appendChild(actionsContainer);
-
-    const body = document.createElement('div');
-    body.className = 'saved-item-body hidden';
-    body.style.paddingTop = '16px';
-
-    headerRow.addEventListener('click', (e) => {
-      if (isBatchSelectionMode) {
-        // In selection mode, toggle the checkbox instead of expanding
-        const checkbox = info.querySelector('.batch-item-checkbox') as HTMLInputElement;
-        if (checkbox && !checkbox.disabled) {
-          checkbox.checked = !checkbox.checked;
-        }
-      } else {
-        // Normal mode: expand/collapse the details
-        body.classList.toggle('hidden');
-      }
-    });
-
-    body.innerHTML = `
-      <p><strong>Sales readiness:</strong> ${res.analysis.salesReadinessScore ?? '—'}</p>
-      <p><strong>What they do:</strong> ${res.analysis.whatTheyDo || '—'}</p>
-      <p><strong>Target customer:</strong> ${res.analysis.targetCustomer || '—'}</p>
-      <p><strong>Value proposition:</strong> ${res.analysis.valueProposition || '—'}</p>
-      <p>
-        <strong>Best sales persona:</strong> ${res.analysis.bestSalesPersona?.persona || '—'}
-        ${res.analysis.bestSalesPersona?.reason
-        ? `<br />
-        <span style="opacity:0.7; font-size:13px">
-          (${res.analysis.bestSalesPersona.reason})
-        </span>`
-        : ''
-      }
-      </p>
-      <p><strong>Sales angle:</strong> ${res.analysis.salesAngle || '—'}</p>
-
-      <hr style="margin:10px 0; opacity:0.25" />
-
-      <p><strong>Recommended outreach</strong></p>
-
-      <p>
-        <strong>Who:</strong>
-        ${res.analysis.recommendedOutreach?.persona || '—'}
-      </p>
-
-      <p>
-        <strong>Goal:</strong>
-        ${res.analysis.recommendedOutreach?.goal || '—'}
-      </p>
-
-      <p>
-        <strong>Angle:</strong>
-        ${res.analysis.recommendedOutreach?.angle || '—'}
-      </p>
-
-      <p>
-        <strong>Message:</strong><br />
-        <span style="white-space: pre-wrap;">${(res.analysis.recommendedOutreach?.message || '—').trim()}</span>
-      </p>
-
-      <hr style="margin:8px 0; opacity:0.3" />
-
-      <p style="opacity:0.85">
-        <strong>Company overview:</strong>
-        ${res.content.metaDescription || '—'}
-      </p>
-    `;
-
-    wrapper.appendChild(headerRow);
-    wrapper.appendChild(body);
-    reviewList.appendChild(wrapper);
-  });
+  renderFlow.renderBatchResultsPage();
 }
 
 async function saveSingleResult(index: number, btn: HTMLButtonElement) {
-  const res = tempBatchResults[index];
-
-  const originalHtml = btn.innerHTML;
-  btn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" class="spin"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
-  btn.disabled = true;
-
-  try {
-    let actionLabel = '';
-    if (res.status === 'saved') {
-      // Unsave the item
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData?.session?.user;
-      if (!user) throw new Error('Not logged in');
-
-      const { error } = await supabase.from('saved_analyses').delete().eq('user_id', user.id).eq('domain', res.domain);
-      if (error) throw error;
-
-      res.status = 'ready';
-      btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2-2z"></path></svg>`;
-      btn.style.color = '';
-      actionLabel = 'Unsaved';
-    } else {
-      // Save the item
-      await performSave(res);
-      res.status = 'saved';
-      btn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2-2z"></path></svg>`;
-      btn.style.color = 'var(--text-primary)';
-      actionLabel = 'Saved';
-    }
-
-    btn.disabled = false;
-    showActionTooltip(btn, actionLabel);
-    await refreshQuotaBannerNow();
-    setTimeout(() => {
-      renderBatchResultsPage(); // update ready count/state after inline feedback is visible
-    }, 250);
-  } catch (err: any) {
-    btn.innerHTML = originalHtml;
-    btn.disabled = false;
-    showToast(err.message || 'Failed to save');
-  }
+  await saveFlow?.saveSingleResult(index, btn);
 }
 
 async function saveSpecificBatchSelection(indicesToSave: number[], triggeredBtn: HTMLButtonElement) {
-  const originalHtml = triggeredBtn.innerHTML;
-  triggeredBtn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" class="spin"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
-  triggeredBtn.disabled = true;
-
-  let savedCount = 0;
-  for (const index of indicesToSave) {
-    const res = tempBatchResults[index];
-    if (res.status === 'saved') continue;
-    try {
-      await performSave(res);
-      res.status = 'saved';
-      savedCount++;
-      if (savedCount % 2 === 0) {
-        renderBatchResultsPage();
-      }
-    } catch (err) {
-      console.error('Batch save error:', err);
-    }
-  }
-
-  await refreshQuotaBannerNow();
-
-  renderBatchResultsPage();
-
-  triggeredBtn.disabled = false;
-  triggeredBtn.innerHTML = originalHtml;
-
-  const { showToast } = await import('../toast.js');
-  showToast(`Successfully saved ${savedCount} analyses.`);
+  await saveFlow?.saveSpecificBatchSelection(indicesToSave, triggeredBtn);
 }
 
 async function saveAllBatchSelection() {
-  if (tempBatchResults.length === 0) return;
-
-  const saveAllBtn = document.getElementById('batch-save-all-btn') as HTMLButtonElement | null;
-  if (saveAllBtn) {
-    saveAllBtn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" class="spin"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
-    saveAllBtn.style.color = '';
-    saveAllBtn.disabled = true;
-  }
-
-  const allSaved = tempBatchResults.every(r => r.status === 'saved');
-  const { showToast } = await import('../toast.js');
-  let actionLabel = '';
-
-  try {
-    if (allSaved) {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData?.session?.user;
-      if (!user) throw new Error('Not logged in');
-
-      const domains = tempBatchResults.map(r => r.domain);
-      const { error } = await supabase.from('saved_analyses').delete().eq('user_id', user.id).in('domain', domains);
-      if (error) throw error;
-
-      tempBatchResults.forEach(r => r.status = 'ready');
-      actionLabel = 'Unsaved all';
-    } else {
-      const indicesToSave = tempBatchResults
-        .map((_, i) => i)
-        .filter((i) => tempBatchResults[i].status === 'ready');
-
-      let savedCount = 0;
-      for (const i of indicesToSave) {
-        try {
-          await performSave(tempBatchResults[i]);
-          tempBatchResults[i].status = 'saved';
-          savedCount++;
-          if (savedCount % 2 === 0) renderBatchResultsPage();
-        } catch (e) { }
-      }
-
-      if (savedCount > 0) {
-        actionLabel = 'Saved all';
-      } else {
-        showToast('No new analyses available to save.');
-      }
-    }
-
-    await refreshQuotaBannerNow();
-  } catch (err: any) {
-    console.error('Batch action error:', err);
-    showToast(err.message || 'Action failed.');
-  }
-
-  if (saveAllBtn) {
-    saveAllBtn.disabled = false;
-  }
-
-  renderBatchResultsPage();
-
-  if (saveAllBtn && actionLabel) {
-    showActionTooltip(saveAllBtn, actionLabel);
-  }
-}
-
-async function performSave(res: BatchResult) {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const user = sessionData?.session?.user;
-  if (!user) throw new Error('Not logged in');
-
-  const insertData = {
-    user_id: user.id,
-    domain: res.domain,
-    url: res.url,
-    title: cleanTitle(res.content.title),
-    description: res.content.metaDescription,
-    content_hash: res.contentHash,
-    last_analyzed_at: new Date().toISOString(),
-    what_they_do: res.analysis.whatTheyDo,
-    target_customer: res.analysis.targetCustomer,
-    value_proposition: res.analysis.valueProposition,
-    sales_angle: res.analysis.salesAngle,
-    sales_readiness_score: res.analysis.salesReadinessScore,
-    best_sales_persona: res.analysis.bestSalesPersona?.persona,
-    best_sales_persona_reason: res.analysis.bestSalesPersona?.reason,
-    recommended_outreach_persona: res.analysis.recommendedOutreach?.persona,
-    recommended_outreach_goal: res.analysis.recommendedOutreach?.goal,
-    recommended_outreach_angle: res.analysis.recommendedOutreach?.angle,
-    recommended_outreach_message: res.analysis.recommendedOutreach?.message,
-  };
-
-  const { error } = await supabase.from('saved_analyses').insert(insertData);
-  if (error) {
-    if (error.code === '23505') throw new Error('Already saved');
-    throw new Error('Save failed');
-  }
-}
-
-async function refreshQuotaBannerNow() {
-  try {
-    await loadQuotaFromAPI(true);
-  } catch {
-    renderQuotaBanner();
-  }
-}
-
-async function processSingleUrl(url: string, telemetry: Map<string, BatchTelemetryEntry>) {
-  const entry = getOrCreateTelemetryEntry(telemetry, url);
-  entry.extractAttempts += 1;
-
-  const response = await fetchAndExtractContent(url, true);
-  const extractErrorMessage = response?.error || response?.reason || 'Extraction failed';
-  const contentForAnalyze =
-    response?.ok && response.content
-      ? response.content
-      : shouldUseUrlOnlyFallback(extractErrorMessage)
-        ? buildUrlOnlyContent(url, extractErrorMessage)
-        : null;
-
-  if (!contentForAnalyze) throw withStageError('extract', extractErrorMessage);
-
-  if (isAnalyzeCircuitOpen()) {
-    return {
-      url,
-      content: contentForAnalyze,
-      analysis: buildDegradedAnalysis(contentForAnalyze, 'AI temporarily unavailable (cooldown)'),
-      contentHash: await hashContent(contentForAnalyze),
-    };
-  }
-
-  entry.analyzeAttempts += 1;
-  let result: Awaited<ReturnType<typeof analyzeWebsiteContent>>;
-  try {
-    const trimmedContent = trimContentForAnalyze(contentForAnalyze);
-    // Serialize AI calls to reduce backend burst pressure that leads to 503s.
-    result = await enqueueAnalyzeCall(() => analyzeWebsiteContent(trimmedContent, false, false, true));
-    analyzeCircuitOpenUntil = 0;
-  } catch (err: unknown) {
-    throw withStageError('analyze', normalizeErrorMessage(err));
-  }
-
-  if (result.quota) {
-    state.currentPlan = result.quota.plan;
-    state.usedToday = result.quota.used_today;
-    state.remainingToday = result.quota.remaining_today;
-    state.dailyLimitFromAPI = result.quota.daily_limit;
-    state.maxSavedLimit = result.quota.max_saved;
-    state.totalSavedCount = result.quota.total_saved;
-    renderQuotaBanner();
-  }
-  if (result.blocked) throw withStageError('analyze', 'Daily limit reached');
-  if (!result.analysis) throw withStageError('analyze', 'AI analysis failed');
-
-  return {
-    url,
-    content: contentForAnalyze,
-    analysis: result.analysis,
-    contentHash: await hashContent(contentForAnalyze),
-  };
-}
-
-function enqueueAnalyzeCall<T>(task: () => Promise<T>): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const runTask = async () => {
-      try {
-        const result = await task();
-        resolve(result);
-      } catch (err) {
-        reject(err);
-      }
-    };
-
-    analyzeQueue = analyzeQueue.then(runTask, runTask).then(
-      () => undefined,
-      () => undefined
-    );
-  });
-}
-
-async function processSingleUrlWithRetry(
-  url: string,
-  telemetry: Map<string, BatchTelemetryEntry>,
-  attempt = 1
-): Promise<any> {
-  try {
-    return await processSingleUrl(url, telemetry);
-  } catch (err: any) {
-    const isAnalyzeStage = getErrorStage(err) === 'analyze';
-    const analyzeMaxAttempts =
-      currentBatchSize >= LARGE_BATCH_THRESHOLD
-        ? ANALYZE_RETRY_ATTEMPTS_LARGE_BATCH
-        : ANALYZE_RETRY_ATTEMPTS;
-    const maxAttempts = isAnalyzeStage ? analyzeMaxAttempts : RETRY_ATTEMPTS;
-    const shouldRetry = isRetryableError(err) && attempt < maxAttempts;
-
-    if (shouldRetry) {
-      const baseDelay = isAnalyzeStage ? ANALYZE_RETRY_BASE_DELAY_MS : RETRY_BASE_DELAY_MS;
-      const backoff = Math.min(baseDelay * Math.pow(2, attempt - 1), MAX_BACKOFF_MS);
-      const jitter = Math.floor(Math.random() * RETRY_JITTER_MS);
-      await new Promise(resolve => setTimeout(resolve, backoff + jitter));
-      return processSingleUrlWithRetry(url, telemetry, attempt + 1);
-    }
-
-    if (isAnalyzeStage && isRetryableError(err)) {
-      // Open a short circuit window to avoid spamming failing analyze requests.
-      analyzeCircuitOpenUntil = Math.max(
-        analyzeCircuitOpenUntil,
-        Date.now() + ANALYZE_CIRCUIT_COOLDOWN_MS
-      );
-      const degradedContent = buildUrlOnlyContent(url, 'AI temporarily unavailable');
-      return {
-        url,
-        content: degradedContent,
-        analysis: buildDegradedAnalysis(degradedContent, normalizeErrorMessage(err)),
-        contentHash: await hashContent(degradedContent),
-      };
-    }
-
-    throw err;
-  }
-}
-
-function withStageError(stage: BatchStage, message: string): Error & { stage: BatchStage } {
-  const error = new Error(message) as Error & { stage: BatchStage };
-  error.stage = stage;
-  return error;
-}
-
-function isTransientAnalyzeFailure(err: unknown): boolean {
-  if (getErrorStage(err) !== 'analyze') return false;
-  if (isQuotaError(err)) return false;
-  return isRetryableError(err);
-}
-
-function isAnalyzeCircuitOpen(): boolean {
-  return Date.now() < analyzeCircuitOpenUntil;
+  await saveFlow?.saveAllBatchSelection();
 }

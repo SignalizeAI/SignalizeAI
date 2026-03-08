@@ -1,0 +1,14 @@
+export const BATCH_PAGE_SIZE = 10;
+export const BATCH_CONCURRENCY = 2; // Process 2 URLs at a time
+export const BATCH_ENABLE_TELEMETRY_LOG = false;
+export const BATCH_DELAY_BETWEEN_GROUPS = 500; // low default pacing; adaptive cooldown handles unstable windows
+export const RETRY_ATTEMPTS = 2; // Retry failed requests
+export const ANALYZE_RETRY_ATTEMPTS = 4;
+export const ANALYZE_RETRY_ATTEMPTS_LARGE_BATCH = 2;
+export const LARGE_BATCH_THRESHOLD = 30;
+export const RETRY_BASE_DELAY_MS = 1200;
+export const RETRY_JITTER_MS = 300;
+export const ANALYZE_RETRY_BASE_DELAY_MS = 1800;
+export const MAX_BACKOFF_MS = 5000;
+export const ANALYZE_FAILURE_COOLDOWN_MS = 2500;
+export const ANALYZE_CIRCUIT_COOLDOWN_MS = 15000;
