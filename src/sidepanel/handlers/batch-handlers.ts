@@ -6,38 +6,27 @@ import { hashContent } from '../cache.js';
 import { fetchAndExtractContent } from '../analysis/fetcher.js';
 import { showToast } from '../toast.js';
 import { showActionTooltip } from '../clipboard.js';
-
-interface Content {
-  url: string;
-  title: string;
-  metaDescription: string;
-  headings: string[];
-  paragraphs: string[];
-}
-
-interface BatchResult {
-  url: string;
-  domain: string;
-  content: Content;
-  analysis: any;
-  contentHash: string;
-  status: 'ready' | 'saved' | 'error';
-  error?: string;
-}
-
-type BatchStage = 'extract' | 'analyze';
-
-interface BatchTelemetryEntry {
-  url: string;
-  startedAt: number;
-  extractAttempts: number;
-  analyzeAttempts: number;
-  finalStatus: 'success' | 'failed';
-  finalStage: BatchStage | 'n/a';
-  errorType: string;
-  errorMessage: string;
-  durationMs: number;
-}
+import type { BatchResult, BatchStage, BatchTelemetryEntry } from './batch/types.js';
+import {
+  buildDegradedAnalysis,
+  buildUrlOnlyContent,
+  cleanTitle,
+  isQuotaError,
+  isRetryableError,
+  mapBatchResultToExportItem,
+  normalizeErrorMessage,
+  parseUrlsFromCsv,
+  parseUrlsFromText,
+  shouldUseUrlOnlyFallback,
+  trimContentForAnalyze,
+} from './batch/helpers.js';
+import {
+  getErrorStage,
+  getOrCreateTelemetryEntry,
+  logBatchTelemetrySummary,
+  markTelemetryFailure,
+  markTelemetrySuccess,
+} from './batch/telemetry.js';
 
 let isBatchCancelled = false;
 let tempBatchResults: BatchResult[] = [];
@@ -359,50 +348,6 @@ export function setupBatchHandlers() {
   });
 }
 
-function parseUrlsFromText(text: string): string[] {
-  const lines = text.split(/\r?\n/);
-  const urls: string[] = [];
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    // Basic heuristics for a URL/domain
-    if (trimmed.includes('.') && !trimmed.includes(' ')) {
-      const fullUrl = trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
-      try {
-        new URL(fullUrl);
-        urls.push(fullUrl);
-      } catch {
-        /* ignore */
-      }
-    }
-  }
-  return urls;
-}
-
-function parseUrlsFromCsv(text: string): string[] {
-  const lines = text.split(/\r?\n/);
-  const urls: string[] = [];
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    const cols = trimmed.split(',');
-    for (const col of cols) {
-      const cleanCol = col.replace(/^["']|["']$/g, '').trim();
-      if (cleanCol.includes('.') && !cleanCol.includes(' ')) {
-        const fullUrl = cleanCol.startsWith('http') ? cleanCol : `https://${cleanCol}`;
-        try {
-          new URL(fullUrl);
-          urls.push(fullUrl);
-          break;
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-  }
-  return urls;
-}
-
 async function handleFileUpload(file: File) {
   if (!file.name.toLowerCase().endsWith('.csv')) {
     const { showErrorToast } = await import('../toast.js');
@@ -613,32 +558,14 @@ async function startBatchProcess(urls: string[]) {
   }
 
   // Done analyzing, move to Review
-  logBatchTelemetrySummary(telemetry, urls);
+  if (BATCH_ENABLE_TELEMETRY_LOG) {
+    logBatchTelemetrySummary(telemetry, urls);
+  }
   setTimeout(() => {
     if (progressContainer) progressContainer.classList.add('hidden');
     currentBatchSize = 0;
     showBatchReviewScreen();
   }, 1000);
-}
-
-function mapBatchResultToExportItem(r: BatchResult) {
-  return {
-    title: r.content.title,
-    domain: r.domain,
-    url: r.url,
-    description: r.content.metaDescription,
-    sales_readiness_score: r.analysis.salesReadinessScore,
-    what_they_do: r.analysis.whatTheyDo,
-    target_customer: r.analysis.targetCustomer,
-    value_proposition: r.analysis.valueProposition,
-    best_sales_persona: r.analysis.bestSalesPersona?.persona,
-    best_sales_persona_reason: r.analysis.bestSalesPersona?.reason,
-    sales_angle: r.analysis.salesAngle,
-    recommended_outreach_persona: r.analysis.recommendedOutreach?.persona,
-    recommended_outreach_goal: r.analysis.recommendedOutreach?.goal,
-    recommended_outreach_angle: r.analysis.recommendedOutreach?.angle,
-    recommended_outreach_message: r.analysis.recommendedOutreach?.message,
-  };
 }
 
 function getFilteredBatchResults() {
@@ -1162,12 +1089,6 @@ async function refreshQuotaBannerNow() {
   }
 }
 
-function cleanTitle(title: string): string {
-  if (!title) return '';
-  const match = title.match(/^(.+?)(?:\s*[-|:]\s*|\s*[–—]\s*)(.+)$/);
-  return match && match[1].length > 3 ? match[1].trim() : title.trim();
-}
-
 async function processSingleUrl(url: string, telemetry: Map<string, BatchTelemetryEntry>) {
   const entry = getOrCreateTelemetryEntry(telemetry, url);
   entry.extractAttempts += 1;
@@ -1288,252 +1209,6 @@ function withStageError(stage: BatchStage, message: string): Error & { stage: Ba
   const error = new Error(message) as Error & { stage: BatchStage };
   error.stage = stage;
   return error;
-}
-
-function trimContentForAnalyze(content: Content): Content {
-  const title = (content.title || '').trim().slice(0, 220);
-  const metaDescription = (content.metaDescription || '').trim().slice(0, 450);
-
-  const headings = content.headings
-    .map((h) => (h || '').replace(/\s+/g, ' ').trim())
-    .filter(Boolean)
-    .slice(0, 12)
-    .map((h) => h.slice(0, 180));
-
-  let totalParagraphChars = 0;
-  const paragraphs: string[] = [];
-  for (const raw of content.paragraphs) {
-    if (paragraphs.length >= 18) break;
-    const cleaned = (raw || '').replace(/\s+/g, ' ').trim();
-    if (!cleaned) continue;
-
-    const clipped = cleaned.slice(0, 420);
-    if (totalParagraphChars + clipped.length > 8000) break;
-
-    paragraphs.push(clipped);
-    totalParagraphChars += clipped.length;
-  }
-
-  return {
-    ...content,
-    title,
-    metaDescription,
-    headings,
-    paragraphs,
-  };
-}
-
-function shouldUseUrlOnlyFallback(errorMessage: string): boolean {
-  const msg = (errorMessage || '').toLowerCase();
-  if (!msg) return false;
-
-  const code = parseStatusCode(msg);
-  if (code !== null) {
-    if ([401, 403, 405, 406, 408, 409, 425, 429, 500, 502, 503, 504].includes(code)) return true;
-    if (code >= 400 && code < 500) return false;
-  }
-
-  return (
-    msg.includes('restricted') ||
-    msg.includes('forbidden') ||
-    msg.includes('blocked') ||
-    msg.includes('thin_content') ||
-    msg.includes('timeout') ||
-    msg.includes('failed to fetch') ||
-    msg.includes('network')
-  );
-}
-
-function buildUrlOnlyContent(url: string, reason: string): Content {
-  const hostname = new URL(url).hostname.replace(/^www\./, '');
-  const label = hostname.split('.').filter(Boolean)[0] || hostname;
-  const title = label.charAt(0).toUpperCase() + label.slice(1);
-
-  return {
-    url,
-    title,
-    metaDescription: `Limited analysis: content extraction unavailable (${reason}).`,
-    headings: [title, hostname],
-    paragraphs: [
-      `Website: ${hostname}`,
-      `URL: ${url}`,
-      `Extraction issue: ${reason}`,
-    ],
-  };
-}
-
-function buildDegradedAnalysis(content: Content, reason: string) {
-  const domain = new URL(content.url).hostname.replace(/^www\./, '');
-  return {
-    whatTheyDo: `Automatic fallback summary for ${domain}.`,
-    targetCustomer: 'Unknown (AI service temporarily unavailable).',
-    valueProposition: 'Could not be reliably inferred from full page content.',
-    salesAngle: `Lead with discovery questions and verify fit manually. (${reason})`,
-    salesReadinessScore: 20,
-    bestSalesPersona: {
-      persona: 'Mid-Market AE',
-      reason: 'Fallback default due to temporary AI service unavailability.',
-    },
-    recommendedOutreach: {
-      persona: 'Account Executive',
-      goal: 'Start a qualification conversation',
-      angle: 'Acknowledge limited context and ask targeted discovery questions',
-      message: `Hi team at ${domain}, I looked at your site and wanted to ask a few questions to understand your priorities and see if there's a fit.`,
-    },
-  };
-}
-
-function getOrCreateTelemetryEntry(
-  telemetry: Map<string, BatchTelemetryEntry>,
-  url: string
-): BatchTelemetryEntry {
-  const existing = telemetry.get(url);
-  if (existing) return existing;
-
-  const entry: BatchTelemetryEntry = {
-    url,
-    startedAt: Date.now(),
-    extractAttempts: 0,
-    analyzeAttempts: 0,
-    finalStatus: 'failed',
-    finalStage: 'n/a',
-    errorType: '',
-    errorMessage: '',
-    durationMs: 0,
-  };
-  telemetry.set(url, entry);
-  return entry;
-}
-
-function markTelemetrySuccess(telemetry: Map<string, BatchTelemetryEntry>, url: string) {
-  const entry = getOrCreateTelemetryEntry(telemetry, url);
-  entry.finalStatus = 'success';
-  entry.finalStage = 'analyze';
-  entry.errorType = '';
-  entry.errorMessage = '';
-  entry.durationMs = Date.now() - entry.startedAt;
-}
-
-function markTelemetryFailure(
-  telemetry: Map<string, BatchTelemetryEntry>,
-  url: string,
-  err: unknown
-) {
-  const entry = getOrCreateTelemetryEntry(telemetry, url);
-  const stage = getErrorStage(err);
-  const message = normalizeErrorMessage(err);
-  entry.finalStatus = 'failed';
-  entry.finalStage = stage;
-  entry.errorType = classifyErrorType(err, stage);
-  entry.errorMessage = message;
-  entry.durationMs = Date.now() - entry.startedAt;
-}
-
-function getErrorStage(err: unknown): BatchStage | 'n/a' {
-  const stage = (err as { stage?: BatchStage })?.stage;
-  if (stage === 'extract' || stage === 'analyze') return stage;
-  return 'n/a';
-}
-
-function classifyErrorType(err: unknown, stage: BatchStage | 'n/a'): string {
-  const message = normalizeErrorMessage(err).toLowerCase();
-  if (isQuotaError(err)) return 'quota_limit';
-
-  const code = parseStatusCode(message);
-  if (code !== null) return `http_${code}`;
-
-  if (message.includes('timeout') || message.includes('timed out')) return 'timeout';
-  if (message.includes('network') || message.includes('failed to fetch')) return 'network';
-  if (message.includes('invalid json')) return 'backend_response';
-  if (message.includes('thin_content')) return 'thin_content';
-  if (message.includes('restricted')) return 'restricted';
-
-  if (stage === 'extract') return 'extract_error';
-  if (stage === 'analyze') return 'analyze_error';
-  return 'unknown';
-}
-
-function logBatchTelemetrySummary(
-  telemetry: Map<string, BatchTelemetryEntry>,
-  inputUrls: string[]
-) {
-  if (!BATCH_ENABLE_TELEMETRY_LOG) return;
-  if (telemetry.size === 0) return;
-
-  const rows = inputUrls
-    .filter((url) => telemetry.has(url))
-    .map((url) => telemetry.get(url)!)
-    .map((entry) => ({
-      url: entry.url,
-      status: entry.finalStatus,
-      stage: entry.finalStage,
-      extract_attempts: entry.extractAttempts,
-      analyze_attempts: entry.analyzeAttempts,
-      error_type: entry.errorType || '-',
-      error: entry.errorMessage || '-',
-      duration_ms: entry.durationMs,
-    }));
-
-  const successCount = rows.filter((r) => r.status === 'success').length;
-  const failedCount = rows.length - successCount;
-
-  console.groupCollapsed(
-    `[Batch Telemetry] processed=${rows.length} success=${successCount} failed=${failedCount}`
-  );
-  console.table(rows);
-  console.groupEnd();
-}
-
-function normalizeErrorMessage(err: unknown): string {
-  const message = err instanceof Error ? err.message : String(err || 'Error');
-  return message?.trim() || 'Error';
-}
-
-function parseStatusCode(message: string): number | null {
-  const match = message.match(/\b(4\d{2}|5\d{2})\b/);
-  if (!match) return null;
-  const code = Number(match[1]);
-  return Number.isFinite(code) ? code : null;
-}
-
-function isQuotaError(err: unknown): boolean {
-  const message = normalizeErrorMessage(err).toLowerCase();
-  return (
-    message.includes('daily limit reached') ||
-    message.includes('quota reached') ||
-    message.includes('limit reached')
-  );
-}
-
-function isRetryableError(err: unknown): boolean {
-  const message = normalizeErrorMessage(err).toLowerCase();
-  if (!message) return false;
-  if (isQuotaError(err) || message.includes('not logged in')) return false;
-
-  const code = parseStatusCode(message);
-  if (code !== null) {
-    if ([408, 409, 425, 429, 500, 502, 503, 504].includes(code)) return true;
-    if (code >= 400 && code < 500) return false;
-  }
-
-  const retryableMarkers = [
-    'service unavailable',
-    'ai service unavailable',
-    'analysis request failed',
-    'invalid json from backend',
-    'network',
-    'failed to fetch',
-    'timeout',
-    'timed out',
-    'temporarily unavailable',
-    'rate limit',
-    'too many requests',
-    'gateway',
-    'econnreset',
-    'socket hang up',
-  ];
-
-  return retryableMarkers.some((marker) => message.includes(marker));
 }
 
 function isTransientAnalyzeFailure(err: unknown): boolean {
