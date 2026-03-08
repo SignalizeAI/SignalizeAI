@@ -133,11 +133,18 @@ export async function analyzeWebsiteContent(
   };
 }
 
-async function sendBackgroundAnalyze(apiBaseUrl: string, token: string | null, payload: any): Promise<any> {
+async function sendBackgroundAnalyze(
+  apiBaseUrl: string,
+  token: string | null,
+  payload: any
+): Promise<any> {
   return await new Promise((resolve) => {
     chrome.runtime.sendMessage({ type: 'BG_ANALYZE', apiBaseUrl, token, payload }, (response) => {
       if (chrome.runtime.lastError) {
-        resolve({ ok: false, error: chrome.runtime.lastError.message || 'Background analyze failed' });
+        resolve({
+          ok: false,
+          error: chrome.runtime.lastError.message || 'Background analyze failed',
+        });
         return;
       }
       resolve(response || { ok: false, error: 'No response from background' });

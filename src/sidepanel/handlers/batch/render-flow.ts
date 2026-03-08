@@ -12,10 +12,12 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
 
   function getFilteredBatchResults() {
     if (!batchState.batchSearchQuery) return batchState.tempBatchResults;
-    return batchState.tempBatchResults.filter(res => {
-      return res.domain.toLowerCase().includes(batchState.batchSearchQuery) ||
+    return batchState.tempBatchResults.filter((res) => {
+      return (
+        res.domain.toLowerCase().includes(batchState.batchSearchQuery) ||
         res.url.toLowerCase().includes(batchState.batchSearchQuery) ||
-        (res.content.title && res.content.title.toLowerCase().includes(batchState.batchSearchQuery));
+        (res.content.title && res.content.title.toLowerCase().includes(batchState.batchSearchQuery))
+      );
     });
   }
 
@@ -28,7 +30,8 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
     reviewContainer.classList.remove('hidden');
     if (headerActions) headerActions.classList.remove('hidden');
     if (reviewDoneBtn) {
-      reviewDoneBtn.textContent = batchState.lastBatchInputMode === 'paste' ? 'Paste new URLs' : 'Upload new CSV';
+      reviewDoneBtn.textContent =
+        batchState.lastBatchInputMode === 'paste' ? 'Paste new URLs' : 'Upload new CSV';
     }
 
     const isTeamPlan = (state.currentPlan || '').toLowerCase() === 'team';
@@ -118,7 +121,9 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
         searchToggle.classList.add('hidden');
       }
 
-      const allSaved = batchState.tempBatchResults.length > 0 && batchState.tempBatchResults.every(r => r.status === 'saved');
+      const allSaved =
+        batchState.tempBatchResults.length > 0 &&
+        batchState.tempBatchResults.every((r) => r.status === 'saved');
       if (allSaved) {
         if (saveAllBtn) {
           saveAllBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2-2z"></path></svg>`;
@@ -138,7 +143,7 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
     if (!reviewList) return;
     reviewList.innerHTML = '';
 
-    const readyItems = batchState.tempBatchResults.filter(r => r.status === 'ready').length;
+    const readyItems = batchState.tempBatchResults.filter((r) => r.status === 'ready').length;
     if (readyCount) readyCount.textContent = readyItems.toString();
 
     const filtered = getFilteredBatchResults();
@@ -153,7 +158,8 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
       const pagePrev = document.getElementById('batch-page-prev') as HTMLButtonElement | null;
       const pageNext = document.getElementById('batch-page-next') as HTMLButtonElement | null;
       if (pagePrev) pagePrev.disabled = batchState.batchCurrentPage === 1;
-      if (pageNext) pageNext.disabled = batchState.batchCurrentPage === totalPages || totalPages === 0;
+      if (pageNext)
+        pageNext.disabled = batchState.batchCurrentPage === totalPages || totalPages === 0;
     } else {
       if (paginationBar) paginationBar.classList.add('hidden');
     }
@@ -293,13 +299,14 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
       <p><strong>Value proposition:</strong> ${res.analysis.valueProposition || '—'}</p>
       <p>
         <strong>Best sales persona:</strong> ${res.analysis.bestSalesPersona?.persona || '—'}
-        ${res.analysis.bestSalesPersona?.reason
-        ? `<br />
+        ${
+          res.analysis.bestSalesPersona?.reason
+            ? `<br />
         <span style="opacity:0.7; font-size:13px">
           (${res.analysis.bestSalesPersona.reason})
         </span>`
-        : ''
-      }
+            : ''
+        }
       </p>
       <p><strong>Sales angle:</strong> ${res.analysis.salesAngle || '—'}</p>
 
@@ -341,5 +348,10 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
     });
   }
 
-  return { getFilteredBatchResults, showBatchReviewScreen, syncBatchSavedStatuses, renderBatchResultsPage };
+  return {
+    getFilteredBatchResults,
+    showBatchReviewScreen,
+    syncBatchSavedStatuses,
+    renderBatchResultsPage,
+  };
 }

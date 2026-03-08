@@ -172,7 +172,9 @@ async function processSingleUrl(url: string, telemetry: Map<string, BatchTelemet
   let result: Awaited<ReturnType<typeof analyzeWebsiteContent>>;
   try {
     const trimmedContent = trimContentForAnalyze(contentForAnalyze);
-    result = await enqueueAnalyzeCall(() => analyzeWebsiteContent(trimmedContent, false, false, true));
+    result = await enqueueAnalyzeCall(() =>
+      analyzeWebsiteContent(trimmedContent, false, false, true)
+    );
     batchState.analyzeCircuitOpenUntil = 0;
   } catch (err: unknown) {
     throw withStageError('analyze', normalizeErrorMessage(err));

@@ -43,7 +43,8 @@ export function navigateTo(view: 'analysis' | 'saved' | 'batch' | 'profile' | 's
       headerSubtitle.style.cursor = 'default';
       headerSubtitle.onclick = null;
     } else {
-      headerSubtitle.innerHTML = '<div style="display:flex; align-items:center; gap:4px; margin-left:-2px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> <span>Back</span></div>';
+      headerSubtitle.innerHTML =
+        '<div style="display:flex; align-items:center; gap:4px; margin-left:-2px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> <span>Back</span></div>';
       headerSubtitle.style.cursor = 'pointer';
       headerSubtitle.onclick = (e: MouseEvent) => {
         e.stopPropagation();

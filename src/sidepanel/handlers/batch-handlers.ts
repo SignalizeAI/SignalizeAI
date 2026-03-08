@@ -38,7 +38,10 @@ export function setupBatchHandlers() {
     const isTeamPlan = (state.currentPlan || '').toLowerCase() === 'team';
     const limit = isTeamPlan ? 100 : 10;
 
-    const urlsToProcess = batchState.pendingCsvUrls.length > limit ? batchState.pendingCsvUrls.slice(0, limit) : batchState.pendingCsvUrls;
+    const urlsToProcess =
+      batchState.pendingCsvUrls.length > limit
+        ? batchState.pendingCsvUrls.slice(0, limit)
+        : batchState.pendingCsvUrls;
     batchState.lastBatchInputMode = 'csv';
     startBatchProcess(urlsToProcess);
   });
@@ -180,14 +183,18 @@ export function setupBatchHandlers() {
   });
 
   selectAllBtn?.addEventListener('click', () => {
-    const checkboxes = document.querySelectorAll('.batch-item-checkbox:not(:disabled)') as NodeListOf<HTMLInputElement>;
-    const anyUnchecked = Array.from(checkboxes).some(cb => !cb.checked);
-    checkboxes.forEach((cb) => cb.checked = anyUnchecked);
+    const checkboxes = document.querySelectorAll(
+      '.batch-item-checkbox:not(:disabled)'
+    ) as NodeListOf<HTMLInputElement>;
+    const anyUnchecked = Array.from(checkboxes).some((cb) => !cb.checked);
+    checkboxes.forEach((cb) => (cb.checked = anyUnchecked));
   });
 
   saveSelectedBtn?.addEventListener('click', async () => {
-    const checkboxes = document.querySelectorAll('.batch-item-checkbox:checked') as NodeListOf<HTMLInputElement>;
-    const indicesToSave = Array.from(checkboxes).map(cb => parseInt(cb.dataset.index!));
+    const checkboxes = document.querySelectorAll(
+      '.batch-item-checkbox:checked'
+    ) as NodeListOf<HTMLInputElement>;
+    const indicesToSave = Array.from(checkboxes).map((cb) => parseInt(cb.dataset.index!));
     if (indicesToSave.length === 0) {
       const { showToast } = await import('../toast.js');
       showToast('No items selected');
@@ -395,7 +402,6 @@ function appendResultItem(url: string, statusText: string, isError: boolean) {
   list.scrollTop = list.scrollHeight;
 }
 
-
 async function startBatchProcess(urls: string[]) {
   const uploadContainer = document.getElementById('batch-upload-container');
   if (uploadContainer) uploadContainer.style.display = 'none';
@@ -419,7 +425,10 @@ function renderBatchResultsPage() {
   renderFlow.renderBatchResultsPage();
 }
 
-async function saveSpecificBatchSelection(indicesToSave: number[], triggeredBtn: HTMLButtonElement) {
+async function saveSpecificBatchSelection(
+  indicesToSave: number[],
+  triggeredBtn: HTMLButtonElement
+) {
   await saveFlow?.saveSpecificBatchSelection(indicesToSave, triggeredBtn);
 }
 

@@ -2,12 +2,20 @@
 <div
   id="manual-url-container"
   class="website-content-card"
-  style="margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; padding: 16px;"
+  style="margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; padding: 16px"
 >
-  <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; margin-left: 4px;">
-     Quick Website Check
+  <div
+    style="
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+      margin-left: 4px;
+    "
+  >
+    Quick Website Check
   </div>
-  <div style="display: flex; gap: 8px; align-items: center;">
+  <div style="display: flex; gap: 8px; align-items: center">
     <input
       type="url"
       id="manual-url-input"
@@ -28,8 +36,14 @@
         transition: all 0.2s ease;
         box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
       "
-      onfocus="this.style.borderColor='var(--accent-color)'; this.style.boxShadow='0 0 0 2px var(--accent-light)';"
-      onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='inset 0 1px 2px rgba(0, 0, 0, 0.04)';"
+      onfocus="
+        this.style.borderColor = 'var(--accent-color)';
+        this.style.boxShadow = '0 0 0 2px var(--accent-light)';
+      "
+      onblur="
+        this.style.borderColor = 'var(--border-color)';
+        this.style.boxShadow = 'inset 0 1px 2px rgba(0, 0, 0, 0.04)';
+      "
     />
     <button
       id="manual-url-btn"
@@ -43,13 +57,15 @@
         color: var(--bg-primary);
         border: none;
         font-weight: 600;
-        transition: transform 0.1s, box-shadow 0.2s;
+        transition:
+          transform 0.1s,
+          box-shadow 0.2s;
         display: inline-flex;
         align-items: center;
         justify-content: center;
       "
-      onmousedown="this.style.transform='translateY(1px)';"
-      onmouseup="this.style.transform='translateY(-1px)';"
+      onmousedown="this.style.transform = 'translateY(1px)'"
+      onmouseup="this.style.transform = 'translateY(-1px)'"
     >
       Analyze
     </button>

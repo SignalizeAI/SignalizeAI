@@ -112,9 +112,9 @@ export async function fetchAndExtractContent(
     const fetchRes = viaBackground
       ? await sendBackgroundFetchText(url)
       : await (async () => {
-        const res = await fetch(url);
-        return { ok: true, status: res.status, text: await res.text() };
-      })();
+          const res = await fetch(url);
+          return { ok: true, status: res.status, text: await res.text() };
+        })();
 
     if (!fetchRes.ok) {
       return { ok: false, error: fetchRes.error || 'Fetch failed' };
@@ -187,7 +187,10 @@ async function sendBackgroundFetchText(
   return await new Promise((resolve) => {
     chrome.runtime.sendMessage({ type: 'BG_FETCH_TEXT', url }, (response) => {
       if (chrome.runtime.lastError) {
-        resolve({ ok: false, error: chrome.runtime.lastError.message || 'Background fetch failed' });
+        resolve({
+          ok: false,
+          error: chrome.runtime.lastError.message || 'Background fetch failed',
+        });
         return;
       }
       resolve(response || { ok: false, error: 'No response from background' });

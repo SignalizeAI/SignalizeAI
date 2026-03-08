@@ -27,7 +27,11 @@ export function createBatchSaveFlow(deps: SaveFlowDeps) {
         const user = sessionData?.session?.user;
         if (!user) throw new Error('Not logged in');
 
-        const { error } = await supabase.from('saved_analyses').delete().eq('user_id', user.id).eq('domain', res.domain);
+        const { error } = await supabase
+          .from('saved_analyses')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('domain', res.domain);
         if (error) throw error;
 
         res.status = 'ready';
@@ -55,7 +59,10 @@ export function createBatchSaveFlow(deps: SaveFlowDeps) {
     }
   }
 
-  async function saveSpecificBatchSelection(indicesToSave: number[], triggeredBtn: HTMLButtonElement) {
+  async function saveSpecificBatchSelection(
+    indicesToSave: number[],
+    triggeredBtn: HTMLButtonElement
+  ) {
     const originalHtml = triggeredBtn.innerHTML;
     triggeredBtn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" class="spin"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
     triggeredBtn.disabled = true;
@@ -96,7 +103,7 @@ export function createBatchSaveFlow(deps: SaveFlowDeps) {
       saveAllBtn.disabled = true;
     }
 
-    const allSaved = batchState.tempBatchResults.every(r => r.status === 'saved');
+    const allSaved = batchState.tempBatchResults.every((r) => r.status === 'saved');
     let actionLabel = '';
 
     try {
@@ -105,11 +112,15 @@ export function createBatchSaveFlow(deps: SaveFlowDeps) {
         const user = sessionData?.session?.user;
         if (!user) throw new Error('Not logged in');
 
-        const domains = batchState.tempBatchResults.map(r => r.domain);
-        const { error } = await supabase.from('saved_analyses').delete().eq('user_id', user.id).in('domain', domains);
+        const domains = batchState.tempBatchResults.map((r) => r.domain);
+        const { error } = await supabase
+          .from('saved_analyses')
+          .delete()
+          .eq('user_id', user.id)
+          .in('domain', domains);
         if (error) throw error;
 
-        batchState.tempBatchResults.forEach(r => r.status = 'ready');
+        batchState.tempBatchResults.forEach((r) => (r.status = 'ready'));
         actionLabel = 'Unsaved all';
       } else {
         const indicesToSave = batchState.tempBatchResults
