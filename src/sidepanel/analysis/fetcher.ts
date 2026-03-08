@@ -105,18 +105,29 @@ function extractContentFromDoc(doc: Document, url: string): ExtractedContent {
 }
 
 export async function fetchAndExtractContent(
-  url: string
+  url: string,
+  viaBackground: boolean = false
 ): Promise<{ ok: boolean; content?: ExtractedContent; reason?: string; error?: string }> {
   try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      if (res.status === 403 || res.status === 401) {
-        return { ok: false, reason: 'RESTRICTED', error: `HTTP Error: ${res.status}` };
-      }
-      return { ok: false, error: `HTTP error: ${res.status}` };
+    const fetchRes = viaBackground
+      ? await sendBackgroundFetchText(url)
+      : await (async () => {
+        const res = await fetch(url);
+        return { ok: true, status: res.status, text: await res.text() };
+      })();
+
+    if (!fetchRes.ok) {
+      return { ok: false, error: fetchRes.error || 'Fetch failed' };
     }
 
-    let html = await res.text();
+    if (fetchRes.status < 200 || fetchRes.status >= 300) {
+      if (fetchRes.status === 403 || fetchRes.status === 401) {
+        return { ok: false, reason: 'RESTRICTED', error: `HTTP Error: ${fetchRes.status}` };
+      }
+      return { ok: false, error: `HTTP error: ${fetchRes.status}` };
+    }
+
+    let html = fetchRes.text;
 
     // 1. Extract the "Essence": Title and Description
     const titleMatch = html.match(/<title[\s\S]*?>([\s\S]*?)<\/title>/i);
@@ -168,4 +179,18 @@ export async function fetchAndExtractContent(
   } catch (err: any) {
     return { ok: false, error: err.message };
   }
+}
+
+async function sendBackgroundFetchText(
+  url: string
+): Promise<{ ok: boolean; status?: number; text?: string; error?: string }> {
+  return await new Promise((resolve) => {
+    chrome.runtime.sendMessage({ type: 'BG_FETCH_TEXT', url }, (response) => {
+      if (chrome.runtime.lastError) {
+        resolve({ ok: false, error: chrome.runtime.lastError.message || 'Background fetch failed' });
+        return;
+      }
+      resolve(response || { ok: false, error: 'No response from background' });
+    });
+  });
 }

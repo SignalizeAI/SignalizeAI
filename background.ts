@@ -37,6 +37,38 @@ function notifySidePanel(): void {
   });
 }
 
+async function handleBgFetchText(url: string) {
+  const res = await fetch(url, {
+    method: 'GET',
+    redirect: 'follow',
+    credentials: 'omit',
+  });
+  const text = await res.text();
+  return { ok: true, status: res.status, text };
+}
+
+async function handleBgAnalyze(apiBaseUrl: string, token: string | null, payload: any) {
+  const res = await fetch(`${apiBaseUrl}/analyze`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+    credentials: 'omit',
+  });
+
+  const text = await res.text();
+  let data: any = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    return { ok: true, status: res.status, parseError: 'invalid_json', raw: text };
+  }
+
+  return { ok: true, status: res.status, data };
+}
+
 // Handle messages from side panel and website
 chrome.runtime.onMessage.addListener(
   (msg: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
@@ -64,6 +96,28 @@ chrome.runtime.onMessage.addListener(
         chrome.runtime.sendMessage({ type: 'SESSION_UPDATED' });
       });
       sendResponse({ ok: true });
+      return true;
+    }
+
+    if (msg.type === 'BG_FETCH_TEXT') {
+      (async () => {
+        try {
+          sendResponse(await handleBgFetchText(msg.url));
+        } catch (err: any) {
+          sendResponse({ ok: false, error: String(err?.message || err || 'Fetch failed') });
+        }
+      })();
+      return true;
+    }
+
+    if (msg.type === 'BG_ANALYZE') {
+      (async () => {
+        try {
+          sendResponse(await handleBgAnalyze(msg.apiBaseUrl, msg.token || null, msg.payload));
+        } catch (err: any) {
+          sendResponse({ ok: false, error: String(err?.message || err || 'Analyze failed') });
+        }
+      })();
       return true;
     }
 

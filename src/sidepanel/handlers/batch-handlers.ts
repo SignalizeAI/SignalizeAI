@@ -25,6 +25,20 @@ interface BatchResult {
   error?: string;
 }
 
+type BatchStage = 'extract' | 'analyze';
+
+interface BatchTelemetryEntry {
+  url: string;
+  startedAt: number;
+  extractAttempts: number;
+  analyzeAttempts: number;
+  finalStatus: 'success' | 'failed';
+  finalStage: BatchStage | 'n/a';
+  errorType: string;
+  errorMessage: string;
+  durationMs: number;
+}
+
 let isBatchCancelled = false;
 let tempBatchResults: BatchResult[] = [];
 let pendingCsvUrls: string[] = [];
@@ -33,6 +47,22 @@ let batchCurrentPage = 1;
 let isBatchSelectionMode = false;
 let lastBatchInputMode: 'csv' | 'paste' = 'csv';
 const BATCH_PAGE_SIZE = 10;
+const BATCH_CONCURRENCY = 2; // Process 2 URLs at a time
+const BATCH_ENABLE_TELEMETRY_LOG = false;
+const BATCH_DELAY_BETWEEN_GROUPS = 500; // low default pacing; adaptive cooldown handles unstable windows
+const RETRY_ATTEMPTS = 2; // Retry failed requests
+const ANALYZE_RETRY_ATTEMPTS = 4;
+const ANALYZE_RETRY_ATTEMPTS_LARGE_BATCH = 2;
+const LARGE_BATCH_THRESHOLD = 30;
+const RETRY_BASE_DELAY_MS = 1200;
+const RETRY_JITTER_MS = 300;
+const ANALYZE_RETRY_BASE_DELAY_MS = 1800;
+const MAX_BACKOFF_MS = 5000;
+const ANALYZE_FAILURE_COOLDOWN_MS = 2500;
+const ANALYZE_CIRCUIT_COOLDOWN_MS = 15000;
+let analyzeQueue: Promise<void> = Promise.resolve();
+let currentBatchSize = 0;
+let analyzeCircuitOpenUntil = 0;
 
 export function setupBatchHandlers() {
   const dropZone = document.getElementById('csv-drop-zone');
@@ -502,36 +532,91 @@ async function startBatchProcess(urls: string[]) {
     cancelBtn.removeAttribute('disabled');
   }
 
+  isBatchCancelled = false;
+  currentBatchSize = urls.length;
+  analyzeCircuitOpenUntil = 0;
   tempBatchResults = [];
   updateProgress(0, urls.length);
+  await loadQuotaFromAPI();
+  if (state.currentPlan === 'free' && state.remainingToday !== null && state.remainingToday <= 0) {
+    appendResultItem('Batch stopped', 'Daily limit reached', true);
+    setTimeout(() => {
+      if (progressContainer) progressContainer.classList.add('hidden');
+      showBatchReviewScreen();
+    }, 700);
+    return;
+  }
 
-  for (let i = 0; i < urls.length; i++) {
+  let processedCount = 0;
+  let stopDueToQuota = false;
+  const telemetry = new Map<string, BatchTelemetryEntry>();
+  let sawTransientAnalyzeFailureInBatch = false;
+
+  // Process URLs in concurrent batches
+  for (let i = 0; i < urls.length; i += BATCH_CONCURRENCY) {
     if (isBatchCancelled) {
       appendResultItem('Batch cancelled', 'Stopped', true);
       break;
     }
 
-    const url = urls[i];
-    try {
-      const result = await processSingleUrl(url);
-      tempBatchResults.push({
-        url,
-        domain: new URL(url).hostname,
-        content: result.content,
-        analysis: result.analysis,
-        contentHash: result.contentHash,
-        status: 'ready',
-      });
-      appendResultItem(url, 'Analyzed', false);
-    } catch (err: any) {
-      appendResultItem(url, err.message || 'Error', true);
+    const batchUrls = urls.slice(i, i + BATCH_CONCURRENCY);
+    
+    // Process batch concurrently
+    const batchPromises = batchUrls.map(url =>
+      processSingleUrlWithRetry(url, telemetry).catch(err => ({ url, error: err }))
+    );
+
+    const batchResults = await Promise.all(batchPromises);
+
+    // Handle results
+    for (const result of batchResults) {
+      if ('error' in result && result.error) {
+        markTelemetryFailure(telemetry, result.url, result.error);
+        const errMessage = normalizeErrorMessage(result.error);
+        appendResultItem(result.url, errMessage, true);
+        if (isQuotaError(result.error)) {
+          stopDueToQuota = true;
+        }
+        if (isTransientAnalyzeFailure(result.error)) {
+          sawTransientAnalyzeFailureInBatch = true;
+        }
+      } else {
+        markTelemetrySuccess(telemetry, result.url);
+        tempBatchResults.push({
+          url: result.url,
+          domain: new URL(result.url).hostname,
+          content: result.content,
+          analysis: result.analysis,
+          contentHash: result.contentHash,
+          status: 'ready',
+        });
+        appendResultItem(result.url, 'Analyzed', false);
+      }
     }
-    updateProgress(i + 1, urls.length);
+
+    processedCount += batchUrls.length;
+    updateProgress(Math.min(processedCount, urls.length), urls.length);
+
+    if (stopDueToQuota) {
+      appendResultItem('Batch stopped', 'Daily limit reached', true);
+      break;
+    }
+
+    // Add delay between batches (except after last batch)
+    if (i + BATCH_CONCURRENCY < urls.length && !isBatchCancelled && !stopDueToQuota) {
+      if (sawTransientAnalyzeFailureInBatch) {
+        await new Promise(resolve => setTimeout(resolve, ANALYZE_FAILURE_COOLDOWN_MS));
+        sawTransientAnalyzeFailureInBatch = false;
+      }
+      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_BETWEEN_GROUPS));
+    }
   }
 
   // Done analyzing, move to Review
+  logBatchTelemetrySummary(telemetry, urls);
   setTimeout(() => {
     if (progressContainer) progressContainer.classList.add('hidden');
+    currentBatchSize = 0;
     showBatchReviewScreen();
   }, 1000);
 }
@@ -1083,24 +1168,380 @@ function cleanTitle(title: string): string {
   return match && match[1].length > 3 ? match[1].trim() : title.trim();
 }
 
-async function processSingleUrl(url: string) {
-  await loadQuotaFromAPI();
-  if (state.currentPlan === 'free' && state.remainingToday !== null && state.remainingToday <= 0) {
-    throw new Error('Daily limit reached');
+async function processSingleUrl(url: string, telemetry: Map<string, BatchTelemetryEntry>) {
+  const entry = getOrCreateTelemetryEntry(telemetry, url);
+  entry.extractAttempts += 1;
+
+  const response = await fetchAndExtractContent(url, true);
+  const extractErrorMessage = response?.error || response?.reason || 'Extraction failed';
+  const contentForAnalyze =
+    response?.ok && response.content
+      ? response.content
+      : shouldUseUrlOnlyFallback(extractErrorMessage)
+        ? buildUrlOnlyContent(url, extractErrorMessage)
+        : null;
+
+  if (!contentForAnalyze) throw withStageError('extract', extractErrorMessage);
+
+  if (isAnalyzeCircuitOpen()) {
+    return {
+      url,
+      content: contentForAnalyze,
+      analysis: buildDegradedAnalysis(contentForAnalyze, 'AI temporarily unavailable (cooldown)'),
+      contentHash: await hashContent(contentForAnalyze),
+    };
   }
 
-  const response = await fetchAndExtractContent(url);
-  if (!response?.ok || !response.content) {
-    throw new Error(response?.error || response?.reason || 'Extraction failed');
+  entry.analyzeAttempts += 1;
+  let result: Awaited<ReturnType<typeof analyzeWebsiteContent>>;
+  try {
+    const trimmedContent = trimContentForAnalyze(contentForAnalyze);
+    // Serialize AI calls to reduce backend burst pressure that leads to 503s.
+    result = await enqueueAnalyzeCall(() => analyzeWebsiteContent(trimmedContent, false, false, true));
+    analyzeCircuitOpenUntil = 0;
+  } catch (err: unknown) {
+    throw withStageError('analyze', normalizeErrorMessage(err));
   }
 
-  const result = await analyzeWebsiteContent(response.content, false, false);
-  if (result.blocked) throw new Error('Quota reached');
-  if (!result.analysis) throw new Error('AI analysis failed');
+  if (result.quota) {
+    state.currentPlan = result.quota.plan;
+    state.usedToday = result.quota.used_today;
+    state.remainingToday = result.quota.remaining_today;
+    state.dailyLimitFromAPI = result.quota.daily_limit;
+    state.maxSavedLimit = result.quota.max_saved;
+    state.totalSavedCount = result.quota.total_saved;
+    renderQuotaBanner();
+  }
+  if (result.blocked) throw withStageError('analyze', 'Daily limit reached');
+  if (!result.analysis) throw withStageError('analyze', 'AI analysis failed');
 
   return {
-    content: response.content,
+    url,
+    content: contentForAnalyze,
     analysis: result.analysis,
-    contentHash: await hashContent(response.content),
+    contentHash: await hashContent(contentForAnalyze),
   };
+}
+
+function enqueueAnalyzeCall<T>(task: () => Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const runTask = async () => {
+      try {
+        const result = await task();
+        resolve(result);
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    analyzeQueue = analyzeQueue.then(runTask, runTask).then(
+      () => undefined,
+      () => undefined
+    );
+  });
+}
+
+async function processSingleUrlWithRetry(
+  url: string,
+  telemetry: Map<string, BatchTelemetryEntry>,
+  attempt = 1
+): Promise<any> {
+  try {
+    return await processSingleUrl(url, telemetry);
+  } catch (err: any) {
+    const isAnalyzeStage = getErrorStage(err) === 'analyze';
+    const analyzeMaxAttempts =
+      currentBatchSize >= LARGE_BATCH_THRESHOLD
+        ? ANALYZE_RETRY_ATTEMPTS_LARGE_BATCH
+        : ANALYZE_RETRY_ATTEMPTS;
+    const maxAttempts = isAnalyzeStage ? analyzeMaxAttempts : RETRY_ATTEMPTS;
+    const shouldRetry = isRetryableError(err) && attempt < maxAttempts;
+
+    if (shouldRetry) {
+      const baseDelay = isAnalyzeStage ? ANALYZE_RETRY_BASE_DELAY_MS : RETRY_BASE_DELAY_MS;
+      const backoff = Math.min(baseDelay * Math.pow(2, attempt - 1), MAX_BACKOFF_MS);
+      const jitter = Math.floor(Math.random() * RETRY_JITTER_MS);
+      await new Promise(resolve => setTimeout(resolve, backoff + jitter));
+      return processSingleUrlWithRetry(url, telemetry, attempt + 1);
+    }
+
+    if (isAnalyzeStage && isRetryableError(err)) {
+      // Open a short circuit window to avoid spamming failing analyze requests.
+      analyzeCircuitOpenUntil = Math.max(
+        analyzeCircuitOpenUntil,
+        Date.now() + ANALYZE_CIRCUIT_COOLDOWN_MS
+      );
+      const degradedContent = buildUrlOnlyContent(url, 'AI temporarily unavailable');
+      return {
+        url,
+        content: degradedContent,
+        analysis: buildDegradedAnalysis(degradedContent, normalizeErrorMessage(err)),
+        contentHash: await hashContent(degradedContent),
+      };
+    }
+
+    throw err;
+  }
+}
+
+function withStageError(stage: BatchStage, message: string): Error & { stage: BatchStage } {
+  const error = new Error(message) as Error & { stage: BatchStage };
+  error.stage = stage;
+  return error;
+}
+
+function trimContentForAnalyze(content: Content): Content {
+  const title = (content.title || '').trim().slice(0, 220);
+  const metaDescription = (content.metaDescription || '').trim().slice(0, 450);
+
+  const headings = content.headings
+    .map((h) => (h || '').replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .slice(0, 12)
+    .map((h) => h.slice(0, 180));
+
+  let totalParagraphChars = 0;
+  const paragraphs: string[] = [];
+  for (const raw of content.paragraphs) {
+    if (paragraphs.length >= 18) break;
+    const cleaned = (raw || '').replace(/\s+/g, ' ').trim();
+    if (!cleaned) continue;
+
+    const clipped = cleaned.slice(0, 420);
+    if (totalParagraphChars + clipped.length > 8000) break;
+
+    paragraphs.push(clipped);
+    totalParagraphChars += clipped.length;
+  }
+
+  return {
+    ...content,
+    title,
+    metaDescription,
+    headings,
+    paragraphs,
+  };
+}
+
+function shouldUseUrlOnlyFallback(errorMessage: string): boolean {
+  const msg = (errorMessage || '').toLowerCase();
+  if (!msg) return false;
+
+  const code = parseStatusCode(msg);
+  if (code !== null) {
+    if ([401, 403, 405, 406, 408, 409, 425, 429, 500, 502, 503, 504].includes(code)) return true;
+    if (code >= 400 && code < 500) return false;
+  }
+
+  return (
+    msg.includes('restricted') ||
+    msg.includes('forbidden') ||
+    msg.includes('blocked') ||
+    msg.includes('thin_content') ||
+    msg.includes('timeout') ||
+    msg.includes('failed to fetch') ||
+    msg.includes('network')
+  );
+}
+
+function buildUrlOnlyContent(url: string, reason: string): Content {
+  const hostname = new URL(url).hostname.replace(/^www\./, '');
+  const label = hostname.split('.').filter(Boolean)[0] || hostname;
+  const title = label.charAt(0).toUpperCase() + label.slice(1);
+
+  return {
+    url,
+    title,
+    metaDescription: `Limited analysis: content extraction unavailable (${reason}).`,
+    headings: [title, hostname],
+    paragraphs: [
+      `Website: ${hostname}`,
+      `URL: ${url}`,
+      `Extraction issue: ${reason}`,
+    ],
+  };
+}
+
+function buildDegradedAnalysis(content: Content, reason: string) {
+  const domain = new URL(content.url).hostname.replace(/^www\./, '');
+  return {
+    whatTheyDo: `Automatic fallback summary for ${domain}.`,
+    targetCustomer: 'Unknown (AI service temporarily unavailable).',
+    valueProposition: 'Could not be reliably inferred from full page content.',
+    salesAngle: `Lead with discovery questions and verify fit manually. (${reason})`,
+    salesReadinessScore: 20,
+    bestSalesPersona: {
+      persona: 'Mid-Market AE',
+      reason: 'Fallback default due to temporary AI service unavailability.',
+    },
+    recommendedOutreach: {
+      persona: 'Account Executive',
+      goal: 'Start a qualification conversation',
+      angle: 'Acknowledge limited context and ask targeted discovery questions',
+      message: `Hi team at ${domain}, I looked at your site and wanted to ask a few questions to understand your priorities and see if there's a fit.`,
+    },
+  };
+}
+
+function getOrCreateTelemetryEntry(
+  telemetry: Map<string, BatchTelemetryEntry>,
+  url: string
+): BatchTelemetryEntry {
+  const existing = telemetry.get(url);
+  if (existing) return existing;
+
+  const entry: BatchTelemetryEntry = {
+    url,
+    startedAt: Date.now(),
+    extractAttempts: 0,
+    analyzeAttempts: 0,
+    finalStatus: 'failed',
+    finalStage: 'n/a',
+    errorType: '',
+    errorMessage: '',
+    durationMs: 0,
+  };
+  telemetry.set(url, entry);
+  return entry;
+}
+
+function markTelemetrySuccess(telemetry: Map<string, BatchTelemetryEntry>, url: string) {
+  const entry = getOrCreateTelemetryEntry(telemetry, url);
+  entry.finalStatus = 'success';
+  entry.finalStage = 'analyze';
+  entry.errorType = '';
+  entry.errorMessage = '';
+  entry.durationMs = Date.now() - entry.startedAt;
+}
+
+function markTelemetryFailure(
+  telemetry: Map<string, BatchTelemetryEntry>,
+  url: string,
+  err: unknown
+) {
+  const entry = getOrCreateTelemetryEntry(telemetry, url);
+  const stage = getErrorStage(err);
+  const message = normalizeErrorMessage(err);
+  entry.finalStatus = 'failed';
+  entry.finalStage = stage;
+  entry.errorType = classifyErrorType(err, stage);
+  entry.errorMessage = message;
+  entry.durationMs = Date.now() - entry.startedAt;
+}
+
+function getErrorStage(err: unknown): BatchStage | 'n/a' {
+  const stage = (err as { stage?: BatchStage })?.stage;
+  if (stage === 'extract' || stage === 'analyze') return stage;
+  return 'n/a';
+}
+
+function classifyErrorType(err: unknown, stage: BatchStage | 'n/a'): string {
+  const message = normalizeErrorMessage(err).toLowerCase();
+  if (isQuotaError(err)) return 'quota_limit';
+
+  const code = parseStatusCode(message);
+  if (code !== null) return `http_${code}`;
+
+  if (message.includes('timeout') || message.includes('timed out')) return 'timeout';
+  if (message.includes('network') || message.includes('failed to fetch')) return 'network';
+  if (message.includes('invalid json')) return 'backend_response';
+  if (message.includes('thin_content')) return 'thin_content';
+  if (message.includes('restricted')) return 'restricted';
+
+  if (stage === 'extract') return 'extract_error';
+  if (stage === 'analyze') return 'analyze_error';
+  return 'unknown';
+}
+
+function logBatchTelemetrySummary(
+  telemetry: Map<string, BatchTelemetryEntry>,
+  inputUrls: string[]
+) {
+  if (!BATCH_ENABLE_TELEMETRY_LOG) return;
+  if (telemetry.size === 0) return;
+
+  const rows = inputUrls
+    .filter((url) => telemetry.has(url))
+    .map((url) => telemetry.get(url)!)
+    .map((entry) => ({
+      url: entry.url,
+      status: entry.finalStatus,
+      stage: entry.finalStage,
+      extract_attempts: entry.extractAttempts,
+      analyze_attempts: entry.analyzeAttempts,
+      error_type: entry.errorType || '-',
+      error: entry.errorMessage || '-',
+      duration_ms: entry.durationMs,
+    }));
+
+  const successCount = rows.filter((r) => r.status === 'success').length;
+  const failedCount = rows.length - successCount;
+
+  console.groupCollapsed(
+    `[Batch Telemetry] processed=${rows.length} success=${successCount} failed=${failedCount}`
+  );
+  console.table(rows);
+  console.groupEnd();
+}
+
+function normalizeErrorMessage(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err || 'Error');
+  return message?.trim() || 'Error';
+}
+
+function parseStatusCode(message: string): number | null {
+  const match = message.match(/\b(4\d{2}|5\d{2})\b/);
+  if (!match) return null;
+  const code = Number(match[1]);
+  return Number.isFinite(code) ? code : null;
+}
+
+function isQuotaError(err: unknown): boolean {
+  const message = normalizeErrorMessage(err).toLowerCase();
+  return (
+    message.includes('daily limit reached') ||
+    message.includes('quota reached') ||
+    message.includes('limit reached')
+  );
+}
+
+function isRetryableError(err: unknown): boolean {
+  const message = normalizeErrorMessage(err).toLowerCase();
+  if (!message) return false;
+  if (isQuotaError(err) || message.includes('not logged in')) return false;
+
+  const code = parseStatusCode(message);
+  if (code !== null) {
+    if ([408, 409, 425, 429, 500, 502, 503, 504].includes(code)) return true;
+    if (code >= 400 && code < 500) return false;
+  }
+
+  const retryableMarkers = [
+    'service unavailable',
+    'ai service unavailable',
+    'analysis request failed',
+    'invalid json from backend',
+    'network',
+    'failed to fetch',
+    'timeout',
+    'timed out',
+    'temporarily unavailable',
+    'rate limit',
+    'too many requests',
+    'gateway',
+    'econnreset',
+    'socket hang up',
+  ];
+
+  return retryableMarkers.some((marker) => message.includes(marker));
+}
+
+function isTransientAnalyzeFailure(err: unknown): boolean {
+  if (getErrorStage(err) !== 'analyze') return false;
+  if (isQuotaError(err)) return false;
+  return isRetryableError(err);
+}
+
+function isAnalyzeCircuitOpen(): boolean {
+  return Date.now() < analyzeCircuitOpenUntil;
 }

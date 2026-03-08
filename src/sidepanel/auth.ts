@@ -119,7 +119,6 @@ export async function restoreSessionFromStorage(): Promise<void> {
   const { supabaseSession } = await chrome.storage.local.get('supabaseSession');
 
   if (!supabaseSession?.access_token || !supabaseSession?.refresh_token) {
-    console.log('No stored Supabase session');
     return;
   }
 
@@ -130,7 +129,5 @@ export async function restoreSessionFromStorage(): Promise<void> {
 
   if (error) {
     console.error('Failed to restore session', error);
-  } else {
-    console.log('Supabase session restored in extension');
   }
 }
