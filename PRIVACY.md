@@ -1,6 +1,6 @@
 # Privacy Policy for SignalizeAI
 
-**Last updated:** 27 February 2026
+**Last updated:** 9 March 2026
 
 SignalizeAI (“we”, “our”, or “the extension”) is a Chrome and Firefox extension designed to help users analyze publicly available business websites and generate sales-related insights.
 
@@ -10,7 +10,12 @@ We take user privacy seriously. This Privacy Policy explains what data we collec
 
 ### 1.1 Website Content
 
-SignalizeAI processes **publicly available content** from the currently active browser tab, including:
+SignalizeAI processes **publicly available content** from:
+
+- The currently active browser tab (single analysis), and
+- User-submitted URLs in batch mode (CSV upload or pasted URL list)
+
+Processed content may include:
 
 - Page title
 - Meta description
@@ -27,7 +32,16 @@ We do **not** collect:
 - Cookies
 - Session data from websites
 
-### 1.2 User Account Information
+### 1.2 URL Inputs for Batch Analysis
+
+If a user runs batch analysis, SignalizeAI processes the URL list they provide (via CSV or pasted text) to fetch publicly available website content and generate analyses.
+
+This includes:
+
+- Submitted URLs
+- Normalized domains derived from those URLs
+
+### 1.3 User Account Information
 
 If a user chooses to sign in using Google:
 
@@ -36,7 +50,7 @@ If a user chooses to sign in using Google:
 
 Authentication is handled securely via **Supabase Authentication**.
 
-### 1.3 Saved Analyses (Optional)
+### 1.4 Saved Analyses (Optional)
 
 If a user chooses to save analyses:
 
@@ -52,6 +66,7 @@ Collected data is used strictly for:
 
 - Generating AI-based business insights
 - Displaying results within the extension
+- Running user-requested batch analyses
 - Saving user-requested analyses
 - Improving extension functionality and user experience within the extension
 
@@ -87,7 +102,10 @@ SignalizeAI requests the following permissions:
 - **scripting**: To inject the content extraction script into the active tab on demand
 - **storage**: To save user settings and preferences
 - **sidePanel / sidebar_action**: To display analysis results (Chrome uses Side Panel; Firefox uses the sidebar)
-- **Host permissions**: `https://*.supabase.co/*` and `https://api.signalizeai.org/*` for authentication and API requests
+- **Host permissions**:
+  - `https://*.supabase.co/*` for authentication and storage
+  - `https://api.signalizeai.org/*` and `https://dev-api.signalizeai.org/*` for API requests (environment-dependent)
+  - `<all_urls>` to allow user-initiated website analysis across arbitrary domains
 
 These permissions are used **only for core functionality**.
 
