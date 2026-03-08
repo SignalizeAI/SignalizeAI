@@ -1,5 +1,4 @@
 import { state } from '../state.js';
-import { showToast } from '../toast.js';
 import {
   mapBatchResultToExportItem,
   parseUrlsFromCsv,
@@ -264,7 +263,6 @@ export function setupBatchHandlers() {
   });
 
   pageNext?.addEventListener('click', () => {
-    const isTeamPlan = (state.currentPlan || '').toLowerCase() === 'team';
     const totalFiltered = getFilteredBatchResults().length;
     const totalPages = Math.ceil(totalFiltered / BATCH_PAGE_SIZE);
     if (batchState.batchCurrentPage < totalPages) {
@@ -352,38 +350,6 @@ async function handleFileUpload(file: File) {
   }
 }
 
-function showBatchLimitError(urls: string[], limit: number, isTeamPlan: boolean) {
-  const uploadContainer = document.getElementById('batch-upload-container');
-  const errorContainer = document.getElementById('batch-error-container');
-  const errorMsg = document.getElementById('batch-error-message');
-  const processAnywayBtn = document.getElementById('batch-process-anyway-btn') as HTMLButtonElement;
-  const closeBtn = document.getElementById('batch-error-close-btn');
-
-  if (!uploadContainer || !errorContainer || !errorMsg || !processAnywayBtn || !closeBtn) return;
-
-  uploadContainer.style.display = 'none';
-  errorContainer.classList.remove('hidden');
-
-  if (isTeamPlan) {
-    errorMsg.innerHTML = `There are more than 100 URLs in this CSV (${urls.length} found). To view all at once, you can contact us via <a href="mailto:support@signalize.org" style="color: var(--accent-color); text-decoration: underline;">support@signalize.org</a> for custom plans made only for you.`;
-    processAnywayBtn.textContent = 'Analyze the first 100';
-  } else {
-    errorMsg.innerHTML = `There are more than 10 URLs in this CSV (${urls.length} found) or upload a new CSV with 10 rows. To view up to 100 analyses at once, <span style="font-weight: 600;">upgrade to Team</span>.`;
-    processAnywayBtn.textContent = 'Analyze the first 10';
-  }
-
-  processAnywayBtn.onclick = () => {
-    errorContainer.classList.add('hidden');
-    batchState.lastBatchInputMode = 'csv';
-    startBatchProcess(urls.slice(0, limit));
-  };
-
-  closeBtn.onclick = () => {
-    errorContainer.classList.add('hidden');
-    uploadContainer.style.display = 'flex';
-  };
-}
-
 function updateProgress(current: number, total: number) {
   const countSpan = document.getElementById('batch-progress-count');
   const totalSpan = document.getElementById('batch-total-count');
@@ -449,16 +415,8 @@ async function showBatchReviewScreen() {
   await renderFlow.showBatchReviewScreen();
 }
 
-async function syncBatchSavedStatuses() {
-  await renderFlow.syncBatchSavedStatuses();
-}
-
 function renderBatchResultsPage() {
   renderFlow.renderBatchResultsPage();
-}
-
-async function saveSingleResult(index: number, btn: HTMLButtonElement) {
-  await saveFlow?.saveSingleResult(index, btn);
 }
 
 async function saveSpecificBatchSelection(indicesToSave: number[], triggeredBtn: HTMLButtonElement) {

@@ -127,7 +127,7 @@ export async function fetchAndExtractContent(
       return { ok: false, error: `HTTP error: ${fetchRes.status}` };
     }
 
-    let html = fetchRes.text;
+    const html = fetchRes.text;
 
     // 1. Extract the "Essence": Title and Description
     const titleMatch = html.match(/<title[\s\S]*?>([\s\S]*?)<\/title>/i);
