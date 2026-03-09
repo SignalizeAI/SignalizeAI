@@ -38,11 +38,15 @@ function notifySidePanel(): void {
 }
 
 async function handleBgFetchText(url: string, timeoutMs: number = 30000) {
-  const res = await fetchWithTimeout(url, {
-    method: 'GET',
-    redirect: 'follow',
-    credentials: 'omit',
-  }, timeoutMs);
+  const res = await fetchWithTimeout(
+    url,
+    {
+      method: 'GET',
+      redirect: 'follow',
+      credentials: 'omit',
+    },
+    timeoutMs
+  );
   const text = await res.text();
   return { ok: true, status: res.status, text };
 }
@@ -53,15 +57,19 @@ async function handleBgAnalyze(
   payload: any,
   timeoutMs: number = 45000
 ) {
-  const res = await fetchWithTimeout(`${apiBaseUrl}/analyze`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  const res = await fetchWithTimeout(
+    `${apiBaseUrl}/analyze`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+      credentials: 'omit',
     },
-    body: JSON.stringify(payload),
-    credentials: 'omit',
-  }, timeoutMs);
+    timeoutMs
+  );
 
   const text = await res.text();
   let data: any = null;

@@ -195,18 +195,21 @@ async function sendBackgroundFetchText(
       resolve({ ok: false, error: 'Background fetch timeout' });
     }, BG_MESSAGE_TIMEOUT_MS);
 
-    chrome.runtime.sendMessage({ type: 'BG_FETCH_TEXT', url, timeoutMs: BG_FETCH_TIMEOUT_MS }, (response) => {
-      if (isResolved) return;
-      isResolved = true;
-      clearTimeout(timeoutId);
-      if (chrome.runtime.lastError) {
-        resolve({
-          ok: false,
-          error: chrome.runtime.lastError.message || 'Background fetch failed',
-        });
-        return;
+    chrome.runtime.sendMessage(
+      { type: 'BG_FETCH_TEXT', url, timeoutMs: BG_FETCH_TIMEOUT_MS },
+      (response) => {
+        if (isResolved) return;
+        isResolved = true;
+        clearTimeout(timeoutId);
+        if (chrome.runtime.lastError) {
+          resolve({
+            ok: false,
+            error: chrome.runtime.lastError.message || 'Background fetch failed',
+          });
+          return;
+        }
+        resolve(response || { ok: false, error: 'No response from background' });
       }
-      resolve(response || { ok: false, error: 'No response from background' });
-    });
+    );
   });
 }

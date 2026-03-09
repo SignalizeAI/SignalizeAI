@@ -265,7 +265,10 @@ function registerAnalyzeBackoff(err: unknown) {
 
   batchState.analyzeCooldownMs = nextCooldown;
   const jitter = Math.floor(Math.random() * RETRY_JITTER_MS);
-  batchState.analyzeBackoffUntil = Math.max(batchState.analyzeBackoffUntil, Date.now() + nextCooldown + jitter);
+  batchState.analyzeBackoffUntil = Math.max(
+    batchState.analyzeBackoffUntil,
+    Date.now() + nextCooldown + jitter
+  );
 }
 
 function decayAnalyzeCooldown() {

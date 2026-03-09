@@ -41,7 +41,9 @@ export function showSavedPaginationSkeleton(count = PAGE_SIZE): void {
   }
 }
 
-export async function fetchAndRenderPage(options?: { paginationTransition?: boolean }): Promise<void> {
+export async function fetchAndRenderPage(options?: {
+  paginationTransition?: boolean;
+}): Promise<void> {
   const paginationTransition = options?.paginationTransition === true;
   const listEl = document.getElementById('saved-list');
   const loadingEl = document.getElementById('saved-loading');
