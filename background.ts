@@ -37,6 +37,66 @@ function notifySidePanel(): void {
   });
 }
 
+async function handleBgFetchText(url: string, timeoutMs: number = 30000) {
+  const res = await fetchWithTimeout(
+    url,
+    {
+      method: 'GET',
+      redirect: 'follow',
+      credentials: 'omit',
+    },
+    timeoutMs
+  );
+  const text = await res.text();
+  return { ok: true, status: res.status, text };
+}
+
+async function handleBgAnalyze(
+  apiBaseUrl: string,
+  token: string | null,
+  payload: any,
+  timeoutMs: number = 45000
+) {
+  const res = await fetchWithTimeout(
+    `${apiBaseUrl}/analyze`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+      credentials: 'omit',
+    },
+    timeoutMs
+  );
+
+  const text = await res.text();
+  let data: any = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    return { ok: true, status: res.status, parseError: 'invalid_json', raw: text };
+  }
+
+  return { ok: true, status: res.status, data };
+}
+
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  timeoutMs: number
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 // Handle messages from side panel and website
 chrome.runtime.onMessage.addListener(
   (msg: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
@@ -66,5 +126,36 @@ chrome.runtime.onMessage.addListener(
       sendResponse({ ok: true });
       return true;
     }
+
+    if (msg.type === 'BG_FETCH_TEXT') {
+      (async () => {
+        try {
+          sendResponse(await handleBgFetchText(msg.url, Number(msg.timeoutMs) || 30000));
+        } catch (err: any) {
+          sendResponse({ ok: false, error: String(err?.message || err || 'Fetch failed') });
+        }
+      })();
+      return true;
+    }
+
+    if (msg.type === 'BG_ANALYZE') {
+      (async () => {
+        try {
+          sendResponse(
+            await handleBgAnalyze(
+              msg.apiBaseUrl,
+              msg.token || null,
+              msg.payload,
+              Number(msg.timeoutMs) || 45000
+            )
+          );
+        } catch (err: any) {
+          sendResponse({ ok: false, error: String(err?.message || err || 'Analyze failed') });
+        }
+      })();
+      return true;
+    }
+
+    return false;
   }
 );

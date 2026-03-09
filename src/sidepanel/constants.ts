@@ -76,12 +76,14 @@ export interface Settings {
   autoReanalysis: boolean;
   reanalysisMode: 'content-change' | 'every-time';
   copyFormat: 'full' | 'short';
+  theme: 'light' | 'dark' | 'system';
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   autoReanalysis: true,
   reanalysisMode: 'content-change',
   copyFormat: 'full',
+  theme: 'system',
 };
 
 export const PAGE_SIZE = 10;

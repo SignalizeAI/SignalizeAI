@@ -21,6 +21,7 @@ It is designed for sales professionals, founders, marketers, and business develo
 - Ideal customer and persona detection
 - Save and export analyses (CSV / Excel)
 - Secure Google sign-in
+- Batch analysis for CSV/pasted URLs with retry + fallback handling
 
 ## 💳 Subscription plans
 
@@ -55,14 +56,25 @@ Authentication and storage are handled securely using **Supabase**.
 
 ## 🧩 Sidepanel Structure
 
-The side panel is split into HTML partials and CSS modules for easier editing.
+The side panel uses a loader + partials + modular runtime architecture:
 
-- HTML partials live in [sidepanel-partials/](sidepanel-partials)
-  - [sidepanel.html](sidepanel.html) is a tiny loader that fetches these partials at runtime.
-  - If you edit the UI, update the partials, not the generated content.
-- CSS is split into feature files in [sidepanel-styles/](sidepanel-styles)
-  - [sidepanel.css](sidepanel.css) only imports those files.
-- Runtime loader is [sidepanel-loader.js](sidepanel-loader.js)
+- Entry and loading:
+  - [sidepanel.html](sidepanel.html): side panel shell
+  - [sidepanel-loader.ts](sidepanel-loader.ts): loads UI partials
+  - [sidepanel.ts](sidepanel.ts): runtime entrypoint
+- UI templates and styles:
+  - [sidepanel-partials/](sidepanel-partials): HTML partials used by the loader
+  - [sidepanel-styles/](sidepanel-styles): feature-level CSS files
+  - [sidepanel.css](sidepanel.css): style entry/imports
+- Runtime source:
+  - `src/sidepanel/init.ts`: side panel initialization and handler wiring
+  - `src/sidepanel/ui.ts`: core UI orchestration
+  - `src/sidepanel/handlers/`: feature handlers (auth, saved, filter, settings, batch)
+  - `src/sidepanel/analysis/`: extraction and analysis helpers
+  - `src/sidepanel/saved/`: saved/export utilities
+- Batch internals:
+  - [src/sidepanel/handlers/batch-handlers.ts](src/sidepanel/handlers/batch-handlers.ts): batch entry handler
+  - `src/sidepanel/handlers/batch/`: process, render, save, telemetry, state, constants, helpers, types
 
 ## ✅ Linting & Formatting
 

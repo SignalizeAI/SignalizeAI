@@ -51,12 +51,14 @@ export function updateSavedActionsVisibility(count: number): void {
   const searchToggleBtn = document.getElementById('search-toggle');
   const multiSelectToggle = document.getElementById('multi-select-toggle');
 
-  const showBasicActions = count > 0 ? '' : 'none';
+  const isFreePlan = (state.currentPlan || '').toLowerCase() === 'free';
+
+  const showBasicActions = count > 0 && !isFreePlan ? '' : 'none';
   if (filterToggle) filterToggle.style.display = showBasicActions;
   if (exportToggle) exportToggle.style.display = showBasicActions;
 
   if (searchToggleBtn) {
-    searchToggleBtn.style.display = count > 1 ? '' : 'none';
+    searchToggleBtn.style.display = count > 1 && !isFreePlan ? '' : 'none';
   }
 
   if (multiSelectToggle) {
@@ -152,9 +154,14 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
     <p><strong>Value proposition:</strong> ${item.value_proposition || '—'}</p>
     <p>
       <strong>Best sales persona:</strong> ${item.best_sales_persona || '—'}
+      ${
+        item.best_sales_persona_reason
+          ? `<br />
       <span style="opacity:0.7; font-size:13px">
-        ${item.best_sales_persona_reason ? `(${item.best_sales_persona_reason})` : ''}
-      </span>
+        (${item.best_sales_persona_reason})
+      </span>`
+          : ''
+      }
     </p>
     <p><strong>Sales angle:</strong> ${item.sales_angle || '—'}</p>
 
@@ -177,9 +184,9 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
       ${item.recommended_outreach_angle || '—'}
     </p>
 
-    <p style="opacity:0.9; font-size:13px">
+    <p>
       <strong>Message:</strong><br />
-      ${item.recommended_outreach_message || '—'}
+<span style="white-space: pre-wrap;">${(item.recommended_outreach_message || '—').trim()}</span>
     </p>
 
     <hr style="margin:8px 0; opacity:0.3" />

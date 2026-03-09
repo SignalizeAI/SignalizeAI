@@ -9,28 +9,28 @@
 
 .empty-icon {
   margin-bottom: 16px;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .empty-title {
   font-size: 16px;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 8px 0 !important;
 }
 
 .empty-subtitle {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-tertiary);
   margin: 0 0 20px 0 !important;
   max-width: 200px;
   line-height: 1.4;
 }
 
 .reset-button-ui {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #fff;
+  background: var(--bg-hover-strong);
+  border: 1px solid var(--border-strong);
+  color: var(--text-primary);
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 13px;
@@ -40,8 +40,8 @@
 }
 
 .reset-button-ui:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--bg-active);
+  border-color: var(--text-muted);
 }
 
 .reset-button-ui:active {
@@ -69,6 +69,7 @@
   100% {
     transform: translateY(0px);
   }
+
   50% {
     transform: translateY(-8px);
   }
@@ -78,21 +79,28 @@
   display: block;
   width: 64px;
   height: 64px;
-  filter: brightness(0) invert(1);
   opacity: 0.4;
+}
+
+[data-theme='dark'] .empty-tab-icon img {
+  filter: brightness(0) invert(1);
+}
+
+[data-theme='light'] .empty-tab-icon img {
+  filter: brightness(0) invert(0);
 }
 
 .empty-tab-title {
   font-size: 22px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--text-primary);
   margin: 0 0 12px 0;
   letter-spacing: -0.5px;
 }
 
 .empty-tab-description {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-tertiary);
   line-height: 1.6;
   margin: 0 0 32px 0;
   max-width: 280px;
@@ -111,15 +119,15 @@
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-surface);
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--bg-surface-border);
   transition: all 0.2s ease;
 }
 
 .tip-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: var(--bg-hover);
+  border-color: var(--bg-hover-strong);
   transform: translateX(4px);
 }
 
@@ -127,12 +135,19 @@
   flex-shrink: 0;
   width: 20px;
   height: 20px;
-  filter: brightness(0) invert(0.5);
+}
+
+[data-theme='dark'] .tip-item .tip-icon {
+  filter: brightness(0) invert(0.6);
+}
+
+[data-theme='light'] .tip-item .tip-icon {
+  filter: brightness(0) invert(0.4);
 }
 
 .tip-item span {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-tertiary);
   text-align: left;
   font-weight: 500;
 }

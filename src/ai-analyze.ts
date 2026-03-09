@@ -54,6 +54,9 @@ interface AnalysisResultBlocked {
 
 type AnalysisResult = AnalysisResultSuccess | AnalysisResultBlocked;
 
+const BG_ANALYZE_TIMEOUT_MS = 45000;
+const BG_MESSAGE_TIMEOUT_MS = 50000;
+
 async function getAccessToken(): Promise<string | null> {
   const { data, error } = await supabase.auth.getSession();
   if (error || !data.session) return null;
@@ -63,31 +66,43 @@ async function getAccessToken(): Promise<string | null> {
 export async function analyzeWebsiteContent(
   extracted: ExtractedContent,
   isInternal: boolean = false,
-  domainAnalyzedToday: boolean = false
+  domainAnalyzedToday: boolean = false,
+  viaBackground: boolean = false
 ): Promise<AnalysisResult> {
   const token = await getAccessToken();
 
-  const res = await fetch(`${API_BASE_URL}/analyze`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ extracted, isInternal, domainAnalyzedToday }),
-    credentials: 'omit',
-    mode: 'cors',
-  });
-
+  const payload = { extracted, isInternal, domainAnalyzedToday };
+  let status: number;
   let data: any;
-  try {
-    data = await res.json();
-  } catch {
-    throw new Error('Invalid JSON from backend');
+
+  if (viaBackground) {
+    const bgResponse = await sendBackgroundAnalyze(API_BASE_URL, token, payload);
+    if (!bgResponse.ok) throw new Error(bgResponse.error || 'Analysis request failed');
+    status = bgResponse.status || 0;
+    if (bgResponse.parseError) throw new Error('Invalid JSON from backend');
+    data = bgResponse.data;
+  } else {
+    const res = await fetch(`${API_BASE_URL}/analyze`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+      credentials: 'omit',
+      mode: 'cors',
+    });
+    status = res.status;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error('Invalid JSON from backend');
+    }
   }
 
   const isLimit = data?.upgrade_required || data?.error === 'limit_reached';
 
-  if (!res.ok && !isLimit) {
+  if ((status < 200 || status >= 300) && !isLimit) {
     throw new Error(data?.error || 'Analysis request failed');
   }
 
@@ -119,6 +134,38 @@ export async function analyzeWebsiteContent(
     },
     analysis: normalizeAnalysis(data),
   };
+}
+
+async function sendBackgroundAnalyze(
+  apiBaseUrl: string,
+  token: string | null,
+  payload: any
+): Promise<any> {
+  return await new Promise((resolve) => {
+    let isResolved = false;
+    const timeoutId = setTimeout(() => {
+      if (isResolved) return;
+      isResolved = true;
+      resolve({ ok: false, error: 'Background analyze timeout' });
+    }, BG_MESSAGE_TIMEOUT_MS);
+
+    chrome.runtime.sendMessage(
+      { type: 'BG_ANALYZE', apiBaseUrl, token, payload, timeoutMs: BG_ANALYZE_TIMEOUT_MS },
+      (response) => {
+        if (isResolved) return;
+        isResolved = true;
+        clearTimeout(timeoutId);
+        if (chrome.runtime.lastError) {
+          resolve({
+            ok: false,
+            error: chrome.runtime.lastError.message || 'Background analyze failed',
+          });
+          return;
+        }
+        resolve(response || { ok: false, error: 'No response from background' });
+      }
+    );
+  });
 }
 
 export async function fetchQuota(): Promise<Quota | null> {

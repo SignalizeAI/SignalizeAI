@@ -1,15 +1,15 @@
 .secondary-btn {
   background: transparent;
-  border: 1px solid #1a1a1a;
+  border: none;
   border-radius: 6px;
   padding: 6px;
   cursor: pointer;
-  color: #fff;
+  color: var(--text-primary);
   transition: background 0.2s;
 }
 
 .export-toggle-icon {
-  color: #fff;
+  color: var(--text-primary);
   width: 20px;
   height: 20px;
   display: block;
@@ -21,26 +21,26 @@
   top: 100%;
   margin-top: 8px;
   min-width: unset;
-  background-color: #1a1a1a;
-  border: 1px solid #1a1a1a;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--bg-secondary);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   padding: 4px;
   z-index: 1000;
 }
 
-.menu-list {
+.export-menu .menu-list {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.menu-item {
+.export-menu .menu-item {
   width: 100%;
   text-align: left;
   background: none;
   border: none;
-  color: #e0e0e0;
+  color: var(--text-secondary);
   padding: 10px 12px;
   font-size: 14px;
   cursor: pointer;
@@ -48,9 +48,9 @@
   transition: background 0.2s;
 }
 
-.menu-item:hover {
-  background-color: #2a2a2a;
-  color: #fff;
+.export-menu .menu-item:hover {
+  background-color: var(--bg-hover-strong);
+  color: var(--text-primary);
 }
 
 .export-menu {
@@ -71,7 +71,7 @@
 }
 
 .export-menu .menu-item:hover {
-  background-color: #2a2a2a;
+  background-color: var(--bg-hover-strong);
 }
 
 .export-actions {
