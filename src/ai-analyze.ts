@@ -54,6 +54,9 @@ interface AnalysisResultBlocked {
 
 type AnalysisResult = AnalysisResultSuccess | AnalysisResultBlocked;
 
+const BG_ANALYZE_TIMEOUT_MS = 45000;
+const BG_MESSAGE_TIMEOUT_MS = 50000;
+
 async function getAccessToken(): Promise<string | null> {
   const { data, error } = await supabase.auth.getSession();
   if (error || !data.session) return null;
@@ -139,16 +142,29 @@ async function sendBackgroundAnalyze(
   payload: any
 ): Promise<any> {
   return await new Promise((resolve) => {
-    chrome.runtime.sendMessage({ type: 'BG_ANALYZE', apiBaseUrl, token, payload }, (response) => {
-      if (chrome.runtime.lastError) {
-        resolve({
-          ok: false,
-          error: chrome.runtime.lastError.message || 'Background analyze failed',
-        });
-        return;
+    let isResolved = false;
+    const timeoutId = setTimeout(() => {
+      if (isResolved) return;
+      isResolved = true;
+      resolve({ ok: false, error: 'Background analyze timeout' });
+    }, BG_MESSAGE_TIMEOUT_MS);
+
+    chrome.runtime.sendMessage(
+      { type: 'BG_ANALYZE', apiBaseUrl, token, payload, timeoutMs: BG_ANALYZE_TIMEOUT_MS },
+      (response) => {
+        if (isResolved) return;
+        isResolved = true;
+        clearTimeout(timeoutId);
+        if (chrome.runtime.lastError) {
+          resolve({
+            ok: false,
+            error: chrome.runtime.lastError.message || 'Background analyze failed',
+          });
+          return;
+        }
+        resolve(response || { ok: false, error: 'No response from background' });
       }
-      resolve(response || { ok: false, error: 'No response from background' });
-    });
+    );
   });
 }
 

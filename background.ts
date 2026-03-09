@@ -37,18 +37,23 @@ function notifySidePanel(): void {
   });
 }
 
-async function handleBgFetchText(url: string) {
-  const res = await fetch(url, {
+async function handleBgFetchText(url: string, timeoutMs: number = 30000) {
+  const res = await fetchWithTimeout(url, {
     method: 'GET',
     redirect: 'follow',
     credentials: 'omit',
-  });
+  }, timeoutMs);
   const text = await res.text();
   return { ok: true, status: res.status, text };
 }
 
-async function handleBgAnalyze(apiBaseUrl: string, token: string | null, payload: any) {
-  const res = await fetch(`${apiBaseUrl}/analyze`, {
+async function handleBgAnalyze(
+  apiBaseUrl: string,
+  token: string | null,
+  payload: any,
+  timeoutMs: number = 45000
+) {
+  const res = await fetchWithTimeout(`${apiBaseUrl}/analyze`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -56,7 +61,7 @@ async function handleBgAnalyze(apiBaseUrl: string, token: string | null, payload
     },
     body: JSON.stringify(payload),
     credentials: 'omit',
-  });
+  }, timeoutMs);
 
   const text = await res.text();
   let data: any = null;
@@ -67,6 +72,21 @@ async function handleBgAnalyze(apiBaseUrl: string, token: string | null, payload
   }
 
   return { ok: true, status: res.status, data };
+}
+
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  timeoutMs: number
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 // Handle messages from side panel and website
@@ -102,7 +122,7 @@ chrome.runtime.onMessage.addListener(
     if (msg.type === 'BG_FETCH_TEXT') {
       (async () => {
         try {
-          sendResponse(await handleBgFetchText(msg.url));
+          sendResponse(await handleBgFetchText(msg.url, Number(msg.timeoutMs) || 30000));
         } catch (err: any) {
           sendResponse({ ok: false, error: String(err?.message || err || 'Fetch failed') });
         }
@@ -113,7 +133,14 @@ chrome.runtime.onMessage.addListener(
     if (msg.type === 'BG_ANALYZE') {
       (async () => {
         try {
-          sendResponse(await handleBgAnalyze(msg.apiBaseUrl, msg.token || null, msg.payload));
+          sendResponse(
+            await handleBgAnalyze(
+              msg.apiBaseUrl,
+              msg.token || null,
+              msg.payload,
+              Number(msg.timeoutMs) || 45000
+            )
+          );
         } catch (err: any) {
           sendResponse({ ok: false, error: String(err?.message || err || 'Analyze failed') });
         }

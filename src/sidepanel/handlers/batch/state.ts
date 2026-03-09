@@ -10,7 +10,10 @@ export interface BatchRuntimeState {
   lastBatchInputMode: 'csv' | 'paste';
   analyzeQueue: Promise<void>;
   currentBatchSize: number;
-  analyzeCircuitOpenUntil: number;
+  isBatchPageTransitioning: boolean;
+  lastAnalyzeAt: number;
+  analyzeBackoffUntil: number;
+  analyzeCooldownMs: number;
 }
 
 export const batchState: BatchRuntimeState = {
@@ -23,5 +26,8 @@ export const batchState: BatchRuntimeState = {
   lastBatchInputMode: 'csv',
   analyzeQueue: Promise.resolve(),
   currentBatchSize: 0,
-  analyzeCircuitOpenUntil: 0,
+  isBatchPageTransitioning: false,
+  lastAnalyzeAt: 0,
+  analyzeBackoffUntil: 0,
+  analyzeCooldownMs: 0,
 };

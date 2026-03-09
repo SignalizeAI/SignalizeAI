@@ -6,6 +6,9 @@ interface ExtractedContent {
   paragraphs: string[];
 }
 
+const BG_FETCH_TIMEOUT_MS = 30000;
+const BG_MESSAGE_TIMEOUT_MS = 35000;
+
 function cleanText(text: string): string {
   return text
     .replace(/\s+/g, ' ')
@@ -185,7 +188,17 @@ async function sendBackgroundFetchText(
   url: string
 ): Promise<{ ok: boolean; status?: number; text?: string; error?: string }> {
   return await new Promise((resolve) => {
-    chrome.runtime.sendMessage({ type: 'BG_FETCH_TEXT', url }, (response) => {
+    let isResolved = false;
+    const timeoutId = setTimeout(() => {
+      if (isResolved) return;
+      isResolved = true;
+      resolve({ ok: false, error: 'Background fetch timeout' });
+    }, BG_MESSAGE_TIMEOUT_MS);
+
+    chrome.runtime.sendMessage({ type: 'BG_FETCH_TEXT', url, timeoutMs: BG_FETCH_TIMEOUT_MS }, (response) => {
+      if (isResolved) return;
+      isResolved = true;
+      clearTimeout(timeoutId);
       if (chrome.runtime.lastError) {
         resolve({
           ok: false,

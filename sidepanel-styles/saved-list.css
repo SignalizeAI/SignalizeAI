@@ -186,3 +186,48 @@
 .banner-upgrade-btn:active {
   transform: translateY(0);
 }
+
+.saved-skeleton-item {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+.saved-skeleton-line {
+  position: relative;
+  height: 11px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-hover);
+}
+
+.saved-skeleton-line.title {
+  width: 64%;
+  margin-bottom: 10px;
+}
+
+.saved-skeleton-line.sub {
+  width: 38%;
+}
+
+.saved-skeleton-line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.28) 50%,
+    transparent 100%
+  );
+  animation: saved-skeleton-shimmer 1.1s ease-in-out infinite;
+}
+
+@keyframes saved-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

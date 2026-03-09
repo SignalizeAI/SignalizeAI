@@ -493,55 +493,31 @@
 
   <div
     id="batch-progress-container"
-    class="hidden"
-    style="display: flex; flex-direction: column; gap: 16px; padding: 12px 0"
+    class="hidden batch-progress-panel"
   >
-    <div style="display: flex; justify-content: space-between; align-items: center">
-      <div style="font-size: 13px; font-weight: 500">
-        Analyzing URLs... (<span id="batch-progress-count">0</span>/<span id="batch-total-count"
-          >0</span
-        >)
+    <div class="batch-progress-header">
+      <div class="batch-progress-title-wrap">
+        <div class="batch-progress-title">Analyzing URLs</div>
+        <div class="batch-progress-subtitle">
+          <span id="batch-progress-count">0</span> of <span id="batch-total-count">0</span> completed
+        </div>
       </div>
       <button
         id="batch-cancel-btn"
-        class="secondary-btn"
-        style="padding: 4px 8px; font-size: 12px; height: auto"
+        class="secondary-btn batch-cancel-btn"
       >
         Cancel
       </button>
     </div>
 
-    <div
-      style="
-        width: 100%;
-        height: 6px;
-        background: var(--bg-hover);
-        border-radius: 3px;
-        overflow: hidden;
-      "
-    >
+    <div class="batch-progress-track">
       <div
         id="batch-progress-bar"
-        style="
-          height: 100%;
-          width: 0%;
-          background: var(--text-primary);
-          transition: width 0.3s ease;
-        "
+        class="batch-progress-bar"
       ></div>
     </div>
 
-    <div
-      id="batch-results-list"
-      style="
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        max-height: 200px;
-        overflow-y: auto;
-        padding-right: 4px;
-      "
-    >
+    <div id="batch-results-list" class="batch-progress-results">
       <!-- Results populated here during processing -->
     </div>
   </div>

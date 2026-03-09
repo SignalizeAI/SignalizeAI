@@ -10,6 +10,38 @@ interface RenderFlowDeps {
 export function createBatchRenderFlow(deps: RenderFlowDeps) {
   const { saveSingleResult } = deps;
 
+  function renderBatchPaginationSkeleton(count = 8) {
+    const reviewList = document.getElementById('batch-review-list');
+    if (!reviewList) return;
+
+    reviewList.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+      const row = document.createElement('div');
+      row.className = 'saved-skeleton-item';
+      row.innerHTML = `
+        <div class="saved-skeleton-line title"></div>
+        <div class="saved-skeleton-line sub"></div>
+      `;
+      reviewList.appendChild(row);
+    }
+  }
+
+  async function navigateBatchPage(page: number) {
+    if (batchState.isBatchPageTransitioning || page === batchState.batchCurrentPage) return;
+
+    const filtered = getFilteredBatchResults();
+    const totalPages = Math.max(1, Math.ceil(filtered.length / 10));
+    const targetPage = Math.min(Math.max(1, page), totalPages);
+    if (targetPage === batchState.batchCurrentPage) return;
+
+    batchState.isBatchPageTransitioning = true;
+    renderBatchPaginationSkeleton();
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    batchState.batchCurrentPage = targetPage;
+    renderBatchResultsPage();
+    batchState.isBatchPageTransitioning = false;
+  }
+
   function getFilteredBatchResults() {
     if (!batchState.batchSearchQuery) return batchState.tempBatchResults;
     return batchState.tempBatchResults.filter((res) => {
@@ -83,6 +115,53 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
     }
   }
 
+  function renderBatchPagination(totalPages: number, container: HTMLElement) {
+    container.innerHTML = '';
+
+    if (totalPages <= 1) return;
+
+    const maxVisible = 5;
+    let start = Math.max(1, batchState.batchCurrentPage - 2);
+    let end = Math.min(totalPages, batchState.batchCurrentPage + 2);
+
+    if (end - start < maxVisible - 1) {
+      if (start === 1) {
+        end = Math.min(totalPages, start + maxVisible - 1);
+      } else if (end === totalPages) {
+        start = Math.max(1, end - maxVisible + 1);
+      }
+    }
+
+    if (start > 1) {
+      container.appendChild(makeBatchPageBtn(1));
+      if (start > 2) container.appendChild(makeBatchEllipsis());
+    }
+
+    for (let i = start; i <= end; i++) {
+      container.appendChild(makeBatchPageBtn(i));
+    }
+
+    if (end < totalPages) {
+      if (end < totalPages - 1) container.appendChild(makeBatchEllipsis());
+      container.appendChild(makeBatchPageBtn(totalPages));
+    }
+  }
+
+  function makeBatchPageBtn(page: number): HTMLButtonElement {
+    const btn = document.createElement('button');
+    btn.textContent = String(page);
+    btn.className = 'page-number' + (page === batchState.batchCurrentPage ? ' active' : '');
+    btn.onclick = () => void navigateBatchPage(page);
+    return btn;
+  }
+
+  function makeBatchEllipsis(): HTMLSpanElement {
+    const span = document.createElement('span');
+    span.textContent = '…';
+    span.className = 'page-ellipsis';
+    return span;
+  }
+
   function renderBatchResultsPage() {
     const reviewList = document.getElementById('batch-review-list');
     const readyCount = document.getElementById('batch-ready-count');
@@ -153,15 +232,22 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
     if (totalFiltered > 10) {
       if (paginationBar) paginationBar.classList.remove('hidden');
       if (pageNumbers) {
-        pageNumbers.textContent = `Page ${batchState.batchCurrentPage} of ${totalPages || 1}`;
+        renderBatchPagination(totalPages, pageNumbers);
       }
       const pagePrev = document.getElementById('batch-page-prev') as HTMLButtonElement | null;
       const pageNext = document.getElementById('batch-page-next') as HTMLButtonElement | null;
-      if (pagePrev) pagePrev.disabled = batchState.batchCurrentPage === 1;
-      if (pageNext)
-        pageNext.disabled = batchState.batchCurrentPage === totalPages || totalPages === 0;
+      if (pagePrev) {
+        pagePrev.disabled = batchState.batchCurrentPage === 1;
+        pagePrev.classList.toggle('hidden', batchState.batchCurrentPage === 1);
+      }
+      if (pageNext) {
+        const isLastPage = batchState.batchCurrentPage === totalPages || totalPages === 0;
+        pageNext.disabled = isLastPage;
+        pageNext.classList.toggle('hidden', isLastPage);
+      }
     } else {
       if (paginationBar) paginationBar.classList.add('hidden');
+      if (pageNumbers) pageNumbers.innerHTML = '';
     }
 
     const startIdx = (batchState.batchCurrentPage - 1) * 10;
@@ -350,6 +436,7 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
 
   return {
     getFilteredBatchResults,
+    navigateBatchPage,
     showBatchReviewScreen,
     syncBatchSavedStatuses,
     renderBatchResultsPage,

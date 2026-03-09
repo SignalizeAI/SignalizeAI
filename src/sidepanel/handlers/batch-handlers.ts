@@ -8,7 +8,7 @@ import { batchState } from './batch/state.js';
 import { createBatchRenderFlow } from './batch/render-flow.js';
 import { createBatchSaveFlow } from './batch/save-flow.js';
 import { startBatchProcess as startBatchProcessFlow } from './batch/process-flow.js';
-import { BATCH_PAGE_SIZE } from './batch/constants.js';
+import { BATCH_PAGE_SIZE, FREE_BATCH_LIMIT, TEAM_BATCH_LIMIT } from './batch/constants.js';
 
 let saveFlow: ReturnType<typeof createBatchSaveFlow> | null = null;
 const renderFlow = createBatchRenderFlow({
@@ -36,7 +36,7 @@ export function setupBatchHandlers() {
     if (batchState.pendingCsvUrls.length === 0) return;
 
     const isTeamPlan = (state.currentPlan || '').toLowerCase() === 'team';
-    const limit = isTeamPlan ? 100 : 10;
+    const limit = isTeamPlan ? TEAM_BATCH_LIMIT : FREE_BATCH_LIMIT;
 
     const urlsToProcess =
       batchState.pendingCsvUrls.length > limit
@@ -102,7 +102,7 @@ export function setupBatchHandlers() {
 
       const urls = parseUrlsFromText(text);
       const isTeamPlan = (state.currentPlan || '').toLowerCase() === 'team';
-      const limit = isTeamPlan ? 100 : 10;
+      const limit = isTeamPlan ? TEAM_BATCH_LIMIT : FREE_BATCH_LIMIT;
 
       if (urls.length > limit && warningNode) {
         warningNode.textContent = `Note: First ${limit} URLs will be analyzed (exceeds plan limit)`;
@@ -128,7 +128,7 @@ export function setupBatchHandlers() {
     }
 
     const isTeamPlan = (state.currentPlan || '').toLowerCase() === 'team';
-    const limit = isTeamPlan ? 100 : 10;
+    const limit = isTeamPlan ? TEAM_BATCH_LIMIT : FREE_BATCH_LIMIT;
 
     const urlsToProcess = urls.length > limit ? urls.slice(0, limit) : urls;
     batchState.lastBatchInputMode = 'paste';
@@ -264,8 +264,7 @@ export function setupBatchHandlers() {
 
   pagePrev?.addEventListener('click', () => {
     if (batchState.batchCurrentPage > 1) {
-      batchState.batchCurrentPage--;
-      renderBatchResultsPage();
+      void renderFlow.navigateBatchPage(batchState.batchCurrentPage - 1);
     }
   });
 
@@ -273,8 +272,7 @@ export function setupBatchHandlers() {
     const totalFiltered = getFilteredBatchResults().length;
     const totalPages = Math.ceil(totalFiltered / BATCH_PAGE_SIZE);
     if (batchState.batchCurrentPage < totalPages) {
-      batchState.batchCurrentPage++;
-      renderBatchResultsPage();
+      void renderFlow.navigateBatchPage(batchState.batchCurrentPage + 1);
     }
   });
 
@@ -311,7 +309,10 @@ export function setupBatchHandlers() {
     const pasteLimitDisplay = document.getElementById('batch-paste-limit-display');
     if (state.currentPlan) {
       const planName = state.currentPlan.toUpperCase();
-      const limit = state.currentPlan.toLowerCase() === 'team' ? '100' : '10';
+      const limit =
+        state.currentPlan.toLowerCase() === 'team'
+          ? TEAM_BATCH_LIMIT.toString()
+          : FREE_BATCH_LIMIT.toString();
       const text = `${planName} PLAN: ${limit} URLs per batch`;
       if (limitDisplay) limitDisplay.textContent = text;
       if (pasteLimitDisplay) pasteLimitDisplay.textContent = text;
@@ -347,7 +348,7 @@ async function handleFileUpload(file: File) {
   if (submitBtn) submitBtn.classList.add('has-file');
 
   const isTeamPlan = (state.currentPlan || '').toLowerCase() === 'team';
-  const limit = isTeamPlan ? 100 : 10;
+  const limit = isTeamPlan ? TEAM_BATCH_LIMIT : FREE_BATCH_LIMIT;
 
   if (urls.length > limit && warningNode) {
     warningNode.textContent = `Note: First ${limit} URLs will be analyzed (exceeds plan limit).`;

@@ -14,9 +14,9 @@ interface QuotaResponse {
 
 export async function loadQuotaFromAPI(force = false): Promise<void> {
   if (!force && Date.now() - state.lastQuotaFetch < QUOTA_TTL) return;
-  state.lastQuotaFetch = Date.now();
   const { data } = await supabase.auth.getSession();
   if (!data?.session) return;
+  state.lastQuotaFetch = Date.now();
 
   const jwt = data.session.access_token;
 

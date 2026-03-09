@@ -108,7 +108,8 @@ export function shouldUseUrlOnlyFallback(errorMessage: string): boolean {
 
   const code = parseStatusCode(msg);
   if (code !== null) {
-    if ([401, 403, 405, 406, 408, 409, 425, 429, 500, 502, 503, 504].includes(code)) return true;
+    if ([401, 403, 405, 406, 408, 409, 415, 425, 429, 500, 502, 503, 504].includes(code))
+      return true;
     if (code >= 400 && code < 500) return false;
   }
 

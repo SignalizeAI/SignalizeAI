@@ -25,7 +25,24 @@ export async function loadSavedAnalyses(): Promise<void> {
   await fetchAndRenderPage();
 }
 
-export async function fetchAndRenderPage(): Promise<void> {
+export function showSavedPaginationSkeleton(count = PAGE_SIZE): void {
+  const listEl = document.getElementById('saved-list');
+  if (!listEl) return;
+
+  listEl.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const row = document.createElement('div');
+    row.className = 'saved-skeleton-item';
+    row.innerHTML = `
+      <div class="saved-skeleton-line title"></div>
+      <div class="saved-skeleton-line sub"></div>
+    `;
+    listEl.appendChild(row);
+  }
+}
+
+export async function fetchAndRenderPage(options?: { paginationTransition?: boolean }): Promise<void> {
+  const paginationTransition = options?.paginationTransition === true;
   const listEl = document.getElementById('saved-list');
   const loadingEl = document.getElementById('saved-loading');
 
@@ -33,8 +50,10 @@ export async function fetchAndRenderPage(): Promise<void> {
   const user = sessionData?.session?.user;
   if (!user) return;
 
-  loadingEl?.classList.remove('hidden');
-  if (listEl) listEl.innerHTML = '';
+  if (!paginationTransition) {
+    loadingEl?.classList.remove('hidden');
+    if (listEl) listEl.innerHTML = '';
+  }
 
   let countQuery = supabase
     .from('saved_analyses')
@@ -146,6 +165,8 @@ export async function fetchAndRenderPage(): Promise<void> {
     console.error(error);
     return;
   }
+
+  if (listEl) listEl.innerHTML = '';
 
   if (!data || data.length === 0) {
     updateSavedEmptyState(0);

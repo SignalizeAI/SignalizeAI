@@ -4,18 +4,19 @@ import { analyzeWebsiteContent } from '../../../ai-analyze.js';
 import { hashContent } from '../../cache.js';
 import { fetchAndExtractContent } from '../../analysis/fetcher.js';
 import {
-  buildDegradedAnalysis,
-  buildUrlOnlyContent,
   isQuotaError,
   isRetryableError,
   normalizeErrorMessage,
-  shouldUseUrlOnlyFallback,
   trimContentForAnalyze,
 } from './helpers.js';
 import {
   BATCH_CONCURRENCY,
   BATCH_DELAY_BETWEEN_GROUPS,
   ANALYZE_FAILURE_COOLDOWN_MS,
+  ANALYZE_MIN_INTERVAL_MS,
+  ANALYZE_ADAPTIVE_COOLDOWN_BASE_MS,
+  ANALYZE_ADAPTIVE_COOLDOWN_MAX_MS,
+  ANALYZE_ADAPTIVE_COOLDOWN_STEP_DOWN_MS,
   ANALYZE_RETRY_ATTEMPTS,
   ANALYZE_RETRY_ATTEMPTS_LARGE_BATCH,
   ANALYZE_RETRY_BASE_DELAY_MS,
@@ -24,7 +25,6 @@ import {
   RETRY_ATTEMPTS,
   RETRY_BASE_DELAY_MS,
   RETRY_JITTER_MS,
-  ANALYZE_CIRCUIT_COOLDOWN_MS,
   BATCH_ENABLE_TELEMETRY_LOG,
 } from './constants.js';
 import { batchState } from './state.js';
@@ -59,8 +59,11 @@ export async function startBatchProcess(urls: string[], deps: ProcessFlowDeps) {
 
   batchState.isBatchCancelled = false;
   batchState.currentBatchSize = urls.length;
-  batchState.analyzeCircuitOpenUntil = 0;
   batchState.tempBatchResults = [];
+  batchState.analyzeQueue = Promise.resolve();
+  batchState.lastAnalyzeAt = 0;
+  batchState.analyzeBackoffUntil = 0;
+  batchState.analyzeCooldownMs = ANALYZE_ADAPTIVE_COOLDOWN_BASE_MS;
   updateProgress(0, urls.length);
 
   await loadQuotaFromAPI();
@@ -126,10 +129,10 @@ export async function startBatchProcess(urls: string[], deps: ProcessFlowDeps) {
 
     if (i + BATCH_CONCURRENCY < urls.length && !batchState.isBatchCancelled && !stopDueToQuota) {
       if (sawTransientAnalyzeFailureInBatch) {
-        await new Promise((resolve) => setTimeout(resolve, ANALYZE_FAILURE_COOLDOWN_MS));
+        await sleep(ANALYZE_FAILURE_COOLDOWN_MS);
         sawTransientAnalyzeFailureInBatch = false;
       }
-      await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_BETWEEN_GROUPS));
+      await sleep(BATCH_DELAY_BETWEEN_GROUPS);
     }
   }
 
@@ -137,7 +140,8 @@ export async function startBatchProcess(urls: string[], deps: ProcessFlowDeps) {
     logBatchTelemetrySummary(telemetry, urls);
   }
 
-  setTimeout(() => {
+  setTimeout(async () => {
+    await loadQuotaFromAPI(true);
     if (progressContainer) progressContainer.classList.add('hidden');
     batchState.currentBatchSize = 0;
     onDone();
@@ -150,23 +154,9 @@ async function processSingleUrl(url: string, telemetry: Map<string, BatchTelemet
 
   const response = await fetchAndExtractContent(url, true);
   const extractErrorMessage = response?.error || response?.reason || 'Extraction failed';
-  const contentForAnalyze =
-    response?.ok && response.content
-      ? response.content
-      : shouldUseUrlOnlyFallback(extractErrorMessage)
-        ? buildUrlOnlyContent(url, extractErrorMessage)
-        : null;
+  const contentForAnalyze = response?.ok && response.content ? response.content : null;
 
   if (!contentForAnalyze) throw withStageError('extract', extractErrorMessage);
-
-  if (isAnalyzeCircuitOpen()) {
-    return {
-      url,
-      content: contentForAnalyze,
-      analysis: buildDegradedAnalysis(contentForAnalyze, 'AI temporarily unavailable (cooldown)'),
-      contentHash: await hashContent(contentForAnalyze),
-    };
-  }
 
   entry.analyzeAttempts += 1;
   let result: Awaited<ReturnType<typeof analyzeWebsiteContent>>;
@@ -175,7 +165,6 @@ async function processSingleUrl(url: string, telemetry: Map<string, BatchTelemet
     result = await enqueueAnalyzeCall(() =>
       analyzeWebsiteContent(trimmedContent, false, false, true)
     );
-    batchState.analyzeCircuitOpenUntil = 0;
   } catch (err: unknown) {
     throw withStageError('analyze', normalizeErrorMessage(err));
   }
@@ -203,8 +192,10 @@ async function processSingleUrl(url: string, telemetry: Map<string, BatchTelemet
 function enqueueAnalyzeCall<T>(task: () => Promise<T>): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const runTask = async () => {
+      await waitForAnalyzeWindow();
       try {
         const result = await task();
+        decayAnalyzeCooldown();
         resolve(result);
       } catch (err) {
         reject(err);
@@ -227,33 +218,24 @@ async function processSingleUrlWithRetry(
     return await processSingleUrl(url, telemetry);
   } catch (err: any) {
     const isAnalyzeStage = getErrorStage(err) === 'analyze';
+    const retryable = isRetryableError(err);
+    if (isAnalyzeStage && retryable) {
+      registerAnalyzeBackoff(err);
+    }
     const analyzeMaxAttempts =
       batchState.currentBatchSize >= LARGE_BATCH_THRESHOLD
         ? ANALYZE_RETRY_ATTEMPTS_LARGE_BATCH
         : ANALYZE_RETRY_ATTEMPTS;
     const maxAttempts = isAnalyzeStage ? analyzeMaxAttempts : RETRY_ATTEMPTS;
-    const shouldRetry = isRetryableError(err) && attempt < maxAttempts;
+    const shouldRetry = retryable && attempt < maxAttempts;
 
     if (shouldRetry) {
       const baseDelay = isAnalyzeStage ? ANALYZE_RETRY_BASE_DELAY_MS : RETRY_BASE_DELAY_MS;
       const backoff = Math.min(baseDelay * Math.pow(2, attempt - 1), MAX_BACKOFF_MS);
       const jitter = Math.floor(Math.random() * RETRY_JITTER_MS);
-      await new Promise((resolve) => setTimeout(resolve, backoff + jitter));
+      const cooldownWait = Math.max(0, batchState.analyzeBackoffUntil - Date.now());
+      await sleep(Math.max(backoff + jitter, cooldownWait));
       return processSingleUrlWithRetry(url, telemetry, attempt + 1);
-    }
-
-    if (isAnalyzeStage && isRetryableError(err)) {
-      batchState.analyzeCircuitOpenUntil = Math.max(
-        batchState.analyzeCircuitOpenUntil,
-        Date.now() + ANALYZE_CIRCUIT_COOLDOWN_MS
-      );
-      const degradedContent = buildUrlOnlyContent(url, 'AI temporarily unavailable');
-      return {
-        url,
-        content: degradedContent,
-        analysis: buildDegradedAnalysis(degradedContent, normalizeErrorMessage(err)),
-        contentHash: await hashContent(degradedContent),
-      };
     }
 
     throw err;
@@ -272,6 +254,48 @@ function isTransientAnalyzeFailure(err: unknown): boolean {
   return isRetryableError(err);
 }
 
-function isAnalyzeCircuitOpen(): boolean {
-  return Date.now() < batchState.analyzeCircuitOpenUntil;
+function registerAnalyzeBackoff(err: unknown) {
+  const message = normalizeErrorMessage(err).toLowerCase();
+  const multiplier = isHeavyThrottleSignal(message) ? 2 : 1.35;
+  const currentCooldown = Math.max(batchState.analyzeCooldownMs, ANALYZE_ADAPTIVE_COOLDOWN_BASE_MS);
+  const nextCooldown = Math.min(
+    Math.round(currentCooldown * multiplier),
+    ANALYZE_ADAPTIVE_COOLDOWN_MAX_MS
+  );
+
+  batchState.analyzeCooldownMs = nextCooldown;
+  const jitter = Math.floor(Math.random() * RETRY_JITTER_MS);
+  batchState.analyzeBackoffUntil = Math.max(batchState.analyzeBackoffUntil, Date.now() + nextCooldown + jitter);
+}
+
+function decayAnalyzeCooldown() {
+  if (batchState.analyzeCooldownMs <= ANALYZE_ADAPTIVE_COOLDOWN_BASE_MS) return;
+  batchState.analyzeCooldownMs = Math.max(
+    ANALYZE_ADAPTIVE_COOLDOWN_BASE_MS,
+    batchState.analyzeCooldownMs - ANALYZE_ADAPTIVE_COOLDOWN_STEP_DOWN_MS
+  );
+}
+
+async function waitForAnalyzeWindow() {
+  const now = Date.now();
+  const minIntervalUntil = batchState.lastAnalyzeAt + ANALYZE_MIN_INTERVAL_MS;
+  const waitUntil = Math.max(minIntervalUntil, batchState.analyzeBackoffUntil);
+  if (waitUntil > now) {
+    await sleep(waitUntil - now);
+  }
+  batchState.lastAnalyzeAt = Date.now();
+}
+
+function isHeavyThrottleSignal(message: string): boolean {
+  return (
+    message.includes('throttled') ||
+    message.includes('rate limit') ||
+    message.includes('too many requests') ||
+    message.includes('429') ||
+    message.includes('503')
+  );
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
