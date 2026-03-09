@@ -68,6 +68,8 @@ export function renderQuotaBanner(): void {
   const text = document.getElementById('quota-text');
   const btn = document.getElementById('upgrade-btn');
   const badge = document.getElementById('plan-badge');
+  const usageRing = document.getElementById('quota-usage-ring') as HTMLElement | null;
+  const resetTooltip = document.getElementById('quota-reset-tooltip');
 
   if (badge && state.currentPlan) {
     badge.textContent = state.currentPlan.toUpperCase();
@@ -80,6 +82,8 @@ export function renderQuotaBanner(): void {
   banner.classList.remove('hidden');
   const used = Number(state.usedToday ?? 0);
   const totalLimit = Math.max(1, Number(state.dailyLimitFromAPI ?? 0));
+  const usedPercent = Math.max(0, Math.min(100, Math.round((used / totalLimit) * 100)));
+  const usedDegrees = Math.round((usedPercent / 100) * 360);
 
   const savedText = `${Number(state.totalSavedCount ?? 0)} / ${Number(
     state.maxSavedLimit ?? 0
@@ -87,9 +91,13 @@ export function renderQuotaBanner(): void {
 
   if (state.remainingToday === null) {
     text.textContent = `Usage unavailable • ${savedText}`;
+    if (usageRing) usageRing.style.setProperty('--progress-deg', '0deg');
+    if (resetTooltip) resetTooltip.textContent = 'Daily quota resets at 00:00 UTC';
     btn.classList.add('hidden');
   } else if (Number(state.remainingToday ?? 0) > 0) {
     text.textContent = `${used} / ${totalLimit} analyses • ${savedText}`;
+    if (usageRing) usageRing.style.setProperty('--progress-deg', `${usedDegrees}deg`);
+    if (resetTooltip) resetTooltip.textContent = 'Daily quota resets at 00:00 UTC';
 
     if (state.currentPlan === 'team') {
       btn.classList.add('hidden');
@@ -99,6 +107,8 @@ export function renderQuotaBanner(): void {
     }
   } else {
     text.textContent = `Daily limit reached • ${savedText}`;
+    if (usageRing) usageRing.style.setProperty('--progress-deg', '360deg');
+    if (resetTooltip) resetTooltip.textContent = 'Daily quota resets at 00:00 UTC';
     if (state.currentPlan === 'team') {
       btn.classList.add('hidden');
     } else {
