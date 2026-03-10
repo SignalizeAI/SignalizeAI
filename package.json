@@ -1,20 +1,22 @@
 {
   "name": "signalizeai",
-  "version": "4.0.0",
-  "description": "Cursor for sales pages 🚀",
+  "version": "5.0.0",
+  "description": "Understand any page. AI insights and outreach strategies.",
   "main": "background.js",
   "scripts": {
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "build": "tsx build.ts",
-    "build:chrome": "cp manifest.chrome.json manifest.json && npm run build",
-    "build:firefox": "cp manifest.firefox.json manifest.json && npm run build",
+    "build:chrome": "cp manifest.chrome.release.json manifest.json && npm run build",
+    "build:firefox": "cp manifest.firefox.release.json manifest.json && npm run build",
+    "build:chrome:dev": "cp manifest.chrome.dev.json manifest.json && npm run build",
+    "build:firefox:dev": "cp manifest.firefox.dev.json manifest.json && npm run build",
     "watch:supabase": "esbuild src/sidepanel-entry.ts --bundle --format=iife --outfile=extension/supabase.bundle.js --watch",
     "watch:panel": "esbuild sidepanel.ts --bundle --platform=browser --format=esm --minify --tree-shaking=true --splitting --outdir=extension --watch",
     "watch": "concurrently -k \"npm:watch:supabase\" \"npm:watch:panel\"",
-    "dev": "concurrently -k \"npm:watch\" \"web-ext run --chromium --source-dir . --watch-file sidepanel.html --watch-file sidepanel-loader.js --watch-file sidepanel.css --watch-file sidepanel-partials/** --watch-file sidepanel-styles/** --watch-file extension/**\"",
-    "dev:firefox": "cp manifest.firefox.json manifest.json && concurrently -k \"npm:watch\" \"web-ext run --firefox --source-dir . --watch-file sidepanel.html --watch-file sidepanel-loader.js --watch-file sidepanel.css --watch-file sidepanel-partials/** --watch-file sidepanel-styles/** --watch-file extension/**\""
+    "dev": "cp manifest.chrome.dev.json manifest.json && concurrently -k \"npm:watch\" \"web-ext run --chromium --source-dir . --watch-file sidepanel.html --watch-file sidepanel-loader.ts --watch-file sidepanel.css --watch-file sidepanel-partials/** --watch-file sidepanel-styles/** --watch-file extension/**\"",
+    "dev:firefox": "cp manifest.firefox.dev.json manifest.json && concurrently -k \"npm:watch\" \"web-ext run --firefox --source-dir . --watch-file sidepanel.html --watch-file sidepanel-loader.ts --watch-file sidepanel.css --watch-file sidepanel-partials/** --watch-file sidepanel-styles/** --watch-file extension/**\""
   },
   "keywords": [],
   "author": "",

@@ -5,7 +5,7 @@
   gap: 6px;
   margin-top: 12px;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--bg-hover);
 }
 
 .page-numbers {
@@ -18,9 +18,9 @@
   width: 26px;
   height: 26px;
   border-radius: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--bg-hover);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -30,8 +30,8 @@
 }
 
 .page-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: var(--bg-hover-strong);
+  color: var(--text-primary);
 }
 
 .page-btn:disabled {
@@ -44,9 +44,9 @@
   height: 26px;
   padding: 0 6px;
   border-radius: 7px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.7);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-surface-border);
+  color: var(--text-tertiary);
   font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
@@ -57,21 +57,21 @@
 }
 
 .page-number:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: var(--bg-hover-strong);
+  color: var(--text-primary);
 }
 
 .page-number.active {
-  background: linear-gradient(135deg, #3b82f6, #60a5fa);
-  color: #fff;
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-light));
+  color: var(--text-primary);
   font-weight: 600;
   border-color: transparent;
-  box-shadow: 0 3px 10px rgba(96, 165, 250, 0.35);
+  box-shadow: 0 3px 10px var(--accent-blue-bg);
 }
 
 .page-ellipsis {
   padding: 0 4px;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-muted);
   font-size: 13px;
   user-select: none;
 }

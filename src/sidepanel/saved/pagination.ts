@@ -1,8 +1,25 @@
 import { state } from '../state.js';
 
+let isSavedPageTransitioning = false;
+
+export async function navigateSavedPage(page: number): Promise<void> {
+  if (isSavedPageTransitioning || page === state.currentPage) return;
+  isSavedPageTransitioning = true;
+
+  const { fetchAndRenderPage, showSavedPaginationSkeleton } = await import('./data.js');
+  state.currentPage = page;
+  showSavedPaginationSkeleton();
+  await new Promise((resolve) => setTimeout(resolve, 120));
+  await fetchAndRenderPage({ paginationTransition: true });
+
+  isSavedPageTransitioning = false;
+}
+
 export function renderPagination(totalPages: number): void {
   const bar = document.getElementById('pagination-bar');
   const container = document.getElementById('page-numbers');
+  const prevBtn = document.getElementById('page-prev') as HTMLButtonElement | null;
+  const nextBtn = document.getElementById('page-next') as HTMLButtonElement | null;
 
   if (!bar || !container) return;
 
@@ -14,6 +31,14 @@ export function renderPagination(totalPages: number): void {
   }
 
   bar.classList.remove('hidden');
+  if (prevBtn) {
+    prevBtn.disabled = state.currentPage === 1;
+    prevBtn.classList.toggle('hidden', state.currentPage === 1);
+  }
+  if (nextBtn) {
+    nextBtn.disabled = state.currentPage >= totalPages;
+    nextBtn.classList.toggle('hidden', state.currentPage >= totalPages);
+  }
 
   const maxVisible = 5;
 
@@ -47,11 +72,7 @@ function makePageBtn(page: number): HTMLButtonElement {
   const btn = document.createElement('button');
   btn.textContent = String(page);
   btn.className = 'page-number' + (page === state.currentPage ? ' active' : '');
-  btn.onclick = async () => {
-    const { fetchAndRenderPage } = await import('./data.js');
-    state.currentPage = page;
-    await fetchAndRenderPage();
-  };
+  btn.onclick = async () => navigateSavedPage(page);
   return btn;
 }
 

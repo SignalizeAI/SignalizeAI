@@ -18,6 +18,7 @@ import { showToast } from '../toast.js';
 import { cleanTitle, endAnalysisLoading } from './utils.js';
 import { showContentBlocked, displayAIAnalysis } from './display.js';
 import { getActiveTab, ensureContentScriptLoaded } from '../utils.js';
+import { fetchAndExtractContent } from './fetcher.js';
 
 interface ContentResponse {
   ok: boolean;
@@ -33,6 +34,11 @@ function isHomepageUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+function setLoadingMessage(message: string): void {
+  const el = document.getElementById('ai-loading-message');
+  if (el) el.textContent = message;
 }
 
 export async function refreshSaveButtonState(): Promise<void> {
@@ -116,6 +122,7 @@ export async function extractWebsiteContent(): Promise<void> {
   if (contentError) contentError.classList.add('hidden');
   if (contentData) contentData.classList.add('hidden');
   document.getElementById('empty-tab-view')?.classList.add('hidden');
+  setLoadingMessage('Extracting page content...');
   state.isAnalysisLoading = true;
 
   try {
@@ -325,6 +332,7 @@ export async function extractWebsiteContent(): Promise<void> {
 
                 if (aiLoading) aiLoading.classList.remove('hidden');
                 if (aiData) aiData.classList.add('hidden');
+                setLoadingMessage('Analyzing content with AI...');
 
                 if (!response.content.paragraphs?.length && !response.content.headings?.length) {
                   showContentBlocked('Not enough readable content to analyze.');
@@ -555,98 +563,112 @@ export async function analyzeSpecificUrl(url: string): Promise<void> {
     return;
   }
 
+  const aiCard = document.getElementById('ai-analysis');
   const contentLoading = document.getElementById('ai-loading');
   const contentError = document.getElementById('content-error');
+  const aiData = document.getElementById('ai-data');
 
   if (contentError) contentError.classList.add('hidden');
+  if (aiData) aiData.classList.add('hidden');
+  if (aiCard) aiCard.classList.remove('hidden');
   if (contentLoading) contentLoading.classList.remove('hidden');
-
-  const tab = await getActiveTab();
-  if (!tab?.id) return;
-
-  const scriptLoaded = await ensureContentScriptLoaded(tab.id);
-  if (!scriptLoaded) {
-    if (contentLoading) contentLoading.classList.add('hidden');
-    showContentBlocked('Unable to load content script.');
-    return;
-  }
-
-  chrome.tabs.sendMessage(
-    tab.id,
-    {
-      type: 'EXTRACT_WEBSITE_CONTENT',
-      overrideUrl: url,
-    },
-    async (response: ContentResponse) => {
-      if (contentLoading) contentLoading.classList.add('hidden');
-
-      if (!response?.ok || !response.content) {
-        showContentBlocked('Unable to analyze homepage.');
-        return;
-      }
-
-      state.lastExtractedMeta = {
-        title: cleanTitle(response.content.title),
-        description: response.content.metaDescription,
-        url: response.content.url,
-        domain: new URL(response.content.url).hostname,
-      };
-
-      state.lastContentHash = await hashContent(response.content);
-      state.lastAnalyzedDomain = state.lastExtractedMeta.domain;
-      const settings = await loadSettings();
-      const reuseAllowed = settings.reanalysisMode === 'content-change' && !state.forceRefresh;
-      const cached = await getCachedAnalysisByDomain(state.lastAnalyzedDomain);
-
-      if (reuseAllowed && cached) {
-        state.lastAnalysis = cached.analysis;
-        state.lastExtractedMeta = {
-          ...cached.meta,
-          url,
-          domain: state.lastAnalyzedDomain,
-        };
-        if (state.lastAnalysis) {
-          displayAIAnalysis(state.lastAnalysis);
-        }
-        return;
-      }
-
-      const urlObj = new URL(response.content.url);
-      const isInternal =
-        urlObj.hostname === 'signalizeai.org' ||
-        urlObj.hostname === 'www.signalizeai.org' ||
-        urlObj.hostname === 'signalizeaipay.lemonsqueezy.com';
-      const domainAnalyzedToday = await wasDomainAnalyzedToday(state.lastAnalyzedDomain);
-      const result = await analyzeWebsiteContent(response.content, isInternal, domainAnalyzedToday);
-
-      if (result.quota) {
-        state.currentPlan = result.quota.plan;
-        state.usedToday = result.quota.used_today;
-        state.remainingToday = result.quota.remaining_today;
-        state.dailyLimitFromAPI = result.quota.daily_limit;
-        state.maxSavedLimit = result.quota.max_saved;
-        state.totalSavedCount = result.quota.total_saved;
-        renderQuotaBanner();
-      }
-
-      if (result.blocked) {
-        endAnalysisLoading();
-        showLimitModal('analysis');
-        return;
-      }
-
-      state.lastAnalysis = result.analysis!;
-      displayAIAnalysis(result.analysis!);
-      markDomainAnalyzedToday(state.lastAnalyzedDomain);
-
-      setCachedAnalysis(state.lastExtractedMeta.url, {
-        analysis: result.analysis,
-        meta: state.lastExtractedMeta,
-      });
-      setCachedAnalysisByDomain(state.lastAnalyzedDomain, {
-        analysis: result.analysis,
-        meta: state.lastExtractedMeta,
-      });
-    }
+  document.getElementById('empty-tab-view')?.classList.add('hidden');
+  setLoadingMessage(
+    "Hold on, we're opening the site in the background, analyzing it, then we'll show you the results..."
   );
+  state.isAnalysisLoading = true;
+
+  try {
+    const saveBtn = document.getElementById('saveButton') as HTMLButtonElement | null;
+    if (saveBtn) {
+      saveBtn.classList.remove('active');
+      saveBtn.title = 'Save';
+      delete saveBtn.dataset.savedId;
+    }
+
+    const response = await fetchAndExtractContent(url);
+
+    if (contentLoading) contentLoading.classList.add('hidden');
+    state.isAnalysisLoading = false;
+
+    if (!response?.ok || !response.content) {
+      showContentBlocked(
+        response?.error || response?.reason || 'Unable to analyze the provided URL.'
+      );
+      return;
+    }
+
+    state.lastExtractedMeta = {
+      title: cleanTitle(response.content.title),
+      description: response.content.metaDescription,
+      url: response.content.url,
+      domain: new URL(response.content.url).hostname,
+    };
+
+    state.lastContentHash = await hashContent(response.content);
+    state.lastAnalyzedDomain = state.lastExtractedMeta.domain;
+    const settings = await loadSettings();
+    const reuseAllowed = settings.reanalysisMode === 'content-change' && !state.forceRefresh;
+    const cached = await getCachedAnalysisByDomain(state.lastAnalyzedDomain);
+
+    if (reuseAllowed && cached) {
+      state.lastAnalysis = cached.analysis;
+      state.lastExtractedMeta = {
+        ...cached.meta,
+        url,
+        domain: state.lastAnalyzedDomain,
+      };
+      if (state.lastAnalysis) {
+        displayAIAnalysis(state.lastAnalysis);
+      }
+      await refreshSaveButtonState();
+      return;
+    }
+
+    if (contentLoading) contentLoading.classList.remove('hidden');
+    setLoadingMessage('Generating AI insights...');
+
+    const urlObj = new URL(response.content.url);
+    const isInternal =
+      urlObj.hostname === 'signalizeai.org' ||
+      urlObj.hostname === 'www.signalizeai.org' ||
+      urlObj.hostname === 'signalizeaipay.lemonsqueezy.com';
+    const domainAnalyzedToday = await wasDomainAnalyzedToday(state.lastAnalyzedDomain);
+    const result = await analyzeWebsiteContent(response.content, isInternal, domainAnalyzedToday);
+
+    if (result.quota) {
+      state.currentPlan = result.quota.plan;
+      state.usedToday = result.quota.used_today;
+      state.remainingToday = result.quota.remaining_today;
+      state.dailyLimitFromAPI = result.quota.daily_limit;
+      state.maxSavedLimit = result.quota.max_saved;
+      state.totalSavedCount = result.quota.total_saved;
+      renderQuotaBanner();
+    }
+
+    if (result.blocked) {
+      endAnalysisLoading();
+      showLimitModal('analysis');
+      return;
+    }
+
+    state.lastAnalysis = result.analysis!;
+    displayAIAnalysis(result.analysis!);
+    markDomainAnalyzedToday(state.lastAnalyzedDomain);
+
+    setCachedAnalysis(state.lastExtractedMeta.url, {
+      analysis: result.analysis!,
+      meta: state.lastExtractedMeta,
+    });
+    setCachedAnalysisByDomain(state.lastAnalyzedDomain, {
+      analysis: result.analysis!,
+      meta: state.lastExtractedMeta,
+    });
+
+    await refreshSaveButtonState();
+  } catch (err: any) {
+    if (contentLoading) contentLoading.classList.add('hidden');
+    state.isAnalysisLoading = false;
+    showContentBlocked('Failed to explicitly analyze URL: ' + err.message);
+  }
 }

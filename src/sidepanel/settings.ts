@@ -28,8 +28,21 @@ export function applySettingsToUI(settings: Settings): void {
   document
     .querySelector<HTMLInputElement>(`input[name="copy-format"][value="${settings.copyFormat}"]`)
     ?.click();
+  document
+    .querySelector<HTMLInputElement>(`input[name="theme"][value="${settings.theme}"]`)
+    ?.click();
 
   updateReanalysisUI(settings);
+  applyTheme(settings.theme);
+}
+
+export function applyTheme(theme: 'light' | 'dark' | 'system'): void {
+  if (theme === 'system') {
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  } else {
+    document.documentElement.setAttribute('data-theme', theme);
+  }
 }
 
 export function updateReanalysisUI(settings: Settings): void {

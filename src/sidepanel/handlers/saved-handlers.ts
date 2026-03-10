@@ -17,6 +17,7 @@ import {
 } from '../saved/index.js';
 import { showUndoToast } from '../saved/delete.js';
 import { PAGE_SIZE } from '../constants.js';
+import { navigateSavedPage } from '../saved/pagination.js';
 
 export function setupSavedHandlers(): void {
   const multiSelectToggle = document.getElementById('multi-select-toggle');
@@ -291,16 +292,14 @@ export function setupSavedHandlers(): void {
 
   pagePrev?.addEventListener('click', async () => {
     if (state.currentPage > 1) {
-      state.currentPage--;
-      await fetchAndRenderPage();
+      await navigateSavedPage(state.currentPage - 1);
     }
   });
 
   pageNext?.addEventListener('click', async () => {
     const totalPages = Math.ceil(state.totalFilteredCount / PAGE_SIZE);
     if (state.currentPage < totalPages) {
-      state.currentPage++;
-      await fetchAndRenderPage();
+      await navigateSavedPage(state.currentPage + 1);
     }
   });
 }

@@ -29,6 +29,11 @@
       "matches": ["https://signalizeai.org/*"],
       "js": ["extension/content-auth-bridge.js"],
       "run_at": "document_start"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["extension/content-extractor.js"],
+      "run_at": "document_idle"
     }
   ],
   "content_security_policy": {

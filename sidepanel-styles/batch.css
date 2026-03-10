@@ -1,0 +1,224 @@
+.batch-review-card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+  transition:
+    border-color 0.2s,
+    transform 0.2s;
+}
+
+.batch-review-card:hover {
+  border-color: var(--border-strong);
+}
+
+.batch-review-card .primary-btn {
+  background-color: var(--text-primary);
+  color: var(--bg-primary);
+  border: none;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.batch-review-card .primary-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.batch-review-card .primary-btn:active {
+  transform: translateY(0);
+}
+
+.batch-item-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--text-primary);
+}
+
+.csv-drop-zone {
+  border: 2px dashed var(--border-strong);
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.csv-drop-zone:hover {
+  border-color: var(--accent-light);
+  background: var(--bg-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.csv-drop-zone.dragover {
+  border-color: var(--accent-color);
+  background: var(--accent-blue-bg);
+  transform: scale(1.02);
+}
+
+.drop-zone-icon-wrapper {
+  color: var(--accent-color);
+  background: var(--accent-blue-bg);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+}
+
+.csv-drop-zone:hover .drop-zone-icon-wrapper {
+  transform: translateY(-2px);
+}
+
+#batch-paste-submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  opacity: 0.95;
+}
+
+#batch-paste-submit-btn:active {
+  transform: translateY(1px);
+}
+
+#batch-paste-submit-btn.has-content {
+  background: var(--accent-light) !important;
+  color: #fff !important;
+  box-shadow: 0 0 12px var(--accent-blue-bg) !important;
+  opacity: 1 !important;
+}
+
+#batch-paste-submit-btn.has-content:hover {
+  background: var(--accent-color) !important;
+  box-shadow: 0 4px 16px var(--accent-blue-bg) !important;
+  transform: translateY(-2px);
+}
+
+#batch-csv-submit-btn.has-file {
+  background: var(--accent-light) !important;
+  color: #fff !important;
+  box-shadow: 0 0 12px var(--accent-blue-bg) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+#batch-csv-submit-btn.has-file:hover {
+  background: var(--accent-color) !important;
+  box-shadow: 0 4px 16px var(--accent-blue-bg) !important;
+  transform: translateY(-2px);
+}
+
+#batch-csv-submit-btn.has-file:active {
+  transform: translateY(1px);
+}
+
+.batch-progress-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  margin-top: 4px;
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.batch-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.batch-progress-title-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.batch-progress-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+}
+
+.batch-progress-subtitle {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+.batch-cancel-btn {
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  height: auto !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--border-strong) !important;
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.batch-cancel-btn:hover:not(:disabled) {
+  background: var(--bg-hover) !important;
+  border-color: var(--accent-light) !important;
+  transform: translateY(-1px);
+}
+
+.batch-cancel-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.batch-cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.batch-progress-track {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-hover);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.batch-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent-color), var(--text-primary));
+  transition: width 0.25s ease;
+}
+
+.batch-progress-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  max-height: 440px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-right: 4px;
+}

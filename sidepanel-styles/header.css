@@ -4,11 +4,11 @@
   align-items: center;
   margin-bottom: 20px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .content-header svg {
-  stroke: rgba(255, 255, 255, 0.65);
+  stroke: var(--text-tertiary);
 }
 
 .content-header button {
@@ -23,7 +23,7 @@
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .export-actions {

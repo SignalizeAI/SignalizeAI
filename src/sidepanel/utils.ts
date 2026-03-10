@@ -41,7 +41,7 @@ export async function ensureContentScriptLoaded(tabId: number): Promise<boolean>
 
     await chrome.scripting.executeScript({
       target: { tabId },
-      files: ['content-extractor.js'],
+      files: ['extension/content-extractor.js'],
     });
 
     return true;

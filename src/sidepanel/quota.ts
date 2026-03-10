@@ -14,9 +14,9 @@ interface QuotaResponse {
 
 export async function loadQuotaFromAPI(force = false): Promise<void> {
   if (!force && Date.now() - state.lastQuotaFetch < QUOTA_TTL) return;
-  state.lastQuotaFetch = Date.now();
   const { data } = await supabase.auth.getSession();
   if (!data?.session) return;
+  state.lastQuotaFetch = Date.now();
 
   const jwt = data.session.access_token;
 
@@ -68,7 +68,8 @@ export function renderQuotaBanner(): void {
   const text = document.getElementById('quota-text');
   const btn = document.getElementById('upgrade-btn');
   const badge = document.getElementById('plan-badge');
-  const progressBar = document.getElementById('quota-progress-fill') as HTMLElement | null;
+  const usageRing = document.getElementById('quota-usage-ring') as HTMLElement | null;
+  const resetTooltip = document.getElementById('quota-reset-tooltip');
 
   if (badge && state.currentPlan) {
     badge.textContent = state.currentPlan.toUpperCase();
@@ -81,39 +82,53 @@ export function renderQuotaBanner(): void {
   banner.classList.remove('hidden');
   const used = Number(state.usedToday ?? 0);
   const totalLimit = Math.max(1, Number(state.dailyLimitFromAPI ?? 0));
-  const percentage = Math.min(100, (used / totalLimit) * 100);
-
-  if (progressBar) {
-    progressBar.style.width = `${percentage}%`;
-
-    if (state.remainingToday === null) {
-      progressBar.classList.remove('danger');
-    } else if (Number(state.remainingToday ?? 0) <= 0) {
-      progressBar.classList.add('danger');
-    } else {
-      progressBar.classList.remove('danger');
-    }
-  }
+  const usedPercent = Math.max(0, Math.min(100, Math.round((used / totalLimit) * 100)));
+  const usedDegrees = Math.round((usedPercent / 100) * 360);
 
   const savedText = `${Number(state.totalSavedCount ?? 0)} / ${Number(
     state.maxSavedLimit ?? 0
   )} saved`;
 
   if (state.remainingToday === null) {
-    text.textContent = `Usage unavailable, ${savedText}`;
+    text.textContent = `Usage unavailable • ${savedText}`;
+    if (usageRing) usageRing.style.setProperty('--progress-deg', '0deg');
+    if (resetTooltip) resetTooltip.textContent = 'Daily quota resets at 00:00 UTC';
     btn.classList.add('hidden');
   } else if (Number(state.remainingToday ?? 0) > 0) {
-    text.textContent = `${used} / ${totalLimit} analyses, ${savedText}`;
+    text.textContent = `${used} / ${totalLimit} analyses • ${savedText}`;
+    if (usageRing) usageRing.style.setProperty('--progress-deg', `${usedDegrees}deg`);
+    if (resetTooltip) resetTooltip.textContent = 'Daily quota resets at 00:00 UTC';
 
     if (state.currentPlan === 'team') {
       btn.classList.add('hidden');
     } else {
       btn.classList.remove('hidden');
-      btn.textContent = state.currentPlan === 'pro' ? 'Upgrade to Team' : 'Upgrade';
+      btn.textContent = 'Upgrade';
     }
   } else {
-    text.textContent = `Daily limit reached, ${savedText}`;
-    btn.classList.remove('hidden');
-    btn.textContent = state.currentPlan === 'pro' ? 'Upgrade to Team' : 'Upgrade to continue';
+    text.textContent = `Daily limit reached • ${savedText}`;
+    if (usageRing) usageRing.style.setProperty('--progress-deg', '360deg');
+    if (resetTooltip) resetTooltip.textContent = 'Daily quota resets at 00:00 UTC';
+    if (state.currentPlan === 'team') {
+      btn.classList.add('hidden');
+    } else {
+      btn.classList.remove('hidden');
+      btn.textContent = 'Upgrade';
+    }
+  }
+
+  const quotaLeft = banner.querySelector('.quota-left') as HTMLElement | null;
+  if (btn.classList.contains('hidden')) {
+    banner.style.justifyContent = 'center';
+    if (quotaLeft) quotaLeft.style.justifyContent = 'center';
+  } else {
+    banner.style.justifyContent = 'space-between';
+    if (quotaLeft) quotaLeft.style.justifyContent = 'flex-start';
+  }
+
+  const batchMenuBtn = document.getElementById('menu-batch-analysis');
+  if (batchMenuBtn) {
+    const isFreePlan = (state.currentPlan || '').toLowerCase() === 'free';
+    batchMenuBtn.style.display = isFreePlan ? 'none' : 'flex';
   }
 }
