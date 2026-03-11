@@ -1,4 +1,26 @@
-# SignalizeAI
+<p align="center">
+  <picture>
+    <source
+      media="(prefers-color-scheme: dark)"
+      srcset="./icons/128.png"
+    />
+    <source
+      media="(prefers-color-scheme: light)"
+      srcset="./icons/128(light).png"
+    />
+    <img
+      src="./icons/128(light).png"
+      alt="SignalizeAI"
+      width="128"
+    />
+  </picture>
+</p>
+
+<h1 align="center">SignalizeAI</h1>
+
+<p align="center">
+  <strong>Understand any page<br/>AI insights and outreach strategies</strong>
+</p>
 
 SignalizeAI helps you quickly understand how any business website is positioned for sales.
 
@@ -19,7 +41,7 @@ It is designed for sales professionals, founders, marketers, and business develo
 - AI-powered website analysis
 - Sales readiness scoring
 - Ideal customer and persona detection
-- Save and export analyses (CSV / Excel)
+- Save analyses and export on supported plans
 - Secure Google sign-in
 - Batch analysis for CSV/pasted URLs with retry + fallback handling
 
