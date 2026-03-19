@@ -112,7 +112,7 @@ export function exportToCSV(rows: SavedAnalysis[]): void {
 
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'signalizeai_saved_analyses.csv';
+  a.download = 'signalizeai_saved_prospects.csv';
   a.click();
 
   URL.revokeObjectURL(url);
@@ -124,7 +124,7 @@ export async function exportToExcel(rows: SavedAnalysis[]): Promise<void> {
   const { default: ExcelJS } = await import('exceljs/dist/exceljs.min.js');
 
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('Saved Analyses');
+  const sheet = workbook.addWorksheet('Saved Prospects');
 
   sheet.columns = [
     { header: 'Title', key: 'title', width: 30 },
@@ -158,7 +158,7 @@ export async function exportToExcel(rows: SavedAnalysis[]): Promise<void> {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'signalizeai_saved_analyses.xlsx';
+  a.download = 'signalizeai_saved_prospects.xlsx';
   a.click();
   URL.revokeObjectURL(url);
 }

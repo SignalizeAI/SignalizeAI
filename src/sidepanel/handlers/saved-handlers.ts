@@ -227,7 +227,7 @@ export function setupSavedHandlers(): void {
         }
 
         if (!homepageResult?.analysis || !homepageResult?.meta) {
-          showToast('Unable to save homepage analysis.');
+          showToast('Unable to save homepage prospect data.');
           return;
         }
 

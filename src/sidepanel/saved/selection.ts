@@ -88,7 +88,7 @@ export function updateSelectionUI(): void {
 
   if (state.selectionMode) {
     multiSelectToggle.title = 'Delete selected';
-    multiSelectToggle.setAttribute('aria-label', 'Delete selected analyses');
+    multiSelectToggle.setAttribute('aria-label', 'Delete selected prospects');
     multiSelectToggle.innerHTML = `
       <svg
         class="multi-select-icon danger"
@@ -110,7 +110,7 @@ export function updateSelectionUI(): void {
     `;
   } else {
     multiSelectToggle.title = 'Select multiple';
-    multiSelectToggle.setAttribute('aria-label', 'Select multiple analyses');
+    multiSelectToggle.setAttribute('aria-label', 'Select multiple prospects');
     multiSelectToggle.innerHTML = `
       <svg
         class="multi-select-icon"

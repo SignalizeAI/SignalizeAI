@@ -182,7 +182,7 @@ async function processSingleUrl(url: string, telemetry: Map<string, BatchTelemet
     renderQuotaBanner();
   }
   if (result.blocked) throw withStageError('analyze', 'Daily limit reached');
-  if (!result.analysis) throw withStageError('analyze', 'AI analysis failed');
+  if (!result.analysis) throw withStageError('analyze', 'AI prospecting failed');
 
   return {
     url,

@@ -123,7 +123,7 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
     </div>
 
     <div class="header-actions">
-      <button class="copy-btn copy-saved-btn" title="Copy analysis">
+      <button class="copy-btn copy-saved-btn" title="Copy prospect data">
         <svg viewBox="0 0 24 24" class="copy-icon">
           <rect x="9" y="9" width="13" height="13" rx="2"></rect>
           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
@@ -145,7 +145,7 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
         type="checkbox"
         class="saved-select-checkbox hidden"
         data-id="${item.id}"
-        aria-label="Select saved analysis ${item.title || item.domain}"
+        aria-label="Select saved prospect ${item.title || item.domain}"
       />
   </div>
 

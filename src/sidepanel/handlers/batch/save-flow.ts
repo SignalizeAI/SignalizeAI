@@ -90,7 +90,7 @@ export function createBatchSaveFlow(deps: SaveFlowDeps) {
     triggeredBtn.disabled = false;
     triggeredBtn.innerHTML = originalHtml;
 
-    showToast(`Successfully saved ${savedCount} analyses.`);
+    showToast(`Successfully saved ${savedCount} prospects.`);
   }
 
   async function saveAllBatchSelection() {
@@ -142,7 +142,7 @@ export function createBatchSaveFlow(deps: SaveFlowDeps) {
         if (savedCount > 0) {
           actionLabel = 'Saved all';
         } else {
-          showToast('No new analyses available to save.');
+          showToast('No new prospects available to save.');
         }
       }
 

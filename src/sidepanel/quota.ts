@@ -95,7 +95,7 @@ export function renderQuotaBanner(): void {
     if (resetTooltip) resetTooltip.textContent = 'Daily quota resets at 00:00 UTC';
     btn.classList.add('hidden');
   } else if (Number(state.remainingToday ?? 0) > 0) {
-    text.textContent = `${used} / ${totalLimit} analyses • ${savedText}`;
+    text.textContent = `${used} / ${totalLimit} prospects generated • ${savedText}`;
     if (usageRing) usageRing.style.setProperty('--progress-deg', `${usedDegrees}deg`);
     if (resetTooltip) resetTooltip.textContent = 'Daily quota resets at 00:00 UTC';
 

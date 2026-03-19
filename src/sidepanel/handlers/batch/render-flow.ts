@@ -333,7 +333,7 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
 
       const copyBtn = document.createElement('button');
       copyBtn.className = 'copy-btn copy-saved-btn';
-      copyBtn.title = 'Copy analysis';
+      copyBtn.title = 'Copy prospect data';
       copyBtn.innerHTML = `
       <svg viewBox="0 0 24 24" class="copy-icon">
         <rect x="9" y="9" width="13" height="13" rx="2"></rect>

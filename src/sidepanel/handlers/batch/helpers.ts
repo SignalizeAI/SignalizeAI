@@ -141,7 +141,7 @@ export function buildUrlOnlyContent(url: string, reason: string): Content {
   return {
     url,
     title,
-    metaDescription: `Limited analysis: content extraction unavailable (${reason}).`,
+    metaDescription: `Limited prospect data: content extraction unavailable (${reason}).`,
     headings: [title, hostname],
     paragraphs: [`Website: ${hostname}`, `URL: ${url}`, `Extraction issue: ${reason}`],
   };
@@ -203,7 +203,7 @@ export function isRetryableError(err: unknown): boolean {
   const retryableMarkers = [
     'service unavailable',
     'ai service unavailable',
-    'analysis request failed',
+    'prospecting request failed',
     'invalid json from backend',
     'network',
     'failed to fetch',

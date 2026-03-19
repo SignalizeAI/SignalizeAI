@@ -33,7 +33,7 @@ export function showContentBlocked(message: string, options: ShowBlockedOptions 
       const btn = document.createElement('button');
       btn.id = 'analyze-homepage-btn';
       btn.className = 'primary-btn';
-      btn.textContent = 'Analyze homepage instead';
+      btn.textContent = 'Generate homepage insights instead';
       wrapper.appendChild(btn);
     }
 
@@ -79,7 +79,7 @@ export function showIrrelevantDomainView(): void {
     if (titleEl) titleEl.textContent = 'Search engines & social media excluded';
     if (descEl) {
       descEl.textContent =
-        'Analysis is automatically skipped on search engines and social media to save your credits. Navigate to a business website for analysis.';
+        'Prospecting is automatically skipped on search engines and social media to save your credits. Navigate to a business website for sales insights.';
     }
     emptyView.classList.remove('hidden');
   }

@@ -138,14 +138,14 @@ export async function extractWebsiteContent(): Promise<void> {
     if (!tab.url) {
       endAnalysisLoading();
       if (contentLoading) contentLoading.classList.add('hidden');
-      showContentBlocked('Please navigate to a website to analyze.');
+      showContentBlocked('Please navigate to a website to generate insights.');
       return;
     }
 
     if (tab.url.includes('signalizeai.org/auth/callback')) {
       endAnalysisLoading();
       if (contentLoading) contentLoading.classList.add('hidden');
-      showContentBlocked('Login completed. Navigate to a website to analyze.');
+      showContentBlocked('Login completed. Navigate to a website to generate insights.');
       return;
     }
 
@@ -182,7 +182,7 @@ export async function extractWebsiteContent(): Promise<void> {
     return new Promise((resolve) => {
       const timeoutId = setTimeout(() => {
         document.getElementById('ai-loading')?.classList.add('hidden');
-        showContentBlocked('Timed out while analyzing. Please try again.');
+        showContentBlocked('Timed out while generating insights. Please try again.');
         resolve();
       }, 15000);
 
@@ -334,17 +334,19 @@ export async function extractWebsiteContent(): Promise<void> {
                 if (!state.forceRefresh && !isNewRootDomain && !isNewUrl && !contentChanged) {
                   if (aiLoading) aiLoading.classList.add('hidden');
                   if (aiData) aiData.classList.add('hidden');
-                  showContentBlocked('Click the refresh button to analyze this page.');
+                  showContentBlocked(
+                    'Click the refresh button to generate fresh insights for this page.'
+                  );
                   resolve();
                   return;
                 }
 
                 if (aiLoading) aiLoading.classList.remove('hidden');
                 if (aiData) aiData.classList.add('hidden');
-                setLoadingMessage('Analyzing content with AI...');
+                setLoadingMessage('Generating AI insights...');
 
                 if (!response.content.paragraphs?.length && !response.content.headings?.length) {
-                  showContentBlocked('Not enough readable content to analyze.');
+                  showContentBlocked('Not enough readable content to generate insights.');
                   resolve();
                   return;
                 }
@@ -383,7 +385,7 @@ export async function extractWebsiteContent(): Promise<void> {
                 }
 
                 if (!result.analysis) {
-                  showContentBlocked('Failed to generate analysis');
+                  showContentBlocked('Failed to generate prospect data');
                   endAnalysisLoading();
                   resolve();
                   return;
@@ -428,14 +430,14 @@ export async function extractWebsiteContent(): Promise<void> {
                     .eq('id', existing.id);
 
                   if (updateError) {
-                    console.error('Failed to update saved analysis:', updateError);
-                    showToast('Failed to update saved analysis. Try again.');
+                    console.error('Failed to update saved prospect:', updateError);
+                    showToast('Failed to update saved prospect. Try again.');
                   }
                 }
                 resolve();
               }
             } catch (err: any) {
-              showContentBlocked('Failed to analyze page: ' + err.message);
+              showContentBlocked('Failed to generate insights for this page: ' + err.message);
               endAnalysisLoading();
               resolve();
             }
@@ -450,7 +452,7 @@ export async function extractWebsiteContent(): Promise<void> {
           } else if (response?.reason === 'RESTRICTED') {
             endAnalysisLoading();
             showContentBlocked(
-              'This page requires login or consent before content can be analyzed.',
+              'This page requires login or consent before insights can be generated.',
               {
                 allowHomepageFallback: true,
                 originalUrl: tab.url,
@@ -462,7 +464,7 @@ export async function extractWebsiteContent(): Promise<void> {
             if (response.error) {
               showContentBlocked(`Error: ${response.error}`);
             } else {
-              showContentBlocked('Unable to analyze this page.');
+              showContentBlocked('Unable to generate insights for this page.');
             }
           }
           resolve();
@@ -509,7 +511,7 @@ export async function getHomepageAnalysisForSave(url: string): Promise<any> {
   });
 
   if (!response?.ok || !response.content) {
-    return { error: 'Unable to analyze homepage.' };
+    return { error: 'Unable to generate homepage insights.' };
   }
 
   const meta: ExtractedMeta = {
@@ -544,7 +546,7 @@ export async function getHomepageAnalysisForSave(url: string): Promise<any> {
   }
 
   if (!result.analysis) {
-    return { error: 'Failed to generate analysis' };
+    return { error: 'Failed to generate prospect data' };
   }
 
   const analysis = result.analysis;
@@ -583,7 +585,7 @@ export async function analyzeSpecificUrl(url: string): Promise<void> {
   if (contentLoading) contentLoading.classList.remove('hidden');
   document.getElementById('empty-tab-view')?.classList.add('hidden');
   setLoadingMessage(
-    "Hold on, we're opening the site in the background, analyzing it, then we'll show you the results..."
+    "Hold on, we're opening the site in the background, generating insights, then we'll show you the results..."
   );
   state.isAnalysisLoading = true;
 
@@ -602,7 +604,7 @@ export async function analyzeSpecificUrl(url: string): Promise<void> {
 
     if (!response?.ok || !response.content) {
       showContentBlocked(
-        response?.error || response?.reason || 'Unable to analyze the provided URL.'
+        response?.error || response?.reason || 'Unable to generate insights for the provided URL.'
       );
       return;
     }
@@ -684,6 +686,6 @@ export async function analyzeSpecificUrl(url: string): Promise<void> {
   } catch (err: any) {
     if (contentLoading) contentLoading.classList.add('hidden');
     state.isAnalysisLoading = false;
-    showContentBlocked('Failed to explicitly analyze URL: ' + err.message);
+    showContentBlocked('Failed to generate insights for the URL: ' + err.message);
   }
 }

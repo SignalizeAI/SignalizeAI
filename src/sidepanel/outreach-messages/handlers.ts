@@ -64,7 +64,7 @@ async function persistOutreachAnglesIfSaved(): Promise<void> {
     .eq('id', savedId);
 
   if (error) {
-    showToast('Emails generated, but failed to sync them to the saved analysis.');
+    showToast('Emails generated, but failed to sync them to the saved prospect.');
   }
 }
 

@@ -36,7 +36,7 @@ export function showLimitModal(type: 'save' | 'analysis' | 'upgrade'): void {
   if (type === 'save') {
     message = `You've reached your limit of ${state.maxSavedLimit} saved items. Upgrade to increase it.`;
   } else if (type === 'analysis') {
-    message = `You've used all ${state.dailyLimitFromAPI} analyses for today. Upgrade to increase your limit.`;
+    message = `You've used all ${state.dailyLimitFromAPI} daily prospect credits. Upgrade to increase your limit.`;
   } else {
     title = 'Upgrade Plan';
     message = 'Unlock higher limits and advanced features by upgrading your plan.';
