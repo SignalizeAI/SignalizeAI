@@ -12,6 +12,13 @@ export interface ExtractedMeta {
   domain: string;
 }
 
+export interface ExtractedEvidence {
+  title: string;
+  metaDescription: string;
+  headings: string[];
+  paragraphs: string[];
+}
+
 export interface BestSalesPersona {
   persona: string;
   reason: string;
@@ -46,6 +53,7 @@ export interface State {
   lastContentHash: string | null;
   lastAnalysis: Analysis | null;
   lastExtractedMeta: ExtractedMeta | null;
+  lastExtractedEvidence: ExtractedEvidence | null;
   lastAnalyzedDomain: string | null;
   forceRefresh: boolean;
   currentView: 'analysis' | 'saved' | 'batch' | 'profile' | 'settings' | null;
@@ -80,6 +88,7 @@ export const state: State = {
   lastContentHash: null,
   lastAnalysis: null,
   lastExtractedMeta: null,
+  lastExtractedEvidence: null,
   lastAnalyzedDomain: null,
   forceRefresh: false,
   currentView: 'analysis',

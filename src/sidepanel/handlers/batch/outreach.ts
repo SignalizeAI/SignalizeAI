@@ -177,6 +177,11 @@ async function generateForResult(index: number): Promise<boolean> {
     title: result.content.title || result.domain,
     url: result.url,
     domain: result.domain,
+    evidence: {
+      metaDescription: result.content.metaDescription,
+      headings: result.content.headings,
+      paragraphs: result.content.paragraphs,
+    },
   };
 
   const generated = await generateOutreachAngles(result.analysis as Analysis, meta);

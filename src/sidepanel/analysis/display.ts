@@ -64,6 +64,7 @@ export function showContentBlocked(message: string, options: ShowBlockedOptions 
   state.lastAnalysis = null;
   state.lastContentHash = null;
   state.lastExtractedMeta = null;
+  state.lastExtractedEvidence = null;
   state.lastAnalyzedDomain = null;
   state.forceRefresh = false;
 }

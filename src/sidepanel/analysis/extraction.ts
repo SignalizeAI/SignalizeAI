@@ -214,6 +214,12 @@ export async function extractWebsiteContent(): Promise<void> {
               url: response.content.url,
               domain: new URL(response.content.url).hostname,
             };
+            state.lastExtractedEvidence = {
+              title: cleanTitle(response.content.title),
+              metaDescription: response.content.metaDescription,
+              headings: response.content.headings || [],
+              paragraphs: response.content.paragraphs || [],
+            };
 
             const currentDomain = state.lastExtractedMeta.domain;
             const currentUrl = state.lastExtractedMeta.url;
@@ -603,6 +609,12 @@ export async function analyzeSpecificUrl(url: string): Promise<void> {
       description: response.content.metaDescription,
       url: response.content.url,
       domain: new URL(response.content.url).hostname,
+    };
+    state.lastExtractedEvidence = {
+      title: cleanTitle(response.content.title),
+      metaDescription: response.content.metaDescription,
+      headings: response.content.headings || [],
+      paragraphs: response.content.paragraphs || [],
     };
 
     state.lastContentHash = await hashContent(response.content);

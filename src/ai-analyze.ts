@@ -186,7 +186,16 @@ export async function fetchQuota(): Promise<Quota | null> {
 
 export async function generateOutreachAngles(
   analysis: Analysis,
-  meta: { title: string; url: string; domain: string }
+  meta: {
+    title: string;
+    url: string;
+    domain: string;
+    evidence?: {
+      metaDescription?: string;
+      headings?: string[];
+      paragraphs?: string[];
+    };
+  }
 ): Promise<import('./sidepanel/outreach-messages/types.js').OutreachAnglesResult | null> {
   const token = await getAccessToken();
   if (!token) return null;

@@ -71,12 +71,22 @@ async function persistOutreachAnglesIfSaved(): Promise<void> {
 async function runGenerate(): Promise<void> {
   const analysis = state.lastAnalysis;
   const meta = state.lastExtractedMeta;
+  const evidence = state.lastExtractedEvidence;
   if (!analysis || !meta) return;
 
   state.outreachAnglesLoading = true;
   renderOutreachLoading();
 
-  const result = await generateOutreachAngles(analysis, meta);
+  const result = await generateOutreachAngles(analysis, {
+    ...meta,
+    evidence: evidence
+      ? {
+          metaDescription: evidence.metaDescription,
+          headings: evidence.headings,
+          paragraphs: evidence.paragraphs,
+        }
+      : undefined,
+  });
 
   state.outreachAnglesLoading = false;
 
