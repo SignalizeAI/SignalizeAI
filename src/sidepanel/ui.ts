@@ -39,7 +39,7 @@ export function navigateTo(view: 'analysis' | 'saved' | 'batch' | 'profile' | 's
 
   if (headerSubtitle) {
     if (view === 'analysis') {
-      headerSubtitle.textContent = 'Understand any page';
+      headerSubtitle.textContent = 'Sell to any company';
       headerSubtitle.style.cursor = 'default';
       headerSubtitle.onclick = null;
     } else {

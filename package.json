@@ -1,7 +1,7 @@
 {
   "name": "signalizeai",
   "version": "5.1.0",
-  "description": "Understand any page. AI insights and outreach strategies.",
+  "description": "Sell to any company. Get sales-ready insights and outreach in seconds.",
   "main": "background.js",
   "scripts": {
     "lint": "eslint .",

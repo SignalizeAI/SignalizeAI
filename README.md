@@ -19,22 +19,22 @@
 <h1 align="center">SignalizeAI</h1>
 
 <p align="center">
-  <strong>Understand any page<br/>AI insights and outreach strategies</strong>
+  <strong>Sell to any company<br/>Get sales-ready insights and outreach in seconds</strong>
 </p>
 
-SignalizeAI helps you quickly understand how any business website is positioned for sales.
+SignalizeAI helps you move from company page to sales action faster.
 
-With one click, it analyzes publicly available website content to identify:
+With one click, it turns publicly available website content into:
 
-- What the company does
-- Who their ideal customer is
-- Their value proposition
+- Sales-ready context
+- Buyer signals
+- Positioning cues
 - Sales readiness score
-- Recommended sales persona
+- Outreach direction
 
-The extension runs directly inside a Chrome or Firefox side panel, allowing you to analyze websites without leaving the page or interrupting your workflow.
+The extension runs directly inside a Chrome or Firefox side panel, letting you qualify targets and prep outreach without leaving the page.
 
-It is designed for sales professionals, founders, marketers, and business development teams who want faster insights before outreach, demos, or research.
+It is designed for sales professionals, founders, marketers, and business development teams who want faster decisions before outreach, demos, or account prioritization.
 
 ## ✨ Key features
 
