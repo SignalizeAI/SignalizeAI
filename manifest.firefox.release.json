@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SignalizeAI",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "description": "Understand any page. AI insights and outreach strategies.",
   "permissions": ["activeTab", "storage", "tabs", "scripting"],
   "host_permissions": [
