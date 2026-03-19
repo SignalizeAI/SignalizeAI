@@ -114,6 +114,9 @@ export async function startBatchProcess(urls: string[], deps: ProcessFlowDeps) {
           analysis: result.analysis,
           contentHash: result.contentHash,
           status: 'ready',
+          outreachAngles: null,
+          outreachGeneratedAt: null,
+          outreachError: null,
         });
         appendResultItem(result.url, 'Analyzed', false);
       }

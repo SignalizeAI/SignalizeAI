@@ -1,0 +1,417 @@
+/* ── Suggested Outreach Messages section ──────────────────────────────── */
+
+.outreach-messages-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 10px 0 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  margin-top: 8px;
+  box-shadow: none;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.outreach-messages-heading {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.outreach-messages-subheading {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: -8px 0 4px;
+}
+
+/* ── CTA button ──────────────────────────────────────────────────────── */
+
+.generate-outreach-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0.85, 0.32, 1.2);
+  margin-top: 12px;
+}
+
+.generate-outreach-btn:hover {
+  background: var(--bg-hover-strong);
+  border-color: var(--accent-light);
+  color: var(--accent-light);
+  transform: translateY(-1px);
+}
+
+.generate-outreach-btn:active {
+  transform: translateY(0);
+}
+
+.generate-outreach-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.generate-outreach-btn[data-mode='hide'] {
+  background: var(--bg-hover-strong);
+}
+
+/* ── Loading skeleton ─────────────────────────────────────────────────── */
+
+.outreach-skeleton-card {
+  height: 110px;
+  border-radius: 10px;
+  background: var(--bg-surface-border);
+  animation: pulse 1.5s infinite ease-in-out;
+  margin-bottom: 8px;
+}
+
+/* ── Angle cards ────────────────────────────────────────────────────── */
+
+.outreach-angle-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--bg-surface);
+  margin-bottom: 6px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.outreach-recommended-section,
+.outreach-other-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.outreach-recommended-section {
+  margin: 6px 0 18px;
+}
+
+.outreach-section-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  opacity: 0.88;
+}
+
+.outreach-recommended-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 2px solid var(--accent-light);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent-blue-bg) 75%, var(--bg-surface) 25%);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.outreach-recommended-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.outreach-recommended-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-light);
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
+}
+
+.outreach-other-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.outreach-angle-card:last-child {
+  margin-bottom: 0;
+}
+
+.outreach-angle-card:hover {
+  border-color: var(--border-medium);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+.outreach-angle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.outreach-angle-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.2px;
+}
+
+.outreach-email-content {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+}
+
+.outreach-email-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* ── Reply probability badge ─────────────────────────────────────────── */
+
+.reply-probability {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+  opacity: 0.72;
+  background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 38%, transparent);
+}
+
+/* ── Variation blocks ────────────────────────────────────────────────── */
+
+.outreach-variation {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--bg-surface-border);
+  border-radius: 8px;
+  position: relative;
+}
+
+.variation-number {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.variation-subject {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.variation-body {
+  font-size: 14px;
+  color: var(--text-tertiary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.variation-copy-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-hover-strong);
+  border: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0.85, 0.32, 1.2);
+  margin-top: 0;
+  flex: 0 0 auto;
+}
+
+.variation-copy-btn svg {
+  pointer-events: none;
+}
+
+.variation-copy-btn:hover {
+  background: var(--bg-active);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+  border-color: var(--border-medium);
+}
+
+.variation-copy-btn.is-copied {
+  color: var(--success-color, #16a34a);
+  background: color-mix(in srgb, var(--success-color, #16a34a) 12%, var(--bg-primary) 88%);
+  border-color: color-mix(in srgb, var(--success-color, #16a34a) 35%, transparent);
+  transform: none;
+}
+
+.variation-copy-btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+  white-space: nowrap;
+  z-index: 5;
+}
+
+.variation-copy-btn:hover::after,
+.variation-copy-btn:focus-visible::after,
+.variation-copy-btn.is-copied::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── Error state ──────────────────────────────────────────────────────── */
+
+.outreach-error-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-light);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--danger-light);
+}
+
+.outreach-retry-btn {
+  background: transparent;
+  border: 1px solid var(--danger-light);
+  color: var(--danger-light);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.outreach-retry-btn:hover {
+  background: var(--danger-light);
+  color: var(--bg-primary);
+}
+
+/* ── Batch per-card styles ───────────────────────────────────────────── */
+
+.batch-outreach-footer {
+  padding: 10px 12px 4px;
+  border-top: 1px solid var(--bg-surface-border);
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.batch-generate-emails-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.batch-generate-emails-btn:hover {
+  background: var(--bg-hover-strong);
+  color: var(--text-primary);
+  border-color: var(--border-medium);
+}
+
+.batch-generate-emails-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.batch-outreach-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.batch-outreach-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--danger-light);
+  padding: 8px 10px;
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-light);
+  border-radius: 6px;
+}
+
+/* ── Emails for All button (in batch header) ─────────────────────────── */
+
+.batch-emails-all-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Emails for All progress row ─────────────────────────────────────── */
+
+.batch-emails-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--accent-blue-bg);
+  border-bottom: 1px solid var(--border-light);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent-light);
+  animation: fadeIn 0.2s ease;
+}

@@ -1,3 +1,5 @@
+import type { OutreachAnglesResult } from './outreach-messages/types.js';
+
 export interface PendingDelete {
   element: HTMLElement;
   finalize: () => Promise<void>;
@@ -69,6 +71,9 @@ export interface State {
   lastQuotaFetch: number;
   lastAutoAnalyzeAt: number;
   activeFilters: ActiveFilters;
+  outreachAngles: OutreachAnglesResult | null;
+  outreachAnglesLoading: boolean;
+  currentUserName: string;
 }
 
 export const state: State = {
@@ -106,4 +111,7 @@ export const state: State = {
     searchQuery: '',
     sort: 'created_at_desc',
   },
+  outreachAngles: null,
+  outreachAnglesLoading: false,
+  currentUserName: '',
 };

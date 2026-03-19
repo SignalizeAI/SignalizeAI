@@ -259,6 +259,13 @@ export function setupSavedHandlers(): void {
           recommended_outreach_goal: saveAnalysis.recommendedOutreach?.goal,
           recommended_outreach_angle: saveAnalysis.recommendedOutreach?.angle,
           recommended_outreach_message: saveAnalysis.recommendedOutreach?.message,
+          ...(state.outreachAngles ? {
+            outreach_angles: {
+              generated_at: new Date().toISOString(),
+              recommended_angle_id: state.outreachAngles.recommendedAngleId,
+              angles: state.outreachAngles.angles,
+            },
+          } : {}),
         })
         .select('id')
         .single();

@@ -2,9 +2,11 @@ import { buildSavedCopyText, copyAnalysisText } from '../clipboard.js';
 import { loadSettings } from '../settings.js';
 import { supabase } from '../supabase.js';
 import { state } from '../state.js';
+import { onCopyVariationClick } from '../outreach-messages/handlers.js';
 import { areFiltersActive } from './filtering.js';
 import { updateDeleteState, updateSelectAllIcon } from './selection.js';
 import { showUndoToast } from './delete.js';
+import { buildSavedOutreachMarkup } from './outreach-render.js';
 
 const exportToggle = document.getElementById('export-menu-toggle');
 const filterToggle = document.getElementById('filter-toggle');
@@ -189,6 +191,8 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
 <span style="white-space: pre-wrap;">${(item.recommended_outreach_message || '—').trim()}</span>
     </p>
 
+    ${buildSavedOutreachMarkup(item)}
+
     <hr style="margin:8px 0; opacity:0.3" />
 
     <p style="opacity:0.85">
@@ -229,6 +233,15 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
 
     const text = await buildSavedCopyText(item);
     copyAnalysisText(text, copySavedBtn, formatLabel);
+  });
+
+  wrapper.addEventListener('click', (e: MouseEvent) => {
+    const outreachCopyBtn = (e.target as HTMLElement).closest(
+      '.saved-outreach-copy-btn'
+    ) as HTMLButtonElement | null;
+    if (!outreachCopyBtn) return;
+    e.stopPropagation();
+    onCopyVariationClick(outreachCopyBtn);
   });
 
   const handleSelection = (isShift: boolean, forceState: boolean | null = null): void => {

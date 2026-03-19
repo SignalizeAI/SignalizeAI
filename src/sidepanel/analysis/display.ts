@@ -1,5 +1,8 @@
 import { state, type Analysis } from '../state.js';
 import { endAnalysisLoading } from './utils.js';
+import { hideOutreachSection, renderOutreachAngles } from '../outreach-messages/render.js';
+import { attachOutreachHandlers, resetOutreachState } from '../outreach-messages/handlers.js';
+import type { OutreachAnglesResult } from '../outreach-messages/types.js';
 
 interface ShowBlockedOptions {
   allowHomepageFallback?: boolean;
@@ -56,6 +59,8 @@ export function showContentBlocked(message: string, options: ShowBlockedOptions 
     saveBtn.classList.remove('active');
   }
 
+  hideOutreachSection();
+
   state.lastAnalysis = null;
   state.lastContentHash = null;
   state.lastExtractedMeta = null;
@@ -79,7 +84,7 @@ export function showIrrelevantDomainView(): void {
   }
 }
 
-export function displayAIAnalysis(analysis: Analysis): void {
+export function displayAIAnalysis(analysis: Analysis, savedAngles?: OutreachAnglesResult): void {
   endAnalysisLoading();
 
   const aiCard = document.getElementById('ai-analysis');
@@ -144,5 +149,13 @@ export function displayAIAnalysis(analysis: Analysis): void {
   }
   if (outreachMessageEl) {
     outreachMessageEl.textContent = analysis.recommendedOutreach?.message || '—';
+  }
+
+  resetOutreachState();
+  attachOutreachHandlers();
+
+  if (savedAngles?.angles?.length) {
+    state.outreachAngles = savedAngles;
+    renderOutreachAngles(savedAngles, analysis);
   }
 }

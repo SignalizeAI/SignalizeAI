@@ -44,6 +44,15 @@ export function parseUrlsFromCsv(text: string): string[] {
 }
 
 export function mapBatchResultToExportItem(r: BatchResult) {
+  const outreachAngles =
+    r.outreachAngles?.angles?.length
+      ? {
+          generated_at: r.outreachGeneratedAt,
+          recommended_angle_id: r.outreachAngles.recommendedAngleId,
+          angles: r.outreachAngles.angles,
+        }
+      : null;
+
   return {
     title: r.content.title,
     domain: r.domain,
@@ -60,6 +69,7 @@ export function mapBatchResultToExportItem(r: BatchResult) {
     recommended_outreach_goal: r.analysis.recommendedOutreach?.goal,
     recommended_outreach_angle: r.analysis.recommendedOutreach?.angle,
     recommended_outreach_message: r.analysis.recommendedOutreach?.message,
+    outreach_angles: outreachAngles,
   };
 }
 

@@ -9,6 +9,7 @@ import { createBatchRenderFlow } from './batch/render-flow.js';
 import { createBatchSaveFlow } from './batch/save-flow.js';
 import { startBatchProcess as startBatchProcessFlow } from './batch/process-flow.js';
 import { BATCH_PAGE_SIZE, FREE_BATCH_LIMIT, TEAM_BATCH_LIMIT } from './batch/constants.js';
+import { generateEmailsForAll, cancelBatchEmailGeneration } from './batch/outreach.js';
 
 let saveFlow: ReturnType<typeof createBatchSaveFlow> | null = null;
 const renderFlow = createBatchRenderFlow({
@@ -166,6 +167,54 @@ export function setupBatchHandlers() {
 
   const saveAllBtn = document.getElementById('batch-save-all-btn');
   saveAllBtn?.addEventListener('click', () => saveAllBatchSelection());
+
+  // ── Emails for All ────────────────────────────────────────────────────
+  const emailsAllBtn = document.getElementById('batch-emails-for-all-btn') as HTMLButtonElement | null;
+
+  emailsAllBtn?.addEventListener('click', () => {
+    if (!emailsAllBtn || batchState.tempBatchResults.length === 0) return;
+
+    emailsAllBtn.disabled = true;
+    emailsAllBtn.title = 'Generating emails…';
+
+    // Show inline progress in the batch header
+    const progressRow = document.getElementById('batch-emails-progress');
+    const progressText = document.getElementById('batch-emails-progress-text');
+    const cancelEmailsBtn = document.getElementById('batch-emails-cancel-btn');
+    if (progressRow) progressRow.classList.remove('hidden');
+
+    cancelEmailsBtn?.addEventListener('click', () => {
+      cancelBatchEmailGeneration();
+      if (progressRow) progressRow.classList.add('hidden');
+      emailsAllBtn.disabled = false;
+      emailsAllBtn.title = 'Generate outreach emails for all results';
+    }, { once: true });
+
+    void generateEmailsForAll(
+      renderFlow.getFilteredBatchResults(),
+      (done, total) => {
+        if (progressText) progressText.textContent = `Generating emails… ${done}/${total}`;
+      },
+      ({ cancelled, completed, total }) => {
+        if (progressRow) progressRow.classList.add('hidden');
+        emailsAllBtn.disabled = false;
+        if (cancelled) {
+          emailsAllBtn.title = `Email generation cancelled after ${completed}/${total}`;
+          return;
+        }
+
+        emailsAllBtn.title =
+          total === 0 ? 'Emails already generated for these results' : 'Emails generated for all';
+        emailsAllBtn.innerHTML = `
+          <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2"
+               fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>`;
+      }
+    );
+  });
+  // ── end Emails for All ────────────────────────────────────────────────
+
 
   const multiSelectToggle = document.getElementById('batch-multi-select-toggle');
   const selectionBackBtn = document.getElementById('batch-selection-back-btn');

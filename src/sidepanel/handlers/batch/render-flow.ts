@@ -2,6 +2,7 @@ import { state } from '../../state.js';
 import { supabase } from '../../supabase.js';
 import { mapBatchResultToExportItem } from './helpers.js';
 import { batchState } from './state.js';
+import { buildBatchOutreachFooter } from './outreach.js';
 
 interface RenderFlowDeps {
   saveSingleResult: (index: number, btn: HTMLButtonElement) => void;
@@ -57,10 +58,26 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
     const reviewContainer = document.getElementById('batch-review-container');
     const headerActions = document.getElementById('batch-header-actions');
     const reviewDoneBtn = document.getElementById('batch-review-done-btn');
+    const emailsAllBtn = document.getElementById(
+      'batch-emails-for-all-btn'
+    ) as HTMLButtonElement | null;
+    const emailsProgress = document.getElementById('batch-emails-progress');
 
     if (!reviewContainer) return;
     reviewContainer.classList.remove('hidden');
     if (headerActions) headerActions.classList.remove('hidden');
+    if (emailsAllBtn) emailsAllBtn.classList.remove('hidden');
+    emailsProgress?.classList.add('hidden');
+    if (emailsAllBtn) {
+      emailsAllBtn.disabled = false;
+      emailsAllBtn.title = 'Generate outreach emails for all results';
+      emailsAllBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor"
+             stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          <polyline points="22,6 12,13 2,6"/>
+        </svg>`;
+    }
     if (reviewDoneBtn) {
       reviewDoneBtn.textContent =
         batchState.lastBatchInputMode === 'paste' ? 'Paste new URLs' : 'Upload new CSV';
@@ -259,6 +276,7 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
       const wrapper = document.createElement('div');
       wrapper.className = 'saved-item';
       wrapper.style.margin = '0 0 10px 0';
+      wrapper.dataset.batchIndex = index.toString();
 
       const headerRow = document.createElement('div');
       headerRow.className = 'saved-item-header';
@@ -430,6 +448,7 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
 
       wrapper.appendChild(headerRow);
       wrapper.appendChild(body);
+      wrapper.appendChild(buildBatchOutreachFooter(res, index));
       reviewList.appendChild(wrapper);
     });
   }

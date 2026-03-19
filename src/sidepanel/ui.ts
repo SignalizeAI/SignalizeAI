@@ -110,6 +110,7 @@ export async function updateUI(session: Session | null): Promise<void> {
 
     const user = session.user;
     const fullName = user?.user_metadata?.full_name || user?.email || '';
+    state.currentUserName = fullName;
     const avatarUrl = user?.user_metadata?.avatar_url;
 
     if (userInitialSpan) {
@@ -152,6 +153,7 @@ export async function updateUI(session: Session | null): Promise<void> {
       setTimeout(extractWebsiteContent, 0);
     }
   } else {
+    state.currentUserName = '';
     document.getElementById('limit-modal')?.classList.add('hidden');
     loginView?.classList.remove('hidden');
     welcomeView?.classList.add('hidden');

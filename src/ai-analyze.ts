@@ -184,7 +184,33 @@ export async function fetchQuota(): Promise<Quota | null> {
   return await res.json();
 }
 
+export async function generateOutreachAngles(
+  analysis: Analysis,
+  meta: { title: string; url: string; domain: string }
+): Promise<import('./sidepanel/outreach-messages/types.js').OutreachAnglesResult | null> {
+  const token = await getAccessToken();
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/outreach-messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: 'omit',
+      mode: 'cors',
+      body: JSON.stringify({ analysis, meta }),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 function normalizeAnalysis(raw: any): Analysis {
+
   const BUYER_PERSONAS = [
     'Founder / CEO',
     'Enterprise Account Executive',

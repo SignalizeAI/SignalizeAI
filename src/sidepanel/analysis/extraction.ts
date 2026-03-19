@@ -306,7 +306,7 @@ export async function extractWebsiteContent(): Promise<void> {
                   state.lastExtractedMeta = cached!.meta;
                 }
 
-                displayAIAnalysis(state.lastAnalysis!);
+                displayAIAnalysis(state.lastAnalysis!, canReuseExisting ? existing?.outreach_angles ?? undefined : undefined);
                 endAnalysisLoading();
 
                 state.lastAnalyzedDomain = currentDomain;
