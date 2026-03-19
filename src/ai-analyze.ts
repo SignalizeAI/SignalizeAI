@@ -219,7 +219,6 @@ export async function generateOutreachAngles(
 }
 
 function normalizeAnalysis(raw: any): Analysis {
-
   const BUYER_PERSONAS = [
     'Founder / CEO',
     'Enterprise Account Executive',

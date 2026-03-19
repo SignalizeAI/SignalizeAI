@@ -191,7 +191,7 @@ async function performSave(res: BatchResult) {
     recommended_outreach_angle: res.analysis.recommendedOutreach?.angle,
     recommended_outreach_message: res.analysis.recommendedOutreach?.message,
     ...(res.outreachAngles?.angles?.length
-        ? {
+      ? {
           outreach_angles: {
             generated_at: res.outreachGeneratedAt || new Date().toISOString(),
             recommended_angle_id: res.outreachAngles.recommendedAngleId,

@@ -263,7 +263,9 @@ export function buildBatchOutreachFooter(res: BatchResult, index: number): HTMLE
   });
 
   container.addEventListener('click', (e) => {
-    const copyBtn = (e.target as HTMLElement).closest('.variation-copy-btn') as HTMLButtonElement | null;
+    const copyBtn = (e.target as HTMLElement).closest(
+      '.variation-copy-btn'
+    ) as HTMLButtonElement | null;
     if (copyBtn) onCopyVariationClick(copyBtn);
   });
 

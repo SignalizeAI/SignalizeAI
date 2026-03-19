@@ -73,8 +73,7 @@ export function exportToCSV(rows: SavedAnalysis[]): void {
     headers.map(csvEscape).join(','),
     ...rows.map((rawItem) => {
       const item = normalizeExportRow(rawItem);
-      return (
-      [
+      return [
         csvEscape(item.title),
         csvEscape(item.domain),
         csvEscape(item.url),
@@ -104,8 +103,7 @@ export function exportToCSV(rows: SavedAnalysis[]): void {
         csvEscape(item.curiosity_subject_2),
         csvEscape(item.curiosity_body_2),
         csvEscape(item.created_at),
-      ].join(',')
-      );
+      ].join(',');
     }),
   ];
 

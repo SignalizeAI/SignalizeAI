@@ -1,5 +1,13 @@
-import { formatOutreachEmailBody, getCompanyDisplayName, getOutreachReplyProbability } from '../outreach-messages/format.js';
-import { PROBABILITY_COLOR, type AngleId, type ReplyProbability } from '../outreach-messages/types.js';
+import {
+  formatOutreachEmailBody,
+  getCompanyDisplayName,
+  getOutreachReplyProbability,
+} from '../outreach-messages/format.js';
+import {
+  PROBABILITY_COLOR,
+  type AngleId,
+  type ReplyProbability,
+} from '../outreach-messages/types.js';
 
 interface SavedOutreachVariation {
   subject?: string;

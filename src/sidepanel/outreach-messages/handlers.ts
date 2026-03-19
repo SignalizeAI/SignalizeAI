@@ -140,7 +140,9 @@ export function attachOutreachHandlers(): void {
 
   // Copy buttons are created dynamically — use event delegation on the list container
   document.getElementById('outreach-messages-list')?.addEventListener('click', (e) => {
-    const btn = (e.target as HTMLElement).closest('.variation-copy-btn') as HTMLButtonElement | null;
+    const btn = (e.target as HTMLElement).closest(
+      '.variation-copy-btn'
+    ) as HTMLButtonElement | null;
     if (btn) onCopyVariationClick(btn);
   });
 

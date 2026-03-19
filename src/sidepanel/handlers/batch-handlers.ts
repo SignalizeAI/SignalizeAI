@@ -169,7 +169,9 @@ export function setupBatchHandlers() {
   saveAllBtn?.addEventListener('click', () => saveAllBatchSelection());
 
   // ── Emails for All ────────────────────────────────────────────────────
-  const emailsAllBtn = document.getElementById('batch-emails-for-all-btn') as HTMLButtonElement | null;
+  const emailsAllBtn = document.getElementById(
+    'batch-emails-for-all-btn'
+  ) as HTMLButtonElement | null;
 
   emailsAllBtn?.addEventListener('click', () => {
     if (!emailsAllBtn || batchState.tempBatchResults.length === 0) return;
@@ -183,12 +185,16 @@ export function setupBatchHandlers() {
     const cancelEmailsBtn = document.getElementById('batch-emails-cancel-btn');
     if (progressRow) progressRow.classList.remove('hidden');
 
-    cancelEmailsBtn?.addEventListener('click', () => {
-      cancelBatchEmailGeneration();
-      if (progressRow) progressRow.classList.add('hidden');
-      emailsAllBtn.disabled = false;
-      emailsAllBtn.title = 'Generate outreach emails for all results';
-    }, { once: true });
+    cancelEmailsBtn?.addEventListener(
+      'click',
+      () => {
+        cancelBatchEmailGeneration();
+        if (progressRow) progressRow.classList.add('hidden');
+        emailsAllBtn.disabled = false;
+        emailsAllBtn.title = 'Generate outreach emails for all results';
+      },
+      { once: true }
+    );
 
     void generateEmailsForAll(
       renderFlow.getFilteredBatchResults(),
@@ -214,7 +220,6 @@ export function setupBatchHandlers() {
     );
   });
   // ── end Emails for All ────────────────────────────────────────────────
-
 
   const multiSelectToggle = document.getElementById('batch-multi-select-toggle');
   const selectionBackBtn = document.getElementById('batch-selection-back-btn');
