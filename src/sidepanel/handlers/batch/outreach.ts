@@ -312,7 +312,12 @@ export function buildBatchOutreachFooter(res: BatchResult, index: number): HTMLE
 export async function generateEmailsForIndices(
   indices: number[],
   onProgress: (done: number, total: number) => void,
-  onDone: (summary: { cancelled: boolean; completed: number; total: number; failed: number }) => void
+  onDone: (summary: {
+    cancelled: boolean;
+    completed: number;
+    total: number;
+    failed: number;
+  }) => void
 ): Promise<void> {
   if (isGeneratingAll) return;
 
@@ -370,7 +375,12 @@ export async function generateEmailsForIndices(
 export async function generateEmailsForAll(
   results: BatchResult[],
   onProgress: (done: number, total: number) => void,
-  onDone: (summary: { cancelled: boolean; completed: number; total: number; failed: number }) => void
+  onDone: (summary: {
+    cancelled: boolean;
+    completed: number;
+    total: number;
+    failed: number;
+  }) => void
 ): Promise<void> {
   const indices = results
     .map((result) => batchState.tempBatchResults.indexOf(result))

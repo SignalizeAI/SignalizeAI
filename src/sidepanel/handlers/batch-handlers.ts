@@ -9,10 +9,7 @@ import { createBatchRenderFlow } from './batch/render-flow.js';
 import { createBatchSaveFlow } from './batch/save-flow.js';
 import { startBatchProcess as startBatchProcessFlow } from './batch/process-flow.js';
 import { BATCH_PAGE_SIZE, FREE_BATCH_LIMIT, TEAM_BATCH_LIMIT } from './batch/constants.js';
-import {
-  generateEmailsForIndices,
-  cancelBatchEmailGeneration,
-} from './batch/outreach.js';
+import { generateEmailsForIndices, cancelBatchEmailGeneration } from './batch/outreach.js';
 
 let saveFlow: ReturnType<typeof createBatchSaveFlow> | null = null;
 const renderFlow = createBatchRenderFlow({
@@ -241,7 +238,11 @@ export function setupBatchHandlers() {
       .getFilteredBatchResults()
       .map((result) => batchState.tempBatchResults.indexOf(result))
       .filter((index) => index >= 0);
-    void startBulkEmailGeneration(indices, emailsAllBtn, 'Emails already generated for these results');
+    void startBulkEmailGeneration(
+      indices,
+      emailsAllBtn,
+      'Emails already generated for these results'
+    );
   });
   // ── end Emails for All ────────────────────────────────────────────────
 
@@ -279,7 +280,11 @@ export function setupBatchHandlers() {
       return;
     }
 
-    void startBulkEmailGeneration(indices, generateSelectedBtn, 'Emails already generated for selected results');
+    void startBulkEmailGeneration(
+      indices,
+      generateSelectedBtn,
+      'Emails already generated for selected results'
+    );
   });
 
   saveSelectedBtn?.addEventListener('click', async () => {

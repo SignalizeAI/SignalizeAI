@@ -34,9 +34,7 @@ function jumpToOutreachArea(): void {
   const section = document.getElementById('outreach-messages-section');
   const btn = document.getElementById('generate-outreach-btn') as HTMLButtonElement | null;
   const target =
-    section && !section.classList.contains('hidden')
-      ? section
-      : (btn as HTMLElement | null);
+    section && !section.classList.contains('hidden') ? section : (btn as HTMLElement | null);
   if (!target || !btn) return;
 
   target.scrollIntoView({ behavior: 'smooth', block: 'start' });
