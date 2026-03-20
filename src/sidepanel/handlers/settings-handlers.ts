@@ -29,6 +29,7 @@ export function setupSettingsHandlers(): void {
     state.lastAnalysis = null;
     state.lastContentHash = null;
     state.lastExtractedMeta = null;
+    state.lastExtractedEvidence = null;
     state.lastAnalyzedDomain = null;
 
     chrome.storage.local.get(null, (items) => {

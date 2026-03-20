@@ -96,6 +96,7 @@ export async function signOut(): Promise<void> {
   state.currentPlan = null;
   state.lastAnalysis = null;
   state.lastExtractedMeta = null;
+  state.lastExtractedEvidence = null;
   state.lastContentHash = null;
   state.lastAnalyzedDomain = null;
   state.pendingDeleteMap.clear();

@@ -44,6 +44,14 @@ export function parseUrlsFromCsv(text: string): string[] {
 }
 
 export function mapBatchResultToExportItem(r: BatchResult) {
+  const outreachAngles = r.outreachAngles?.angles?.length
+    ? {
+        generated_at: r.outreachGeneratedAt,
+        recommended_angle_id: r.outreachAngles.recommendedAngleId,
+        angles: r.outreachAngles.angles,
+      }
+    : null;
+
   return {
     title: r.content.title,
     domain: r.domain,
@@ -60,6 +68,7 @@ export function mapBatchResultToExportItem(r: BatchResult) {
     recommended_outreach_goal: r.analysis.recommendedOutreach?.goal,
     recommended_outreach_angle: r.analysis.recommendedOutreach?.angle,
     recommended_outreach_message: r.analysis.recommendedOutreach?.message,
+    outreach_angles: outreachAngles,
   };
 }
 
@@ -132,7 +141,7 @@ export function buildUrlOnlyContent(url: string, reason: string): Content {
   return {
     url,
     title,
-    metaDescription: `Limited analysis: content extraction unavailable (${reason}).`,
+    metaDescription: `Limited prospect data: content extraction unavailable (${reason}).`,
     headings: [title, hostname],
     paragraphs: [`Website: ${hostname}`, `URL: ${url}`, `Extraction issue: ${reason}`],
   };
@@ -194,7 +203,7 @@ export function isRetryableError(err: unknown): boolean {
   const retryableMarkers = [
     'service unavailable',
     'ai service unavailable',
-    'analysis request failed',
+    'prospecting request failed',
     'invalid json from backend',
     'network',
     'failed to fetch',

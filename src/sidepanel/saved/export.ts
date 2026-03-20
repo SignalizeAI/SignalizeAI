@@ -1,3 +1,9 @@
+import {
+  flattenOutreachExportFields,
+  OUTREACH_EXPORT_COLUMNS,
+  OUTREACH_EXPORT_HEADERS,
+} from './outreach-export.js';
+
 interface SavedAnalysis {
   title?: string;
   domain?: string;
@@ -14,8 +20,25 @@ interface SavedAnalysis {
   recommended_outreach_goal?: string;
   recommended_outreach_angle?: string;
   recommended_outreach_message?: string;
+  outreach_angles?: {
+    generated_at?: string;
+    angles?: Array<{
+      id?: string;
+      variations?: Array<{
+        subject?: string;
+        body?: string;
+      }>;
+    }>;
+  } | null;
   created_at?: string;
   [key: string]: any;
+}
+
+function normalizeExportRow(item: SavedAnalysis): Record<string, any> {
+  return {
+    ...item,
+    ...flattenOutreachExportFields(item),
+  };
 }
 
 export function exportToCSV(rows: SavedAnalysis[]): void {
@@ -42,13 +65,15 @@ export function exportToCSV(rows: SavedAnalysis[]): void {
     'Outreach Goal',
     'Outreach Angle',
     'Outreach Message',
+    ...OUTREACH_EXPORT_HEADERS,
     'Saved At',
   ];
 
   const csvRows = [
     headers.map(csvEscape).join(','),
-    ...rows.map((item) =>
-      [
+    ...rows.map((rawItem) => {
+      const item = normalizeExportRow(rawItem);
+      return [
         csvEscape(item.title),
         csvEscape(item.domain),
         csvEscape(item.url),
@@ -64,9 +89,16 @@ export function exportToCSV(rows: SavedAnalysis[]): void {
         csvEscape(item.recommended_outreach_goal),
         csvEscape(item.recommended_outreach_angle),
         csvEscape(item.recommended_outreach_message),
+        csvEscape(item.outreach_generated_at),
+        csvEscape(item.pain_point_subject_1),
+        csvEscape(item.pain_point_body_1),
+        csvEscape(item.observation_subject_1),
+        csvEscape(item.observation_body_1),
+        csvEscape(item.curiosity_subject_1),
+        csvEscape(item.curiosity_body_1),
         csvEscape(item.created_at),
-      ].join(',')
-    ),
+      ].join(',');
+    }),
   ];
 
   const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
@@ -74,7 +106,7 @@ export function exportToCSV(rows: SavedAnalysis[]): void {
 
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'signalizeai_saved_analyses.csv';
+  a.download = 'signalizeai_saved_prospects.csv';
   a.click();
 
   URL.revokeObjectURL(url);
@@ -86,7 +118,7 @@ export async function exportToExcel(rows: SavedAnalysis[]): Promise<void> {
   const { default: ExcelJS } = await import('exceljs/dist/exceljs.min.js');
 
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('Saved Analyses');
+  const sheet = workbook.addWorksheet('Saved Prospects');
 
   sheet.columns = [
     { header: 'Title', key: 'title', width: 30 },
@@ -104,10 +136,11 @@ export async function exportToExcel(rows: SavedAnalysis[]): Promise<void> {
     { header: 'Outreach Goal', key: 'recommended_outreach_goal', width: 30 },
     { header: 'Outreach Angle', key: 'recommended_outreach_angle', width: 35 },
     { header: 'Outreach Message', key: 'recommended_outreach_message', width: 45 },
+    ...OUTREACH_EXPORT_COLUMNS,
     { header: 'Saved At', key: 'created_at', width: 22 },
   ];
 
-  rows.forEach((item) => sheet.addRow(item));
+  rows.forEach((item) => sheet.addRow(normalizeExportRow(item)));
 
   sheet.getRow(1).font = { bold: true };
 
@@ -119,7 +152,7 @@ export async function exportToExcel(rows: SavedAnalysis[]): Promise<void> {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'signalizeai_saved_analyses.xlsx';
+  a.download = 'signalizeai_saved_prospects.xlsx';
   a.click();
   URL.revokeObjectURL(url);
 }

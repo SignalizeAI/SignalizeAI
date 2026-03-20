@@ -4,6 +4,7 @@ export const FREE_BATCH_LIMIT = 10;
 export const TEAM_BATCH_LIMIT = 50;
 export const BATCH_ENABLE_TELEMETRY_LOG = false;
 export const BATCH_DELAY_BETWEEN_GROUPS = 500; // low default pacing; adaptive cooldown handles unstable windows
+export const BATCH_OUTREACH_DELAY_MS = 1500; // keep outreach generation intentionally paced
 export const RETRY_ATTEMPTS = 2; // Retry failed requests
 export const ANALYZE_RETRY_ATTEMPTS = 4;
 export const ANALYZE_RETRY_ATTEMPTS_LARGE_BATCH = 4;

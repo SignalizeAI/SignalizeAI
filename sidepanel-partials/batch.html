@@ -4,7 +4,7 @@
   style="display: flex; flex-direction: column; flex: 1"
 >
   <div class="content-header">
-    <h3 class="content-title">Batch Analysis</h3>
+    <h3 class="content-title">Batch Prospecting</h3>
     <div id="batch-header-actions" class="header-actions-right hidden">
       <button id="batch-search-toggle" class="secondary-btn hidden" title="Search results">
         <svg
@@ -75,6 +75,46 @@
           <path d="M7 12l3 3 7-7"></path>
         </svg>
       </button>
+      <button
+        id="batch-generate-selected-btn"
+        class="secondary-btn hidden"
+        title="Generate emails for selected"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          width="18"
+          height="18"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+          ></path>
+          <polyline points="22 6 12 13 2 6"></polyline>
+        </svg>
+      </button>
+      <button
+        id="batch-emails-for-all-btn"
+        class="secondary-btn batch-emails-all-btn hidden"
+        title="Generate emails for all results"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          width="18"
+          height="18"
+          stroke="currentColor"
+          stroke-width="2"
+          fill="none"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+          <polyline points="22,6 12,13 2,6" />
+        </svg>
+      </button>
       <button id="batch-save-all-btn" class="secondary-btn" title="Save all results">
         <svg
           width="18"
@@ -112,7 +152,7 @@
           aria-haspopup="true"
           aria-expanded="false"
           aria-label="Export options"
-          title="Export analyses"
+          title="Export prospects"
         >
           <svg
             viewBox="0 0 24 24"
@@ -149,6 +189,18 @@
     </div>
   </div>
 
+  <!-- Emails for All progress row -->
+  <div id="batch-emails-progress" class="batch-emails-progress hidden">
+    <span id="batch-emails-progress-text">Generating emails…</span>
+    <button
+      id="batch-emails-cancel-btn"
+      class="secondary-btn"
+      style="font-size: 11px; padding: 3px 8px; height: auto"
+    >
+      Cancel
+    </button>
+  </div>
+
   <div
     id="batch-upload-container"
     style="display: flex; flex-direction: column; gap: 16px; padding: 12px 0"
@@ -167,7 +219,7 @@
       "
     >
       <div style="font-size: 13px; font-weight: 600; color: var(--text-primary)">
-        How batch analysis works
+        How batch prospecting works
       </div>
       <div
         style="
@@ -216,7 +268,7 @@
             "
             >2</span
           >
-          <span style="line-height: 1.4">We analyze each URL for you</span>
+          <span style="line-height: 1.4">We generate sales-ready insights for each URL</span>
         </div>
         <div style="display: flex; gap: 10px; align-items: flex-start">
           <span
@@ -359,7 +411,7 @@
           pointer-events: none;
         "
       >
-        Analyze CSV
+        Prospect CSV
       </button>
       <div
         id="batch-csv-limit-warning"
@@ -419,7 +471,7 @@
             justify-content: center;
           "
         >
-          Analyze URLs
+          Prospect URLs
         </button>
         <div
           style="

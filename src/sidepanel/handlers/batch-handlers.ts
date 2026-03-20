@@ -9,6 +9,7 @@ import { createBatchRenderFlow } from './batch/render-flow.js';
 import { createBatchSaveFlow } from './batch/save-flow.js';
 import { startBatchProcess as startBatchProcessFlow } from './batch/process-flow.js';
 import { BATCH_PAGE_SIZE, FREE_BATCH_LIMIT, TEAM_BATCH_LIMIT } from './batch/constants.js';
+import { generateEmailsForIndices, cancelBatchEmailGeneration } from './batch/outreach.js';
 
 let saveFlow: ReturnType<typeof createBatchSaveFlow> | null = null;
 const renderFlow = createBatchRenderFlow({
@@ -164,8 +165,86 @@ export function setupBatchHandlers() {
     cancelBtn.setAttribute('disabled', 'true');
   });
 
+  const emailsAllBtn = document.getElementById(
+    'batch-emails-for-all-btn'
+  ) as HTMLButtonElement | null;
+  const generateSelectedBtn = document.getElementById(
+    'batch-generate-selected-btn'
+  ) as HTMLButtonElement | null;
   const saveAllBtn = document.getElementById('batch-save-all-btn');
   saveAllBtn?.addEventListener('click', () => saveAllBatchSelection());
+
+  async function startBulkEmailGeneration(
+    indices: number[],
+    triggerBtn: HTMLButtonElement,
+    emptyTitle: string
+  ) {
+    if (indices.length === 0) return;
+
+    triggerBtn.disabled = true;
+
+    const progressRow = document.getElementById('batch-emails-progress');
+    const progressText = document.getElementById('batch-emails-progress-text');
+    const cancelEmailsBtn = document.getElementById('batch-emails-cancel-btn');
+    if (progressRow) progressRow.classList.remove('hidden');
+    if (progressText) progressText.textContent = `Generating 0/${indices.length}`;
+
+    cancelEmailsBtn?.addEventListener(
+      'click',
+      () => {
+        cancelBatchEmailGeneration();
+        if (progressRow) progressRow.classList.add('hidden');
+        triggerBtn.disabled = false;
+      },
+      { once: true }
+    );
+
+    await generateEmailsForIndices(
+      indices,
+      (done, total) => {
+        if (progressText) progressText.textContent = `Generating ${done}/${total}`;
+      },
+      async ({ cancelled, completed, total, failed }) => {
+        if (progressRow) progressRow.classList.add('hidden');
+        triggerBtn.disabled = false;
+
+        if (cancelled) {
+          const { showToast } = await import('../toast.js');
+          showToast(`Stopped after ${completed}/${total}`);
+          return;
+        }
+
+        if (total === 0) {
+          const { showToast } = await import('../toast.js');
+          showToast(emptyTitle);
+          return;
+        }
+
+        if (failed > 0) {
+          const { showToast } = await import('../toast.js');
+          showToast(`Generated ${total - failed}/${total}. Retry is available on failed cards.`);
+          return;
+        }
+
+        const { showToast } = await import('../toast.js');
+        showToast(`Generated ${total}/${total} emails.`);
+      }
+    );
+  }
+
+  emailsAllBtn?.addEventListener('click', () => {
+    if (!emailsAllBtn || batchState.tempBatchResults.length === 0) return;
+    const indices = renderFlow
+      .getFilteredBatchResults()
+      .map((result) => batchState.tempBatchResults.indexOf(result))
+      .filter((index) => index >= 0);
+    void startBulkEmailGeneration(
+      indices,
+      emailsAllBtn,
+      'Emails already generated for these results'
+    );
+  });
+  // ── end Emails for All ────────────────────────────────────────────────
 
   const multiSelectToggle = document.getElementById('batch-multi-select-toggle');
   const selectionBackBtn = document.getElementById('batch-selection-back-btn');
@@ -188,6 +267,24 @@ export function setupBatchHandlers() {
     ) as NodeListOf<HTMLInputElement>;
     const anyUnchecked = Array.from(checkboxes).some((cb) => !cb.checked);
     checkboxes.forEach((cb) => (cb.checked = anyUnchecked));
+  });
+
+  generateSelectedBtn?.addEventListener('click', async () => {
+    const checkboxes = document.querySelectorAll(
+      '.batch-item-checkbox:checked'
+    ) as NodeListOf<HTMLInputElement>;
+    const indices = Array.from(checkboxes).map((cb) => parseInt(cb.dataset.index!));
+    if (indices.length === 0) {
+      const { showToast } = await import('../toast.js');
+      showToast('No items selected');
+      return;
+    }
+
+    void startBulkEmailGeneration(
+      indices,
+      generateSelectedBtn,
+      'Emails already generated for selected results'
+    );
   });
 
   saveSelectedBtn?.addEventListener('click', async () => {

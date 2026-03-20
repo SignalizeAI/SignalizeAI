@@ -1,3 +1,5 @@
+import type { OutreachAnglesResult } from './outreach-messages/types.js';
+
 export interface PendingDelete {
   element: HTMLElement;
   finalize: () => Promise<void>;
@@ -8,6 +10,13 @@ export interface ExtractedMeta {
   description: string;
   url: string;
   domain: string;
+}
+
+export interface ExtractedEvidence {
+  title: string;
+  metaDescription: string;
+  headings: string[];
+  paragraphs: string[];
 }
 
 export interface BestSalesPersona {
@@ -44,6 +53,7 @@ export interface State {
   lastContentHash: string | null;
   lastAnalysis: Analysis | null;
   lastExtractedMeta: ExtractedMeta | null;
+  lastExtractedEvidence: ExtractedEvidence | null;
   lastAnalyzedDomain: string | null;
   forceRefresh: boolean;
   currentView: 'analysis' | 'saved' | 'batch' | 'profile' | 'settings' | null;
@@ -69,12 +79,16 @@ export interface State {
   lastQuotaFetch: number;
   lastAutoAnalyzeAt: number;
   activeFilters: ActiveFilters;
+  outreachAngles: OutreachAnglesResult | null;
+  outreachAnglesLoading: boolean;
+  currentUserName: string;
 }
 
 export const state: State = {
   lastContentHash: null,
   lastAnalysis: null,
   lastExtractedMeta: null,
+  lastExtractedEvidence: null,
   lastAnalyzedDomain: null,
   forceRefresh: false,
   currentView: 'analysis',
@@ -106,4 +120,7 @@ export const state: State = {
     searchQuery: '',
     sort: 'created_at_desc',
   },
+  outreachAngles: null,
+  outreachAnglesLoading: false,
+  currentUserName: '',
 };
