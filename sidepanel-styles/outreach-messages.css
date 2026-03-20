@@ -70,6 +70,11 @@
   background: var(--bg-hover-strong);
 }
 
+.outreach-jump-btn--highlight,
+.generate-outreach-btn--highlight {
+  animation: outreachButtonPulse 1.2s ease;
+}
+
 /* ── Loading skeleton ─────────────────────────────────────────────────── */
 
 .outreach-skeleton-card {
@@ -260,6 +265,16 @@
   pointer-events: none;
 }
 
+@keyframes outreachButtonPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(26, 115, 232, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(26, 115, 232, 0.12);
+  }
+}
+
 .variation-copy-btn:hover {
   background: var(--bg-active);
   color: var(--text-primary);
@@ -351,26 +366,37 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: transparent;
-  border: 1px solid var(--border-light);
-  color: var(--text-secondary);
-  font-size: 11.5px;
+  min-height: 38px;
+  background: color-mix(in srgb, var(--accent-blue-bg) 28%, var(--bg-primary) 72%);
+  border: 1px solid color-mix(in srgb, var(--accent-light) 14%, var(--border-light));
+  color: var(--text-primary);
+  font-size: 12px;
   font-weight: 600;
-  padding: 5px 12px;
-  border-radius: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .batch-generate-emails-btn:hover {
-  background: var(--bg-hover-strong);
+  background: color-mix(in srgb, var(--accent-blue-bg) 38%, var(--bg-primary) 62%);
   color: var(--text-primary);
-  border-color: var(--border-medium);
+  border-color: var(--accent-light);
 }
 
 .batch-generate-emails-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
+}
+
+.batch-generate-emails-btn[data-state='toggle'] {
+  background: var(--bg-hover-strong);
+}
+
+.batch-generate-emails-btn[data-state='retry'] {
+  border-color: var(--danger-light);
+  color: var(--danger-light);
+  background: var(--danger-bg);
 }
 
 .batch-outreach-container {
@@ -398,6 +424,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
 }
 
 /* ── Emails for All progress row ─────────────────────────────────────── */

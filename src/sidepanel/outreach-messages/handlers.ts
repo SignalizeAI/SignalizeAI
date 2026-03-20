@@ -30,6 +30,27 @@ const CHECK_ICON = `
     <polyline points="20 6 9 17 4 12"></polyline>
   </svg>`;
 
+function jumpToOutreachArea(): void {
+  const section = document.getElementById('outreach-messages-section');
+  const btn = document.getElementById('generate-outreach-btn') as HTMLButtonElement | null;
+  const target =
+    section && !section.classList.contains('hidden')
+      ? section
+      : (btn as HTMLElement | null);
+  if (!target || !btn) return;
+
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const jumpBtn = document.getElementById('outreach-jump-btn') as HTMLButtonElement | null;
+  jumpBtn?.classList.add('outreach-jump-btn--highlight');
+  window.setTimeout(() => {
+    jumpBtn?.classList.remove('outreach-jump-btn--highlight');
+    btn.classList.add('generate-outreach-btn--highlight');
+    window.setTimeout(() => {
+      btn.classList.remove('generate-outreach-btn--highlight');
+    }, 1200);
+  }, 1200);
+}
+
 function showCopySuccess(btn: HTMLButtonElement): void {
   const existingTimer = copyResetTimers.get(btn);
   if (existingTimer) window.clearTimeout(existingTimer);
@@ -137,6 +158,7 @@ export function attachOutreachHandlers(): void {
   if (handlersAttached) return;
 
   document.getElementById('generate-outreach-btn')?.addEventListener('click', onGenerateClick);
+  document.getElementById('outreach-jump-btn')?.addEventListener('click', jumpToOutreachArea);
 
   // Copy buttons are created dynamically — use event delegation on the list container
   document.getElementById('outreach-messages-list')?.addEventListener('click', (e) => {

@@ -16,6 +16,7 @@ import {
 } from '../../outreach-messages/format.js';
 import type { Analysis } from '../../state.js';
 import { batchState } from './state.js';
+import { BATCH_OUTREACH_DELAY_MS } from './constants.js';
 import type { BatchResult } from './types.js';
 
 const EMAIL_BUTTON_ICON = `
@@ -28,6 +29,10 @@ const EMAIL_BUTTON_ICON = `
 let isGeneratingAll = false;
 let cancelGenerateAll = false;
 
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 function hasOutreachAngles(result: BatchResult): boolean {
   return Boolean(result.outreachAngles?.angles?.length);
 }
@@ -38,9 +43,15 @@ function findBatchFooter(index: number): HTMLElement | null {
   ) as HTMLElement | null;
 }
 
-function setButtonState(btn: HTMLButtonElement | null, label: string, disabled = false): void {
+function setButtonState(
+  btn: HTMLButtonElement | null,
+  label: string,
+  disabled = false,
+  state: 'default' | 'loading' | 'toggle' | 'retry' = 'default'
+): void {
   if (!btn) return;
   btn.disabled = disabled;
+  btn.dataset.state = state;
   btn.innerHTML = `${EMAIL_BUTTON_ICON} ${label}`;
   btn.classList.remove('hidden');
   btn.style.display = '';
@@ -148,26 +159,12 @@ function renderCardError(index: number, container: HTMLElement): void {
 
   const error = document.createElement('div');
   error.className = 'batch-outreach-error';
-  error.innerHTML = `<span>Failed to generate emails.</span>`;
-
-  const retryBtn = document.createElement('button');
-  retryBtn.className = 'outreach-retry-btn';
-  retryBtn.textContent = 'Retry';
-  retryBtn.addEventListener('click', () => {
-    const footer = findBatchFooter(index);
-    const btn = footer?.querySelector('.batch-generate-emails-btn') as HTMLButtonElement | null;
-    const nextContainer = footer?.querySelector('.batch-outreach-container') as HTMLElement | null;
-    if (btn && nextContainer) {
-      void runCardGenerate(index, btn, nextContainer);
-    }
-  });
-
-  error.appendChild(retryBtn);
+  error.innerHTML = `<span>Failed to generate emails after multiple attempts.</span>`;
   container.appendChild(error);
   container.classList.remove('hidden');
 }
 
-async function generateForResult(index: number): Promise<boolean> {
+async function generateForResult(index: number, maxAttempts = 3): Promise<boolean> {
   const result = batchState.tempBatchResults[index];
   if (!result) return false;
 
@@ -184,16 +181,18 @@ async function generateForResult(index: number): Promise<boolean> {
     },
   };
 
-  const generated = await generateOutreachAngles(result.analysis as Analysis, meta);
-  if (!generated) {
-    result.outreachError = 'Failed to generate emails.';
-    return false;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const generated = await generateOutreachAngles(result.analysis as Analysis, meta);
+    if (generated) {
+      result.outreachAngles = generated;
+      result.outreachGeneratedAt = new Date().toISOString();
+      result.outreachError = null;
+      return true;
+    }
   }
 
-  result.outreachAngles = generated;
-  result.outreachGeneratedAt = new Date().toISOString();
-  result.outreachError = null;
-  return true;
+  result.outreachError = 'Failed to generate emails.';
+  return false;
 }
 
 function syncVisibleFooter(index: number): void {
@@ -206,25 +205,28 @@ function syncVisibleFooter(index: number): void {
   if (!container) return;
 
   if (hasOutreachAngles(result) && result.outreachAngles) {
-    renderCardAngles(
-      result.outreachAngles,
-      result.analysis as Analysis,
-      container,
-      getCompanyDisplayName(result.content.title, result.domain)
-    );
-    if (btn) btn.style.display = 'none';
+    const isHidden = container.classList.contains('hidden');
+    if (!isHidden) {
+      renderCardAngles(
+        result.outreachAngles,
+        result.analysis as Analysis,
+        container,
+        getCompanyDisplayName(result.content.title, result.domain)
+      );
+    }
+    setButtonState(btn, isHidden ? 'Show Emails' : 'Hide Emails', false, 'toggle');
     return;
   }
 
   if (result.outreachError) {
     renderCardError(index, container);
-    setButtonState(btn, 'Retry Emails');
+    setButtonState(btn, 'Retry Emails', false, 'retry');
     return;
   }
 
   container.classList.add('hidden');
   container.innerHTML = '';
-  setButtonState(btn, 'Generate Emails');
+  setButtonState(btn, 'Generate Emails', false, 'default');
 }
 
 async function runCardGenerate(
@@ -232,16 +234,17 @@ async function runCardGenerate(
   btn: HTMLButtonElement,
   container: HTMLElement
 ): Promise<void> {
-  setButtonState(btn, 'Generating...', true);
+  setButtonState(btn, 'Generating...', true, 'loading');
   showCardLoading(container);
 
   const success = await generateForResult(index);
   if (!success) {
     renderCardError(index, container);
-    setButtonState(btn, 'Retry Emails');
+    setButtonState(btn, 'Retry Emails', false, 'retry');
     return;
   }
 
+  container.classList.remove('hidden');
   syncVisibleFooter(index);
 }
 
@@ -252,13 +255,31 @@ export function buildBatchOutreachFooter(res: BatchResult, index: number): HTMLE
 
   const btn = document.createElement('button');
   btn.className = 'batch-generate-emails-btn';
-  setButtonState(btn, 'Generate Emails');
+  setButtonState(btn, 'Generate Emails', false, 'default');
 
   const container = document.createElement('div');
   container.className = 'batch-outreach-container hidden';
 
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
+
+    if (hasOutreachAngles(res) && res.outreachAngles) {
+      const isHidden = container.classList.contains('hidden');
+      if (isHidden) {
+        renderCardAngles(
+          res.outreachAngles,
+          res.analysis as Analysis,
+          container,
+          getCompanyDisplayName(res.content.title, res.domain)
+        );
+        setButtonState(btn, 'Hide Emails', false, 'toggle');
+      } else {
+        container.classList.add('hidden');
+        setButtonState(btn, 'Show Emails', false, 'toggle');
+      }
+      return;
+    }
+
     void runCardGenerate(index, btn, container);
   });
 
@@ -279,25 +300,29 @@ export function buildBatchOutreachFooter(res: BatchResult, index: number): HTMLE
       container,
       getCompanyDisplayName(res.content.title, res.domain)
     );
-    btn.style.display = 'none';
+    setButtonState(btn, 'Hide Emails', false, 'toggle');
   } else if (res.outreachError) {
     renderCardError(index, container);
-    setButtonState(btn, 'Retry Emails');
+    setButtonState(btn, 'Retry Emails', false, 'retry');
   }
 
   return footer;
 }
 
-export async function generateEmailsForAll(
-  results: BatchResult[],
+export async function generateEmailsForIndices(
+  indices: number[],
   onProgress: (done: number, total: number) => void,
-  onDone: (summary: { cancelled: boolean; completed: number; total: number }) => void
+  onDone: (summary: { cancelled: boolean; completed: number; total: number; failed: number }) => void
 ): Promise<void> {
   if (isGeneratingAll) return;
 
-  const targets = results.filter((result) => !hasOutreachAngles(result));
+  const targets = indices.filter((index) => {
+    const result = batchState.tempBatchResults[index];
+    return result && !hasOutreachAngles(result);
+  });
+
   if (targets.length === 0) {
-    onDone({ cancelled: false, completed: 0, total: 0 });
+    onDone({ cancelled: false, completed: 0, total: 0, failed: 0 });
     return;
   }
 
@@ -305,32 +330,52 @@ export async function generateEmailsForAll(
   cancelGenerateAll = false;
 
   let completed = 0;
-  for (const result of targets) {
+  let failed = 0;
+  for (const index of targets) {
     if (cancelGenerateAll) break;
 
-    const index = batchState.tempBatchResults.indexOf(result);
-    if (index >= 0) {
-      const footer = findBatchFooter(index);
-      const btn = footer?.querySelector('.batch-generate-emails-btn') as HTMLButtonElement | null;
-      const container = footer?.querySelector('.batch-outreach-container') as HTMLElement | null;
+    const footer = findBatchFooter(index);
+    const btn = footer?.querySelector('.batch-generate-emails-btn') as HTMLButtonElement | null;
+    const container = footer?.querySelector('.batch-outreach-container') as HTMLElement | null;
 
-      if (btn && container) {
-        setButtonState(btn, 'Generating...', true);
-        showCardLoading(container);
-      }
+    if (btn && container) {
+      setButtonState(btn, 'Generating...', true, 'loading');
+      showCardLoading(container);
+    }
 
-      await generateForResult(index);
-      syncVisibleFooter(index);
+    const success = await generateForResult(index);
+    if (!success) failed++;
+    syncVisibleFooter(index);
+
+    const result = batchState.tempBatchResults[index];
+    if (success && result?.outreachAngles && container) {
+      container.classList.remove('hidden');
     }
 
     completed++;
     onProgress(completed, targets.length);
+
+    const isLast = completed >= targets.length;
+    if (!cancelGenerateAll && !isLast) {
+      await wait(BATCH_OUTREACH_DELAY_MS);
+    }
   }
 
   const cancelled = cancelGenerateAll;
   isGeneratingAll = false;
   cancelGenerateAll = false;
-  onDone({ cancelled, completed, total: targets.length });
+  onDone({ cancelled, completed, total: targets.length, failed });
+}
+
+export async function generateEmailsForAll(
+  results: BatchResult[],
+  onProgress: (done: number, total: number) => void,
+  onDone: (summary: { cancelled: boolean; completed: number; total: number; failed: number }) => void
+): Promise<void> {
+  const indices = results
+    .map((result) => batchState.tempBatchResults.indexOf(result))
+    .filter((index) => index >= 0);
+  await generateEmailsForIndices(indices, onProgress, onDone);
 }
 
 export function cancelBatchEmailGeneration(): void {

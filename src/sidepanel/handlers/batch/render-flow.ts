@@ -70,9 +70,9 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
     emailsProgress?.classList.add('hidden');
     if (emailsAllBtn) {
       emailsAllBtn.disabled = false;
-      emailsAllBtn.title = 'Generate outreach emails for all results';
+      emailsAllBtn.title = 'Generate emails for all results';
       emailsAllBtn.innerHTML = `
-        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor"
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor"
              stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
           <polyline points="22,6 12,13 2,6"/>
@@ -188,26 +188,32 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
     const multiSelectToggle = document.getElementById('batch-multi-select-toggle');
     const selectionBackBtn = document.getElementById('batch-selection-back-btn');
     const selectAllBtn = document.getElementById('batch-select-all-btn');
+    const generateSelectedBtn = document.getElementById('batch-generate-selected-btn');
     const saveSelectedBtn = document.getElementById('batch-save-selected-btn');
     const searchToggle = document.getElementById('batch-search-toggle');
     const saveAllBtn = document.getElementById('batch-save-all-btn');
     const exportMenuToggle = document.getElementById('batch-export-menu-toggle');
+    const emailsAllBtn = document.getElementById('batch-emails-for-all-btn');
 
     if (batchState.isBatchSelectionMode) {
       selectionBackBtn?.classList.remove('hidden');
       selectAllBtn?.classList.remove('hidden');
+      generateSelectedBtn?.classList.remove('hidden');
       saveSelectedBtn?.classList.remove('hidden');
       multiSelectToggle?.classList.add('hidden');
       exportMenuToggle?.classList.add('hidden');
       saveAllBtn?.classList.add('hidden');
+      emailsAllBtn?.classList.add('hidden');
       searchToggle?.classList.add('hidden');
     } else {
       selectionBackBtn?.classList.add('hidden');
       selectAllBtn?.classList.add('hidden');
+      generateSelectedBtn?.classList.add('hidden');
       saveSelectedBtn?.classList.add('hidden');
       multiSelectToggle?.classList.remove('hidden');
       saveAllBtn?.classList.remove('hidden');
       exportMenuToggle?.classList.remove('hidden');
+      emailsAllBtn?.classList.remove('hidden');
 
       const isTeamPlan = (state.currentPlan || '').toLowerCase() === 'team';
       const hasEnoughResults = batchState.tempBatchResults.length > 10;
