@@ -1,3 +1,5 @@
+import type { OutreachAnglesResult } from '../../outreach-messages/types.js';
+
 export interface Content {
   url: string;
   title: string;
@@ -13,6 +15,9 @@ export interface BatchResult {
   analysis: any;
   contentHash: string;
   status: 'ready' | 'saved' | 'error';
+  outreachAngles?: OutreachAnglesResult | null;
+  outreachGeneratedAt?: string | null;
+  outreachError?: string | null;
   error?: string;
 }
 

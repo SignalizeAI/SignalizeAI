@@ -67,7 +67,7 @@
       onmousedown="this.style.transform = 'translateY(1px)'"
       onmouseup="this.style.transform = 'translateY(-1px)'"
     >
-      Analyze
+      Prospect
     </button>
   </div>
 </div>
@@ -75,15 +75,28 @@
 <!-- AI Business Analysis -->
 <div id="ai-analysis" class="website-content-card hidden">
   <div class="content-header">
-    <h3 class="content-title">Website Information</h3>
+    <h3 class="content-title">Overview</h3>
     <div style="display: flex; gap: 8px">
+      <button
+        class="copy-btn"
+        id="outreach-jump-btn"
+        title="Emails below"
+        aria-label="Emails below"
+      >
+        <svg viewBox="0 0 24 24" class="copy-icon">
+          <path
+            d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+          ></path>
+          <polyline points="22,6 12,13 2,6"></polyline>
+        </svg>
+      </button>
       <button class="copy-btn" id="copyButton" title="Copy website info">
         <svg viewBox="0 0 24 24" class="copy-icon">
           <rect x="9" y="9" width="13" height="13" rx="2"></rect>
           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
         </svg>
       </button>
-      <button class="refresh-btn" id="refreshButton" title="Re-analyze">
+      <button class="refresh-btn" id="refreshButton" title="Refresh insights">
         <svg viewBox="0 0 24 24" class="refresh-icon">
           <path d="M21 12a9 9 0 1 1-3-6.7" />
           <polyline points="21 3 21 9 15 9" />
@@ -120,8 +133,8 @@
         padding: 0 10px;
       "
     >
-      Hold on, we're opening the site in the background, analyzing it, then we'll show you the
-      results...
+      Hold on, we're opening the site in the background, generating insights, then we'll show you
+      the results...
     </div>
     <div class="skeleton-group">
       <div class="skeleton-label"></div>
@@ -231,6 +244,27 @@
           </button>
         </div>
         <div id="ai-outreach-message" class="outreach-message-box">—</div>
+        <button id="generate-outreach-btn" class="generate-outreach-btn">
+          <svg
+            viewBox="0 0 24 24"
+            width="14"
+            height="14"
+            stroke="currentColor"
+            stroke-width="2"
+            fill="none"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+            <polyline points="22,6 12,13 2,6" />
+          </svg>
+          Suggest Outreach Emails
+        </button>
+        <div id="outreach-messages-section" class="outreach-messages-section hidden">
+          <div class="outreach-messages-heading">Suggested outreach emails</div>
+          <div id="outreach-messages-loading" class="hidden"></div>
+          <div id="outreach-messages-list" class="hidden"></div>
+        </div>
       </div>
     </div>
 

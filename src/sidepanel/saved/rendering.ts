@@ -2,9 +2,11 @@ import { buildSavedCopyText, copyAnalysisText } from '../clipboard.js';
 import { loadSettings } from '../settings.js';
 import { supabase } from '../supabase.js';
 import { state } from '../state.js';
+import { onCopyVariationClick } from '../outreach-messages/handlers.js';
 import { areFiltersActive } from './filtering.js';
 import { updateDeleteState, updateSelectAllIcon } from './selection.js';
 import { showUndoToast } from './delete.js';
+import { buildSavedOutreachMarkup } from './outreach-render.js';
 
 const exportToggle = document.getElementById('export-menu-toggle');
 const filterToggle = document.getElementById('filter-toggle');
@@ -121,7 +123,7 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
     </div>
 
     <div class="header-actions">
-      <button class="copy-btn copy-saved-btn" title="Copy analysis">
+      <button class="copy-btn copy-saved-btn" title="Copy prospect data">
         <svg viewBox="0 0 24 24" class="copy-icon">
           <rect x="9" y="9" width="13" height="13" rx="2"></rect>
           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
@@ -143,7 +145,7 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
         type="checkbox"
         class="saved-select-checkbox hidden"
         data-id="${item.id}"
-        aria-label="Select saved analysis ${item.title || item.domain}"
+        aria-label="Select saved prospect ${item.title || item.domain}"
       />
   </div>
 
@@ -189,6 +191,8 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
 <span style="white-space: pre-wrap;">${(item.recommended_outreach_message || '—').trim()}</span>
     </p>
 
+    ${buildSavedOutreachMarkup(item)}
+
     <hr style="margin:8px 0; opacity:0.3" />
 
     <p style="opacity:0.85">
@@ -229,6 +233,15 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
 
     const text = await buildSavedCopyText(item);
     copyAnalysisText(text, copySavedBtn, formatLabel);
+  });
+
+  wrapper.addEventListener('click', (e: MouseEvent) => {
+    const outreachCopyBtn = (e.target as HTMLElement).closest(
+      '.saved-outreach-copy-btn'
+    ) as HTMLButtonElement | null;
+    if (!outreachCopyBtn) return;
+    e.stopPropagation();
+    onCopyVariationClick(outreachCopyBtn);
   });
 
   const handleSelection = (isShift: boolean, forceState: boolean | null = null): void => {

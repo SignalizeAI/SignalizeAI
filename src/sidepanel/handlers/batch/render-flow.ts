@@ -2,6 +2,7 @@ import { state } from '../../state.js';
 import { supabase } from '../../supabase.js';
 import { mapBatchResultToExportItem } from './helpers.js';
 import { batchState } from './state.js';
+import { buildBatchOutreachFooter } from './outreach.js';
 
 interface RenderFlowDeps {
   saveSingleResult: (index: number, btn: HTMLButtonElement) => void;
@@ -57,10 +58,26 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
     const reviewContainer = document.getElementById('batch-review-container');
     const headerActions = document.getElementById('batch-header-actions');
     const reviewDoneBtn = document.getElementById('batch-review-done-btn');
+    const emailsAllBtn = document.getElementById(
+      'batch-emails-for-all-btn'
+    ) as HTMLButtonElement | null;
+    const emailsProgress = document.getElementById('batch-emails-progress');
 
     if (!reviewContainer) return;
     reviewContainer.classList.remove('hidden');
     if (headerActions) headerActions.classList.remove('hidden');
+    if (emailsAllBtn) emailsAllBtn.classList.remove('hidden');
+    emailsProgress?.classList.add('hidden');
+    if (emailsAllBtn) {
+      emailsAllBtn.disabled = false;
+      emailsAllBtn.title = 'Generate emails for all results';
+      emailsAllBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor"
+             stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          <polyline points="22,6 12,13 2,6"/>
+        </svg>`;
+    }
     if (reviewDoneBtn) {
       reviewDoneBtn.textContent =
         batchState.lastBatchInputMode === 'paste' ? 'Paste new URLs' : 'Upload new CSV';
@@ -171,26 +188,32 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
     const multiSelectToggle = document.getElementById('batch-multi-select-toggle');
     const selectionBackBtn = document.getElementById('batch-selection-back-btn');
     const selectAllBtn = document.getElementById('batch-select-all-btn');
+    const generateSelectedBtn = document.getElementById('batch-generate-selected-btn');
     const saveSelectedBtn = document.getElementById('batch-save-selected-btn');
     const searchToggle = document.getElementById('batch-search-toggle');
     const saveAllBtn = document.getElementById('batch-save-all-btn');
     const exportMenuToggle = document.getElementById('batch-export-menu-toggle');
+    const emailsAllBtn = document.getElementById('batch-emails-for-all-btn');
 
     if (batchState.isBatchSelectionMode) {
       selectionBackBtn?.classList.remove('hidden');
       selectAllBtn?.classList.remove('hidden');
+      generateSelectedBtn?.classList.remove('hidden');
       saveSelectedBtn?.classList.remove('hidden');
       multiSelectToggle?.classList.add('hidden');
       exportMenuToggle?.classList.add('hidden');
       saveAllBtn?.classList.add('hidden');
+      emailsAllBtn?.classList.add('hidden');
       searchToggle?.classList.add('hidden');
     } else {
       selectionBackBtn?.classList.add('hidden');
       selectAllBtn?.classList.add('hidden');
+      generateSelectedBtn?.classList.add('hidden');
       saveSelectedBtn?.classList.add('hidden');
       multiSelectToggle?.classList.remove('hidden');
       saveAllBtn?.classList.remove('hidden');
       exportMenuToggle?.classList.remove('hidden');
+      emailsAllBtn?.classList.remove('hidden');
 
       const isTeamPlan = (state.currentPlan || '').toLowerCase() === 'team';
       const hasEnoughResults = batchState.tempBatchResults.length > 10;
@@ -259,6 +282,7 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
       const wrapper = document.createElement('div');
       wrapper.className = 'saved-item';
       wrapper.style.margin = '0 0 10px 0';
+      wrapper.dataset.batchIndex = index.toString();
 
       const headerRow = document.createElement('div');
       headerRow.className = 'saved-item-header';
@@ -315,7 +339,7 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
 
       const copyBtn = document.createElement('button');
       copyBtn.className = 'copy-btn copy-saved-btn';
-      copyBtn.title = 'Copy analysis';
+      copyBtn.title = 'Copy prospect data';
       copyBtn.innerHTML = `
       <svg viewBox="0 0 24 24" class="copy-icon">
         <rect x="9" y="9" width="13" height="13" rx="2"></rect>
@@ -430,6 +454,7 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
 
       wrapper.appendChild(headerRow);
       wrapper.appendChild(body);
+      wrapper.appendChild(buildBatchOutreachFooter(res, index));
       reviewList.appendChild(wrapper);
     });
   }
