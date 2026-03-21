@@ -154,10 +154,17 @@ function buildFollowUpMarkup(item: SavedItemLike, payload: SavedOutreachPayload)
   `;
 }
 
-function buildControls(payload: SavedOutreachPayload | null | undefined, expanded: boolean): string {
+function buildControls(
+  payload: SavedOutreachPayload | null | undefined,
+  expanded: boolean
+): string {
   const hasOutreach = Boolean(payload?.angles?.length);
   const hasFollowUps = Boolean(payload?.follow_ups?.emails?.length);
-  const primaryLabel = hasOutreach ? (expanded ? 'Hide emails' : 'Show emails') : 'Suggest outreach emails';
+  const primaryLabel = hasOutreach
+    ? expanded
+      ? 'Hide emails'
+      : 'Show emails'
+    : 'Suggest outreach emails';
 
   return `
     <div class="saved-outreach-controls">
@@ -202,7 +209,11 @@ export function buildSavedOutreachMarkup(item: SavedItemLike, expanded = false):
               ${angles
                 .filter((angle) => angle.id !== recommended.id)
                 .map((angle) =>
-                  buildApproachMarkup(angle, item, recommended.id || payload.recommended_angle_id || 'observation')
+                  buildApproachMarkup(
+                    angle,
+                    item,
+                    recommended.id || payload.recommended_angle_id || 'observation'
+                  )
                 )
                 .join('')}
             </div>

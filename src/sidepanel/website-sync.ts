@@ -1,9 +1,4 @@
-const WEBSITE_HOSTS = new Set([
-  'signalizeai.org',
-  'www.signalizeai.org',
-  'localhost',
-  '127.0.0.1',
-]);
+const WEBSITE_HOSTS = new Set(['signalizeai.org', 'www.signalizeai.org', 'localhost', '127.0.0.1']);
 
 function isWebsiteUrl(url: string): boolean {
   try {

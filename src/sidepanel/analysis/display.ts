@@ -3,7 +3,10 @@ import { updateAnalysisDashboardButton } from '../dashboard-link.js';
 import { endAnalysisLoading } from './utils.js';
 import { hideOutreachSection, renderOutreachAngles } from '../outreach-messages/render.js';
 import { attachOutreachHandlers, resetOutreachState } from '../outreach-messages/handlers.js';
-import { normalizeStoredOutreachPayload, type OutreachAnglesResult } from '../outreach-messages/types.js';
+import {
+  normalizeStoredOutreachPayload,
+  type OutreachAnglesResult,
+} from '../outreach-messages/types.js';
 
 interface ShowBlockedOptions {
   allowHomepageFallback?: boolean;

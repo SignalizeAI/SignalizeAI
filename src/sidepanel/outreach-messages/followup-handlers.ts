@@ -4,7 +4,6 @@ import { supabase } from '../supabase.js';
 import { showToast } from '../toast.js';
 import { getRecommendedAngleId } from './types.js';
 import {
-  collapseFollowUpEmails,
   renderFollowUpEmails,
   renderFollowUpError,
   renderFollowUpLoading,
@@ -30,7 +29,10 @@ async function persistFollowUpsIfSaved(): Promise<void> {
     follow_ups: state.followUpEmails,
   };
 
-  const { error } = await supabase.from('saved_analyses').update({ outreach_angles: payload }).eq('id', savedId);
+  const { error } = await supabase
+    .from('saved_analyses')
+    .update({ outreach_angles: payload })
+    .eq('id', savedId);
   if (error) showToast('Follow-ups generated, but failed to sync them to the saved prospect.');
 }
 

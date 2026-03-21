@@ -4,11 +4,7 @@
   "version": "5.1.0",
   "description": "Sell to any company. Get sales-ready insights and outreach in seconds.",
   "permissions": ["activeTab", "storage", "tabs", "scripting"],
-  "host_permissions": [
-    "https://*.supabase.co/*",
-    "https://api.signalizeai.org/*",
-    "<all_urls>"
-  ],
+  "host_permissions": ["https://*.supabase.co/*", "https://api.signalizeai.org/*", "<all_urls>"],
   "icons": {
     "16": "icons/16.png",
     "48": "icons/48.png",

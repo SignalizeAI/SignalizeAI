@@ -337,7 +337,10 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
         return;
       }
       item.outreach_angles = payload;
-      const { error } = await supabase.from('saved_analyses').update({ outreach_angles: payload }).eq('id', item.id);
+      const { error } = await supabase
+        .from('saved_analyses')
+        .update({ outreach_angles: payload })
+        .eq('id', item.id);
       if (error) {
         console.error('Failed to save outreach emails:', error);
       }
@@ -357,7 +360,10 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
       return;
     }
     item.outreach_angles = payload;
-    const { error } = await supabase.from('saved_analyses').update({ outreach_angles: payload }).eq('id', item.id);
+    const { error } = await supabase
+      .from('saved_analyses')
+      .update({ outreach_angles: payload })
+      .eq('id', item.id);
     if (error) {
       console.error('Failed to save follow-up emails:', error);
     }

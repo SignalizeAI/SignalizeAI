@@ -173,8 +173,7 @@
   border: 1px solid var(--border-light);
   background:
     linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%),
-    linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%),
-    var(--bg-primary);
+    linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%), var(--bg-primary);
   background-position:
     calc(100% - 18px) 16px,
     calc(100% - 13px) 16px,

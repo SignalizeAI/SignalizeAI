@@ -2,9 +2,7 @@ import { supabase } from '../supabase.js';
 import { state } from '../state.js';
 import { renderQuotaBanner, loadQuotaFromAPI } from '../quota.js';
 import { showLimitModal } from '../modal.js';
-import { showToast } from '../toast.js';
 import { updateAnalysisDashboardButton } from '../dashboard-link.js';
-import { getHomepageAnalysisForSave } from '../analysis/extraction.js';
 import {
   loadSavedAnalyses,
   exitSelectionMode,
@@ -157,11 +155,6 @@ export function setupSavedHandlers(): void {
     const { data } = await supabase.auth.getSession();
     const user = data?.session?.user;
     if (!user) return;
-
-    const currentUrl = state.lastExtractedMeta.url;
-    const urlObj = new URL(currentUrl);
-    const isHomepage = urlObj.pathname === '/' || urlObj.pathname === '';
-    const originUrl = urlObj.origin;
 
     if (saveButton.classList.contains('active')) {
       const savedId = saveButton.dataset.savedId;

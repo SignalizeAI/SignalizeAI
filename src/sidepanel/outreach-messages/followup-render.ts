@@ -6,7 +6,11 @@ function escapeAttr(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
-function setButtonState(label: string, disabled = false, mode: 'generate' | 'show' | 'hide' = 'generate') {
+function setButtonState(
+  label: string,
+  disabled = false,
+  mode: 'generate' | 'show' | 'hide' = 'generate'
+) {
   const btn = document.getElementById('generate-followups-btn') as HTMLButtonElement | null;
   if (!btn) return;
   btn.disabled = disabled;
@@ -78,7 +82,8 @@ export function renderFollowUpLoading(): void {
   document.getElementById('follow-up-list')?.classList.add('hidden');
   const loading = document.getElementById('follow-up-loading');
   if (!loading) return;
-  loading.innerHTML = '<div class="outreach-skeleton-card"></div><div class="outreach-skeleton-card"></div>';
+  loading.innerHTML =
+    '<div class="outreach-skeleton-card"></div><div class="outreach-skeleton-card"></div>';
   loading.classList.remove('hidden');
   setButtonState('Generating follow-ups...', true);
 }

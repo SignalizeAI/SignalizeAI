@@ -1,9 +1,4 @@
-const WEBSITE_HOSTS = new Set([
-  'signalizeai.org',
-  'www.signalizeai.org',
-  'localhost',
-  '127.0.0.1',
-]);
+const WEBSITE_HOSTS = new Set(['signalizeai.org', 'www.signalizeai.org', 'localhost', '127.0.0.1']);
 
 function isMatchingProspectUrl(url: string, savedId: string): boolean {
   try {
@@ -15,17 +10,16 @@ function isMatchingProspectUrl(url: string, savedId: string): boolean {
   }
 }
 
-export async function syncProspectStatusToWebsite(
-  savedId: string,
-  status: string
-): Promise<void> {
+export async function syncProspectStatusToWebsite(savedId: string, status: string): Promise<void> {
   const message = {
     type: 'SYNC_PROSPECT_STATUS_TO_PAGE',
     savedId,
     status,
   };
   const tabs = await chrome.tabs.query({});
-  const targetTabs = tabs.filter((tab) => tab.id && tab.url && isMatchingProspectUrl(tab.url, savedId));
+  const targetTabs = tabs.filter(
+    (tab) => tab.id && tab.url && isMatchingProspectUrl(tab.url, savedId)
+  );
 
   await Promise.all(
     targetTabs.map(async (tab) => {

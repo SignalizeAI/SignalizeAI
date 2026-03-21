@@ -1,5 +1,8 @@
 import { generateFollowUpEmails, generateOutreachAngles } from '../../ai-analyze.js';
-import { getRecommendedAngleId, normalizeStoredOutreachPayload } from '../outreach-messages/types.js';
+import {
+  getRecommendedAngleId,
+  normalizeStoredOutreachPayload,
+} from '../outreach-messages/types.js';
 
 type SavedItemLike = {
   id: string;
