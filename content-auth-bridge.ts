@@ -1,5 +1,6 @@
 window.addEventListener('message', (event: MessageEvent) => {
   if (event.source !== window) return;
+  if (event.origin !== window.location.origin) return;
 
   if (event.data?.type === 'SIGNALIZE_AUTH_SUCCESS') {
     if (!event.data.session) {
@@ -37,7 +38,7 @@ window.addEventListener('message', (event: MessageEvent) => {
         type: 'SIGNALIZE_EXTENSION_CHECK_RESULT',
         installed: true,
       },
-      '*'
+      window.location.origin
     );
     return;
   }
@@ -59,7 +60,7 @@ chrome.runtime.onMessage.addListener((message) => {
       {
         type: 'SIGNALIZE_EXTENSION_SIGNED_OUT',
       },
-      '*'
+      window.location.origin
     );
     return;
   }
@@ -72,6 +73,6 @@ chrome.runtime.onMessage.addListener((message) => {
       savedId: message.savedId,
       status: message.status,
     },
-    '*'
+    window.location.origin
   );
 });
