@@ -36,7 +36,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://signalizeai.org/*"],
+      "matches": [
+        "https://signalizeai.org/*",
+        "https://www.signalizeai.org/*",
+        "http://localhost:3000/*",
+        "http://127.0.0.1:3000/*"
+      ],
       "js": ["extension/content-auth-bridge.js"],
       "run_at": "document_start"
     },

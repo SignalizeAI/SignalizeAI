@@ -1,4 +1,4 @@
-import { restoreSessionFromStorage } from '../auth.js';
+import { restoreSessionFromStorage, signOut } from '../auth.js';
 import { AUTO_ANALYZE_DEBOUNCE, IRRELEVANT_DOMAINS } from '../constants.js';
 import {
   extractWebsiteContent,
@@ -6,6 +6,7 @@ import {
   showIrrelevantDomainView,
 } from '../analysis/index.js';
 import { loadQuotaFromAPI } from '../quota.js';
+import { loadSavedAnalyses } from '../saved/index.js';
 import { supabase } from '../supabase.js';
 import { state } from '../state.js';
 import { isMenuOpen, updateUI } from '../ui.js';
@@ -50,6 +51,10 @@ export function setupRuntimeHandlers(): void {
         updateUI(data.session);
         break;
       }
+      case 'EXTENSION_SIGNED_OUT': {
+        await signOut();
+        break;
+      }
       case 'PAYMENT_SUCCESS': {
         await restoreSessionFromStorage();
         const { data } = await supabase.auth.getSession();
@@ -65,6 +70,24 @@ export function setupRuntimeHandlers(): void {
         await new Promise((resolve) => setTimeout(resolve, 500));
         await loadQuotaFromAPI(true);
         updateUI(data.session);
+        break;
+      }
+      case 'PROSPECT_STATUS_UPDATED': {
+        if (state.currentView === 'analysis') {
+          setTimeout(extractWebsiteContent, 50);
+        }
+        if (state.currentView === 'saved') {
+          void loadSavedAnalyses();
+        }
+        break;
+      }
+      case 'PROSPECT_CONTENT_UPDATED': {
+        if (state.currentView === 'analysis') {
+          setTimeout(extractWebsiteContent, 50);
+        }
+        if (state.currentView === 'saved') {
+          void loadSavedAnalyses();
+        }
         break;
       }
       default:

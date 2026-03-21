@@ -127,6 +127,31 @@ chrome.runtime.onMessage.addListener(
       return true;
     }
 
+    if (msg.type === 'WEBSITE_SIGN_OUT') {
+      chrome.storage.local.remove('supabaseSession', () => {
+        chrome.runtime.sendMessage({ type: 'EXTENSION_SIGNED_OUT' }, () => {
+          void chrome.runtime.lastError;
+        });
+      });
+      sendResponse({ ok: true });
+      return true;
+    }
+
+    if (msg.type === 'PROSPECT_STATUS_UPDATED') {
+      chrome.runtime.sendMessage(
+        {
+          type: 'PROSPECT_STATUS_UPDATED',
+          savedId: msg.savedId,
+          status: msg.status,
+        },
+        () => {
+          void chrome.runtime.lastError;
+        }
+      );
+      sendResponse({ ok: true });
+      return true;
+    }
+
     if (msg.type === 'BG_FETCH_TEXT') {
       (async () => {
         try {

@@ -179,6 +179,7 @@ async function performSave(res: BatchResult) {
     description: res.content.metaDescription,
     content_hash: res.contentHash,
     last_analyzed_at: new Date().toISOString(),
+    prospect_status: 'not_contacted',
     what_they_do: res.analysis.whatTheyDo,
     target_customer: res.analysis.targetCustomer,
     value_proposition: res.analysis.valueProposition,

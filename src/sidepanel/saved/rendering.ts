@@ -2,8 +2,11 @@ import { buildSavedCopyText, copyAnalysisText } from '../clipboard.js';
 import { loadSettings } from '../settings.js';
 import { supabase } from '../supabase.js';
 import { state } from '../state.js';
+import { openDashboardForSavedId } from '../dashboard-link.js';
+import { syncProspectStatusToWebsite } from '../status-sync.js';
 import { onCopyVariationClick } from '../outreach-messages/handlers.js';
 import { areFiltersActive } from './filtering.js';
+import { generateSavedFollowUpPayload, generateSavedOutreachPayload } from './outreach-actions.js';
 import { updateDeleteState, updateSelectAllIcon } from './selection.js';
 import { showUndoToast } from './delete.js';
 import { buildSavedOutreachMarkup } from './outreach-render.js';
@@ -28,7 +31,30 @@ interface SavedItem {
   recommended_outreach_goal?: string;
   recommended_outreach_angle?: string;
   recommended_outreach_message?: string;
+  prospect_status?: string;
   [key: string]: any;
+}
+
+async function updateProspectStatus(itemId: string, status: string): Promise<void> {
+  const { data } = await supabase.auth.getSession();
+  const user = data?.session?.user;
+  if (!user) return;
+
+  const { error } = await supabase
+    .from('saved_analyses')
+    .update({ prospect_status: status })
+    .eq('user_id', user.id)
+    .eq('id', itemId);
+
+  if (error) {
+    throw error;
+  }
+}
+
+function formatStatusLabel(status: string): string {
+  if (status === 'contacted') return 'Contacted';
+  if (status === 'follow_up') return 'Follow-up due';
+  return 'Not contacted';
 }
 
 export function updatePlanLimitBanner(): void {
@@ -109,37 +135,58 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
 
   const escapedTitle = escapeHtml(item.title || item.domain || '');
   const escapedDescription = escapeHtml(item.description || '—');
+  const currentStatus = item.prospect_status || 'not_contacted';
 
   const wrapper = document.createElement('div');
   wrapper.dataset.salesScore = String(Number(item.sales_readiness_score ?? 0));
   wrapper.dataset.persona = (item.best_sales_persona || '').toLowerCase().trim();
+  wrapper.dataset.status = currentStatus;
   wrapper.className = 'saved-item';
 
   wrapper.innerHTML = `
   <div class="saved-item-header">
     <div class="header-info">
-      <strong>${escapedTitle}</strong>
-      <div style="font-size:12px; opacity:0.7">${item.domain}</div>
+      <div class="saved-item-title">${escapedTitle}</div>
+      <div class="saved-item-site-row">
+        ${
+          item.url
+            ? `<a href="${item.url}" target="_blank" class="saved-item-site-link">${item.domain || item.url}</a>`
+            : `<div class="saved-item-site-link">${item.domain || '—'}</div>`
+        }
+      </div>
     </div>
 
     <div class="header-actions">
-      <button class="copy-btn copy-saved-btn" title="Copy prospect data">
-        <svg viewBox="0 0 24 24" class="copy-icon">
-          <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-        </svg>
-      </button>
+      <div class="saved-item-badge-row">
+        <span class="saved-status-pill saved-status-pill--${currentStatus}">${formatStatusLabel(currentStatus)}</span>
+      </div>
+      <div class="header-actions-row">
+        <button class="copy-btn copy-saved-btn" title="Copy prospect data">
+          <svg viewBox="0 0 24 24" class="copy-icon">
+            <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+        </button>
 
-      <button class="delete-saved-btn" title="Remove">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="3 6 5 6 21 6"></polyline>
-          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
-          <path d="M10 11v6"></path>
-          <path d="M14 11v6"></path>
-          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
-        </svg>
-      </button>
+        <button class="copy-btn open-dashboard-saved-btn" title="Open in website">
+          <svg viewBox="0 0 24 24" class="copy-icon">
+            <path d="M14 3h7v7"></path>
+            <path d="M10 14 21 3"></path>
+            <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"></path>
+          </svg>
+        </button>
+
+        <button class="delete-saved-btn" title="Remove">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+            <path d="M10 11v6"></path>
+            <path d="M14 11v6"></path>
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+          </svg>
+        </button>
+      </div>
     </div>
       <input
         type="checkbox"
@@ -150,6 +197,14 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
   </div>
 
   <div class="saved-item-body hidden">
+    <div class="saved-status-row">
+      <div class="saved-status-label">Status</div>
+      <select class="saved-status-select" data-id="${item.id}" aria-label="Prospect status">
+        <option value="not_contacted"${currentStatus === 'not_contacted' ? ' selected' : ''}>Not contacted</option>
+        <option value="contacted"${currentStatus === 'contacted' ? ' selected' : ''}>Contacted</option>
+        <option value="follow_up"${currentStatus === 'follow_up' ? ' selected' : ''}>Follow-up due</option>
+      </select>
+    </div>
     <p><strong>Sales readiness:</strong> ${item.sales_readiness_score ?? '—'}</p>
     <p><strong>What they do:</strong> ${item.what_they_do || '—'}</p>
     <p><strong>Target customer:</strong> ${item.target_customer || '—'}</p>
@@ -224,6 +279,15 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
   const checkbox = wrapper.querySelector<HTMLInputElement>('.saved-select-checkbox')!;
 
   const copySavedBtn = wrapper.querySelector<HTMLButtonElement>('.copy-saved-btn')!;
+  const openDashboardBtn = wrapper.querySelector<HTMLButtonElement>('.open-dashboard-saved-btn')!;
+  const statusSelect = wrapper.querySelector<HTMLSelectElement>('.saved-status-select')!;
+  const statusPill = wrapper.querySelector<HTMLElement>('.saved-status-pill');
+
+  const rerenderOutreach = (expanded = false): void => {
+    const shell = wrapper.querySelector<HTMLElement>('.saved-outreach-shell');
+    if (!shell) return;
+    shell.outerHTML = buildSavedOutreachMarkup(item, expanded);
+  };
 
   copySavedBtn.addEventListener('click', async (e: MouseEvent) => {
     e.stopPropagation();
@@ -235,6 +299,11 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
     copyAnalysisText(text, copySavedBtn, formatLabel);
   });
 
+  openDashboardBtn.addEventListener('click', (e: MouseEvent) => {
+    e.stopPropagation();
+    void openDashboardForSavedId(item.id);
+  });
+
   wrapper.addEventListener('click', (e: MouseEvent) => {
     const outreachCopyBtn = (e.target as HTMLElement).closest(
       '.saved-outreach-copy-btn'
@@ -242,6 +311,81 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
     if (!outreachCopyBtn) return;
     e.stopPropagation();
     onCopyVariationClick(outreachCopyBtn);
+  });
+
+  wrapper.addEventListener('click', async (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const toggleBtn = target.closest('.saved-outreach-toggle-btn') as HTMLButtonElement | null;
+    const followUpsBtn = target.closest('.saved-followups-btn') as HTMLButtonElement | null;
+    if (!toggleBtn && !followUpsBtn) return;
+    e.stopPropagation();
+
+    if (toggleBtn) {
+      const hasOutreach = Boolean(item.outreach_angles?.angles?.length);
+      if (hasOutreach) {
+        const content = wrapper.querySelector<HTMLElement>('.saved-outreach-content');
+        rerenderOutreach(Boolean(content?.classList.contains('hidden')));
+        return;
+      }
+
+      toggleBtn.disabled = true;
+      toggleBtn.textContent = 'Generating...';
+      const payload = await generateSavedOutreachPayload(item);
+      if (!payload) {
+        toggleBtn.disabled = false;
+        toggleBtn.textContent = 'Retry';
+        return;
+      }
+      item.outreach_angles = payload;
+      const { error } = await supabase.from('saved_analyses').update({ outreach_angles: payload }).eq('id', item.id);
+      if (error) {
+        console.error('Failed to save outreach emails:', error);
+      }
+      rerenderOutreach(true);
+      return;
+    }
+
+    if (!followUpsBtn) return;
+    followUpsBtn.disabled = true;
+    followUpsBtn.textContent = item.outreach_angles?.follow_ups?.emails?.length
+      ? 'Refreshing...'
+      : 'Generating...';
+    const payload = await generateSavedFollowUpPayload(item);
+    if (!payload) {
+      followUpsBtn.disabled = false;
+      followUpsBtn.textContent = 'Retry';
+      return;
+    }
+    item.outreach_angles = payload;
+    const { error } = await supabase.from('saved_analyses').update({ outreach_angles: payload }).eq('id', item.id);
+    if (error) {
+      console.error('Failed to save follow-up emails:', error);
+    }
+    rerenderOutreach(true);
+  });
+
+  statusSelect?.addEventListener('click', (e: MouseEvent) => {
+    e.stopPropagation();
+  });
+
+  statusSelect?.addEventListener('change', async () => {
+    const previousStatus = wrapper.dataset.status || 'not_contacted';
+    const nextStatus = statusSelect.value;
+
+    try {
+      await updateProspectStatus(item.id, nextStatus);
+      wrapper.dataset.status = nextStatus;
+      item.prospect_status = nextStatus;
+      if (statusPill) {
+        statusPill.textContent = formatStatusLabel(nextStatus);
+        statusPill.className = `saved-status-pill saved-status-pill--${nextStatus}`;
+      }
+      updateFilterBanner();
+      void syncProspectStatusToWebsite(item.id, nextStatus);
+    } catch (error) {
+      console.error('Failed to update prospect status:', error);
+      statusSelect.value = previousStatus;
+    }
   });
 
   const handleSelection = (isShift: boolean, forceState: boolean | null = null): void => {
@@ -374,7 +518,8 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
 
       if (
         (e.target as HTMLElement).closest('.delete-saved-btn') ||
-        (e.target as HTMLElement).closest('.copy-saved-btn')
+        (e.target as HTMLElement).closest('.copy-saved-btn') ||
+        (e.target as HTMLElement).closest('.open-dashboard-saved-btn')
       ) {
         return;
       }

@@ -73,6 +73,9 @@ export async function fetchAndRenderPage(options?: {
   if (state.activeFilters.persona) {
     countQuery = countQuery.ilike('best_sales_persona', `%${state.activeFilters.persona}%`);
   }
+  if (state.activeFilters.status) {
+    countQuery = countQuery.eq('prospect_status', state.activeFilters.status);
+  }
 
   if (state.activeFilters.searchQuery) {
     const q = `%${state.activeFilters.searchQuery}%`;
@@ -88,6 +91,10 @@ export async function fetchAndRenderPage(options?: {
   }
 
   state.totalFilteredCount = count || 0;
+  const totalPages = Math.max(1, Math.ceil(state.totalFilteredCount / PAGE_SIZE));
+  if (state.currentPage > totalPages) {
+    state.currentPage = totalPages;
+  }
 
   let dataQuery = supabase
     .from('saved_analyses')
@@ -110,6 +117,9 @@ export async function fetchAndRenderPage(options?: {
   }
   if (state.activeFilters.persona) {
     dataQuery = dataQuery.ilike('best_sales_persona', `%${state.activeFilters.persona}%`);
+  }
+  if (state.activeFilters.status) {
+    dataQuery = dataQuery.eq('prospect_status', state.activeFilters.status);
   }
   if (state.activeFilters.searchQuery) {
     const q = `%${state.activeFilters.searchQuery}%`;
@@ -207,5 +217,21 @@ export async function fetchSavedAnalysesData(): Promise<any[]> {
     .order('created_at', { ascending: false });
 
   if (error || !data) return [];
+  return data;
+}
+
+export async function fetchSavedAnalysisById(savedId: string): Promise<any | null> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData?.session?.user;
+  if (!user || !savedId) return null;
+
+  const { data, error } = await supabase
+    .from('saved_analyses')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('id', savedId)
+    .maybeSingle();
+
+  if (error || !data) return null;
   return data;
 }

@@ -3,6 +3,7 @@
  */
 
 export type AngleId = 'observation' | 'pain_point' | 'curiosity';
+const ANGLE_IDS: AngleId[] = ['observation', 'pain_point', 'curiosity'];
 
 export interface OutreachVariation {
   subject: string;
@@ -20,6 +21,24 @@ export interface OutreachAnglesResult {
   recommendedAngleId: AngleId;
   angles: OutreachAngle[];
 }
+
+export type FollowUpTone = 'reminder' | 'value_add' | 'breakup';
+
+export interface FollowUpEmail {
+  id: FollowUpTone;
+  label: string;
+  subject: string;
+  body: string;
+}
+
+export interface FollowUpEmailsResult {
+  emails: FollowUpEmail[];
+}
+
+type StoredOutreachPayload = Partial<OutreachAnglesResult> & {
+  recommended_angle_id?: AngleId;
+  follow_ups?: Partial<FollowUpEmailsResult> | null;
+};
 
 export type ReplyProbability = 'High' | 'Medium' | 'Low';
 
@@ -53,3 +72,43 @@ export const PROBABILITY_COLOR: Record<ReplyProbability, string> = {
   Medium: 'var(--reply-prob-medium, #f59e0b)',
   Low: 'var(--reply-prob-low, #ef4444)',
 };
+
+export function normalizeStoredOutreachPayload(payload: StoredOutreachPayload | null | undefined): {
+  outreachAngles: OutreachAnglesResult | null;
+  followUpEmails: FollowUpEmailsResult | null;
+} {
+  const angles = Array.isArray(payload?.angles) ? payload.angles : [];
+  const storedRecommendedAngleId = payload?.recommendedAngleId || payload?.recommended_angle_id;
+  const outreachAngles =
+    angles.length > 0
+      ? {
+          recommendedAngleId: ANGLE_IDS.includes(storedRecommendedAngleId as AngleId)
+            ? (storedRecommendedAngleId as AngleId)
+            : 'observation',
+          angles,
+        }
+      : null;
+
+  const rawEmails = Array.isArray(payload?.follow_ups?.emails) ? payload?.follow_ups?.emails : [];
+  const followUpEmails =
+    rawEmails.length > 0
+      ? {
+          emails: rawEmails
+            .map((email) => ({
+              id: email?.id,
+              label: email?.label,
+              subject: email?.subject,
+              body: email?.body,
+            }))
+            .filter(
+              (email): email is FollowUpEmail =>
+                typeof email.id === 'string' &&
+                typeof email.label === 'string' &&
+                typeof email.subject === 'string' &&
+                typeof email.body === 'string'
+            ),
+        }
+      : null;
+
+  return { outreachAngles, followUpEmails };
+}

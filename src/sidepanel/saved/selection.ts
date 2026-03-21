@@ -36,16 +36,19 @@ export function updateSelectionUI(): void {
   const toggleItemSelectionUI = (itemEl: HTMLElement, enable: boolean): void => {
     const checkbox = itemEl.querySelector<HTMLInputElement>('.saved-select-checkbox');
     const copyBtn = itemEl.querySelector<HTMLElement>('.copy-saved-btn');
+    const openWebsiteBtn = itemEl.querySelector<HTMLElement>('.open-dashboard-saved-btn');
     const deleteBtn = itemEl.querySelector<HTMLElement>('.delete-saved-btn');
 
     if (enable) {
       checkbox?.classList.remove('hidden');
       copyBtn?.classList.add('hidden');
+      openWebsiteBtn?.classList.add('hidden');
       deleteBtn?.classList.add('hidden');
     } else {
       if (checkbox) checkbox.checked = false;
       checkbox?.classList.add('hidden');
       copyBtn?.classList.remove('hidden');
+      openWebsiteBtn?.classList.remove('hidden');
       deleteBtn?.classList.remove('hidden');
     }
   };

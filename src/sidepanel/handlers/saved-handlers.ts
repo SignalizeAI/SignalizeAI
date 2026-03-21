@@ -3,6 +3,7 @@ import { state } from '../state.js';
 import { renderQuotaBanner, loadQuotaFromAPI } from '../quota.js';
 import { showLimitModal } from '../modal.js';
 import { showToast } from '../toast.js';
+import { updateAnalysisDashboardButton } from '../dashboard-link.js';
 import { getHomepageAnalysisForSave } from '../analysis/extraction.js';
 import {
   loadSavedAnalyses,
@@ -18,6 +19,7 @@ import {
 import { showUndoToast } from '../saved/delete.js';
 import { PAGE_SIZE } from '../constants.js';
 import { navigateSavedPage } from '../saved/pagination.js';
+import { ensureCurrentAnalysisSaved } from '../save-analysis.js';
 
 export function setupSavedHandlers(): void {
   const multiSelectToggle = document.getElementById('multi-select-toggle');
@@ -181,6 +183,7 @@ export function setupSavedHandlers(): void {
       saveButton.classList.remove('active');
       saveButton.title = 'Save';
       delete saveButton.dataset.savedId;
+      updateAnalysisDashboardButton(null);
       if (Number.isFinite(state.totalSavedCount) && state.totalSavedCount > 0) {
         state.totalSavedCount -= 1;
       }
@@ -188,111 +191,10 @@ export function setupSavedHandlers(): void {
       loadSavedAnalyses();
       await loadQuotaFromAPI(true);
     } else {
-      const { data: existing } = await supabase
-        .from('saved_analyses')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('domain', state.lastExtractedMeta.domain)
-        .limit(1)
-        .maybeSingle();
-
-      const isPendingDelete = existing && state.pendingDeleteMap.has(existing.id);
-
-      if (existing && !isPendingDelete) {
-        saveButton.classList.add('active');
-        saveButton.title = 'Remove';
-        saveButton.dataset.savedId = existing.id;
-        showToast('Already saved for this domain.');
+      const savedId = await ensureCurrentAnalysisSaved();
+      if (!savedId && !saveButton.classList.contains('active')) {
         return;
       }
-
-      let saveAnalysis = state.lastAnalysis;
-      let saveMeta = state.lastExtractedMeta;
-      let saveContentHash = state.lastContentHash;
-
-      if (!isHomepage) {
-        saveButton.disabled = true;
-        let homepageResult = null;
-
-        try {
-          saveButton.classList.add('saving');
-          homepageResult = await getHomepageAnalysisForSave(originUrl);
-        } finally {
-          saveButton.classList.remove('saving');
-          saveButton.disabled = false;
-        }
-
-        if (homepageResult?.blocked) {
-          return;
-        }
-
-        if (!homepageResult?.analysis || !homepageResult?.meta) {
-          showToast('Unable to save homepage prospect data.');
-          return;
-        }
-
-        saveAnalysis = homepageResult.analysis;
-        saveMeta = homepageResult.meta;
-        saveContentHash = homepageResult.contentHash;
-      }
-
-      const saveUrl = originUrl;
-
-      const { data: insertData, error } = await supabase
-        .from('saved_analyses')
-        .insert({
-          user_id: user.id,
-          domain: saveMeta.domain,
-          url: saveUrl,
-          title: saveMeta.title,
-          description: saveMeta.description,
-          content_hash: saveContentHash,
-          last_analyzed_at: new Date().toISOString(),
-          what_they_do: saveAnalysis.whatTheyDo,
-          target_customer: saveAnalysis.targetCustomer,
-          value_proposition: saveAnalysis.valueProposition,
-          sales_angle: saveAnalysis.salesAngle,
-          sales_readiness_score: saveAnalysis.salesReadinessScore,
-          best_sales_persona: saveAnalysis.bestSalesPersona?.persona,
-          best_sales_persona_reason: saveAnalysis.bestSalesPersona?.reason,
-          recommended_outreach_persona: saveAnalysis.recommendedOutreach?.persona,
-          recommended_outreach_goal: saveAnalysis.recommendedOutreach?.goal,
-          recommended_outreach_angle: saveAnalysis.recommendedOutreach?.angle,
-          recommended_outreach_message: saveAnalysis.recommendedOutreach?.message,
-          ...(state.outreachAngles
-            ? {
-                outreach_angles: {
-                  generated_at: new Date().toISOString(),
-                  recommended_angle_id: state.outreachAngles.recommendedAngleId,
-                  angles: state.outreachAngles.angles,
-                },
-              }
-            : {}),
-        })
-        .select('id')
-        .single();
-
-      if (error) {
-        const message =
-          error.code === '23505' || /duplicate|unique/i.test(error.message || '')
-            ? 'Already saved for this domain.'
-            : 'Failed to save. Please try again.';
-        console.error('Failed to save:', error);
-        showToast(message);
-        return;
-      }
-
-      saveButton.classList.add('active');
-      saveButton.title = 'Remove';
-      if (insertData?.id) {
-        saveButton.dataset.savedId = insertData.id;
-      }
-      if (Number.isFinite(state.totalSavedCount)) {
-        state.totalSavedCount += 1;
-      }
-      renderQuotaBanner();
-      loadSavedAnalyses();
-      await loadQuotaFromAPI(true);
     }
   });
 

@@ -43,6 +43,10 @@ export const ENV: 'production' | 'dev' = ${JSON.stringify(env)};
 export const API_BASE_URL = ENV === 'dev' 
   ? 'https://dev-api.signalizeai.org' 
   : 'https://api.signalizeai.org';
+
+export const WEBSITE_BASE_URL = ENV === 'dev'
+  ? 'http://localhost:3000'
+  : 'https://signalizeai.org';
 `;
 
 fs.writeFileSync(path.join(__dirname, 'src/config.ts'), configContent);

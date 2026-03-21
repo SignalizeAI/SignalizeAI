@@ -7,6 +7,8 @@ import { supabase } from '../supabase.js';
 import { showToast } from '../toast.js';
 import { generateOutreachAngles } from '../../ai-analyze.js';
 import { formatOutreachEmailBody } from './format.js';
+import { onGenerateFollowUpsClick } from './followup-handlers.js';
+import { resetFollowUpUi } from './followup-render.js';
 import {
   collapseOutreachAngles,
   renderOutreachAngles,
@@ -75,6 +77,7 @@ async function persistOutreachAnglesIfSaved(): Promise<void> {
     generated_at: new Date().toISOString(),
     recommended_angle_id: state.outreachAngles.recommendedAngleId,
     angles: state.outreachAngles.angles,
+    ...(state.followUpEmails ? { follow_ups: state.followUpEmails } : {}),
   };
 
   const { error } = await supabase
@@ -94,6 +97,9 @@ async function runGenerate(): Promise<void> {
   if (!analysis || !meta) return;
 
   state.outreachAnglesLoading = true;
+  state.followUpEmails = null;
+  state.followUpEmailsLoading = false;
+  resetFollowUpUi();
   renderOutreachLoading();
 
   const result = await generateOutreachAngles(analysis, {
@@ -156,10 +162,13 @@ export function attachOutreachHandlers(): void {
   if (handlersAttached) return;
 
   document.getElementById('generate-outreach-btn')?.addEventListener('click', onGenerateClick);
+  document
+    .getElementById('generate-followups-btn')
+    ?.addEventListener('click', onGenerateFollowUpsClick);
   document.getElementById('outreach-jump-btn')?.addEventListener('click', jumpToOutreachArea);
 
   // Copy buttons are created dynamically — use event delegation on the list container
-  document.getElementById('outreach-messages-list')?.addEventListener('click', (e) => {
+  document.getElementById('outreach-messages-section')?.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest(
       '.variation-copy-btn'
     ) as HTMLButtonElement | null;
@@ -172,5 +181,8 @@ export function attachOutreachHandlers(): void {
 export function resetOutreachState(): void {
   state.outreachAngles = null;
   state.outreachAnglesLoading = false;
+  state.followUpEmails = null;
+  state.followUpEmailsLoading = false;
+  resetFollowUpUi();
   resetToCtaState();
 }

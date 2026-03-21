@@ -7,7 +7,6 @@
   "host_permissions": [
     "https://*.supabase.co/*",
     "https://api.signalizeai.org/*",
-    "https://dev-api.signalizeai.org/*",
     "<all_urls>"
   ],
   "icons": {
@@ -36,7 +35,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://signalizeai.org/*"],
+      "matches": ["https://signalizeai.org/*", "https://www.signalizeai.org/*"],
       "js": ["extension/content-auth-bridge.js"],
       "run_at": "document_start"
     }
