@@ -1,5 +1,6 @@
 import { state } from '../../state.js';
 import { supabase } from '../../supabase.js';
+import { normalizeStoredOutreachPayload } from '../../outreach-messages/types.js';
 import { mapBatchResultToExportItem } from './helpers.js';
 import { batchState } from './state.js';
 import { buildBatchOutreachFooter } from './outreach.js';
@@ -117,15 +118,26 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
 
       const { data, error } = await supabase
         .from('saved_analyses')
-        .select('domain')
+        .select('domain, outreach_angles')
         .eq('user_id', user.id)
         .in('domain', uniqueDomains);
 
       if (error) throw error;
 
-      const savedDomains = new Set((data || []).map((row: any) => row.domain));
+      const savedRowsByDomain = new Map((data || []).map((row: any) => [row.domain, row]));
       batchState.tempBatchResults.forEach((result) => {
-        result.status = savedDomains.has(result.domain) ? 'saved' : 'ready';
+        const savedRow = savedRowsByDomain.get(result.domain);
+        result.status = savedRow ? 'saved' : 'ready';
+
+        if (!savedRow?.outreach_angles) return;
+
+        const { outreachAngles, followUpEmails } = normalizeStoredOutreachPayload(
+          savedRow.outreach_angles
+        );
+        result.outreachAngles = outreachAngles;
+        result.followUpEmails = followUpEmails;
+        result.outreachGeneratedAt = savedRow.outreach_angles.generated_at || null;
+        result.outreachExpanded = false;
       });
     } catch (err) {
       console.warn('Failed to sync saved batch statuses:', err);
@@ -293,28 +305,9 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
       info.style.overflow = 'hidden';
 
       const actionsContainer = document.createElement('div');
-      actionsContainer.className = 'header-actions';
-
-      if (batchState.isBatchSelectionMode) {
-        actionsContainer.style.display = 'none';
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.className = 'batch-item-checkbox';
-        checkbox.dataset.index = index.toString();
-        checkbox.style.margin = '0 12px 0 0';
-        checkbox.style.width = '16px';
-        checkbox.style.height = '16px';
-        checkbox.style.accentColor = 'var(--text-primary)';
-        checkbox.style.cursor = 'pointer';
-        if (res.status === 'saved') checkbox.disabled = true;
-
-        checkbox.addEventListener('click', (e) => e.stopPropagation());
-        info.style.display = 'flex';
-        info.style.alignItems = 'center';
-        info.appendChild(checkbox);
-      } else {
-        actionsContainer.style.display = 'flex';
-      }
+      actionsContainer.className = 'header-actions batch-result-actions';
+      const actionsRow = document.createElement('div');
+      actionsRow.className = 'header-actions-row';
 
       const titleWrap = document.createElement('div');
       titleWrap.style.overflow = 'hidden';
@@ -335,7 +328,28 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
 
       titleWrap.appendChild(title);
       titleWrap.appendChild(url);
-      info.appendChild(titleWrap);
+
+      if (batchState.isBatchSelectionMode) {
+        actionsContainer.style.display = 'none';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'batch-item-checkbox';
+        checkbox.dataset.index = index.toString();
+        checkbox.style.width = '16px';
+        checkbox.style.height = '16px';
+        checkbox.style.accentColor = 'var(--text-primary)';
+        checkbox.style.cursor = 'pointer';
+
+        checkbox.addEventListener('click', (e) => e.stopPropagation());
+        const selectionWrap = document.createElement('div');
+        selectionWrap.className = 'batch-selection-info';
+        selectionWrap.appendChild(checkbox);
+        selectionWrap.appendChild(titleWrap);
+        info.appendChild(selectionWrap);
+      } else {
+        actionsContainer.style.display = 'flex';
+        info.appendChild(titleWrap);
+      }
 
       const copyBtn = document.createElement('button');
       copyBtn.className = 'copy-btn copy-saved-btn';
@@ -381,8 +395,9 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
         saveSingleResult(index, saveBtn);
       };
 
-      actionsContainer.appendChild(copyBtn);
-      actionsContainer.appendChild(saveBtn);
+      actionsRow.appendChild(copyBtn);
+      actionsRow.appendChild(saveBtn);
+      actionsContainer.appendChild(actionsRow);
 
       headerRow.appendChild(info);
       headerRow.appendChild(actionsContainer);
@@ -398,6 +413,12 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
             checkbox.checked = !checkbox.checked;
           }
         } else {
+          const container = wrapper.parentElement;
+          if (container) {
+            container.querySelectorAll<HTMLElement>('.saved-item-body').forEach((other) => {
+              if (other !== body) other.classList.add('hidden');
+            });
+          }
           body.classList.toggle('hidden');
         }
       });
@@ -452,9 +473,14 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
       </p>
     `;
 
+      const outreachHost = document.createElement('div');
+      outreachHost.className = 'batch-outreach-inline hidden';
+      outreachHost.dataset.batchIndex = index.toString();
+      body.appendChild(outreachHost);
+
       wrapper.appendChild(headerRow);
       wrapper.appendChild(body);
-      wrapper.appendChild(buildBatchOutreachFooter(res, index));
+      wrapper.appendChild(buildBatchOutreachFooter(res, index, body, outreachHost));
       reviewList.appendChild(wrapper);
     });
   }

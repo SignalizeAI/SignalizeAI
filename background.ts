@@ -123,7 +123,9 @@ chrome.runtime.onMessage.addListener(
       }
 
       chrome.storage.local.set({ supabaseSession: msg.session }, () => {
-        chrome.runtime.sendMessage({ type: 'SESSION_UPDATED' });
+        chrome.runtime.sendMessage({ type: 'SESSION_UPDATED', session: msg.session }, () => {
+          void chrome.runtime.lastError;
+        });
       });
       sendResponse({ ok: true });
       return true;

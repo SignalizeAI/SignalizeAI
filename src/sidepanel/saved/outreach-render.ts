@@ -132,7 +132,6 @@ function buildFollowUpMarkup(item: SavedItemLike, payload: SavedOutreachPayload)
 
   return `
     <div class="saved-outreach-block">
-      <div class="saved-outreach-heading" style="margin-top:4px;">Follow-up emails</div>
       <div class="saved-outreach-list">
         ${emails
           .map(

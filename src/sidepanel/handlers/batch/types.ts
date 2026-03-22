@@ -1,4 +1,7 @@
-import type { OutreachAnglesResult } from '../../outreach-messages/types.js';
+import type {
+  FollowUpEmailsResult,
+  OutreachAnglesResult,
+} from '../../outreach-messages/types.js';
 
 export interface Content {
   url: string;
@@ -16,8 +19,10 @@ export interface BatchResult {
   contentHash: string;
   status: 'ready' | 'saved' | 'error';
   outreachAngles?: OutreachAnglesResult | null;
+  followUpEmails?: FollowUpEmailsResult | null;
   outreachGeneratedAt?: string | null;
   outreachError?: string | null;
+  outreachExpanded?: boolean;
   error?: string;
 }
 

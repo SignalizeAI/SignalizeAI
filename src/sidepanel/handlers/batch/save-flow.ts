@@ -197,6 +197,7 @@ async function performSave(res: BatchResult) {
             generated_at: res.outreachGeneratedAt || new Date().toISOString(),
             recommended_angle_id: res.outreachAngles.recommendedAngleId,
             angles: res.outreachAngles.angles,
+            ...(res.followUpEmails?.emails?.length ? { follow_ups: res.followUpEmails } : {}),
           },
         }
       : {}),

@@ -46,7 +46,17 @@ export function setupRuntimeHandlers(): void {
         break;
       }
       case 'SESSION_UPDATED': {
-        await restoreSessionFromStorage();
+        if (message.session?.access_token && message.session?.refresh_token) {
+          const { error } = await supabase.auth.setSession({
+            access_token: message.session.access_token,
+            refresh_token: message.session.refresh_token,
+          });
+          if (error) {
+            console.error('Failed to apply session from website sync', error);
+          }
+        } else {
+          await restoreSessionFromStorage();
+        }
         const { data } = await supabase.auth.getSession();
         if (!data?.session) return;
         updateUI(data.session);

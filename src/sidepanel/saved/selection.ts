@@ -7,6 +7,7 @@ const selectionBackBtn = document.getElementById('selection-back-btn');
 const selectAllBtn = document.getElementById('select-all-btn');
 const exportToggle = document.getElementById('export-menu-toggle');
 const filterToggle = document.getElementById('filter-toggle');
+const searchToggle = document.getElementById('search-toggle');
 
 export function updateDeleteState(): void {
   if (!multiSelectToggle) return;
@@ -63,6 +64,10 @@ export function updateSelectionUI(): void {
 
   if (filterToggle) {
     filterToggle.classList.toggle('hidden', state.selectionMode);
+  }
+
+  if (searchToggle) {
+    searchToggle.classList.toggle('hidden', state.selectionMode);
   }
 
   if (selectionBackBtn) {

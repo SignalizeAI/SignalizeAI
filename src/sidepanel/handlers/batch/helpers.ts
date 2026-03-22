@@ -49,6 +49,7 @@ export function mapBatchResultToExportItem(r: BatchResult) {
         generated_at: r.outreachGeneratedAt,
         recommended_angle_id: r.outreachAngles.recommendedAngleId,
         angles: r.outreachAngles.angles,
+        ...(r.followUpEmails?.emails?.length ? { follow_ups: r.followUpEmails } : {}),
       }
     : null;
 

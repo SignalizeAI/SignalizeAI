@@ -106,7 +106,7 @@
 .delete-saved-btn {
   background: transparent;
   border: none;
-  color: var(--text-primary);
+  color: var(--text-tertiary);
   width: 34px;
   height: 34px;
   display: flex;
@@ -122,7 +122,6 @@
 .delete-saved-btn:hover {
   background-color: rgba(239, 68, 68, 0.15);
   color: var(--danger-color);
-  transform: scale(1.1);
 }
 
 .delete-saved-btn svg {
@@ -189,7 +188,7 @@
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   cursor: pointer;
   transition:
     color 0.2s ease,
@@ -306,6 +305,12 @@
   gap: 10px;
 }
 
+.saved-outreach-content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
 .saved-outreach-content.hidden {
   display: none;
 }
@@ -325,6 +330,10 @@
 }
 
 .saved-outreach-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   border: 1px solid var(--border-color);
   background: var(--bg-primary);
   color: var(--text-primary);
@@ -335,6 +344,11 @@
   font-weight: 600;
   cursor: pointer;
   transition: border-color 0.2s ease;
+}
+
+.saved-outreach-action-btn svg {
+  display: block;
+  flex: 0 0 auto;
 }
 
 .saved-outreach-action-btn:hover {
@@ -357,10 +371,6 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-.saved-outreach-block:first-of-type {
-  margin-bottom: 18px;
 }
 
 .saved-outreach-block-label {
