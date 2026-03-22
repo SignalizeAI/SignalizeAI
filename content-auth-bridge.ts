@@ -1,17 +1,70 @@
+import { SUPABASE_URL } from './src/config.js';
+
+type WebsiteSession = {
+  access_token: string;
+  refresh_token: string;
+};
+
+const SUPABASE_PROJECT_REF = new URL(SUPABASE_URL).hostname.split('.')[0];
+const WEBSITE_SESSION_STORAGE_KEY = `sb-${SUPABASE_PROJECT_REF}-auth-token`;
+
+function extractSession(candidate: unknown): WebsiteSession | null {
+  if (!candidate || typeof candidate !== 'object') return null;
+
+  const direct = candidate as Record<string, unknown>;
+  if (
+    typeof direct.access_token === 'string' &&
+    typeof direct.refresh_token === 'string'
+  ) {
+    return {
+      access_token: direct.access_token,
+      refresh_token: direct.refresh_token,
+    };
+  }
+
+  if ('currentSession' in direct) {
+    return extractSession(direct.currentSession);
+  }
+
+  if (Array.isArray(candidate)) {
+    for (const value of candidate) {
+      const session = extractSession(value);
+      if (session) return session;
+    }
+  }
+
+  return null;
+}
+
+function getWebsiteSessionFromStorage(): WebsiteSession | null {
+  try {
+    const raw = window.localStorage.getItem(WEBSITE_SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return extractSession(parsed);
+  } catch (error) {
+    console.warn('Failed to read website session from storage:', error);
+  }
+
+  return null;
+}
+
+function syncStoredWebsiteSession(): void {
+  const session = getWebsiteSessionFromStorage();
+  if (!session) return;
+
+  chrome.runtime.sendMessage({
+    type: 'AUTH_SUCCESS_FROM_WEBSITE',
+    session,
+  });
+}
+
 window.addEventListener('message', (event: MessageEvent) => {
   if (event.source !== window) return;
   if (event.origin !== window.location.origin) return;
 
-  if (event.data?.type === 'SIGNALIZE_AUTH_SUCCESS') {
-    if (!event.data.session) {
-      console.error('No session received from website');
-      return;
-    }
-
-    chrome.runtime.sendMessage({
-      type: 'AUTH_SUCCESS_FROM_WEBSITE',
-      session: event.data.session,
-    });
+  if (event.data?.type === 'SIGNALIZE_WEBSITE_AUTH_STATE_CHANGED') {
+    syncStoredWebsiteSession();
     return;
   }
 
@@ -95,3 +148,5 @@ chrome.runtime.onMessage.addListener((message) => {
     window.location.origin
   );
 });
+
+syncStoredWebsiteSession();
