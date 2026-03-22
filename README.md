@@ -1,156 +1,165 @@
 <p align="center">
   <picture>
-    <source
-      media="(prefers-color-scheme: dark)"
-      srcset="./icons/128.png"
-    />
-    <source
-      media="(prefers-color-scheme: light)"
-      srcset="./icons/128(light).png"
-    />
-    <img
-      src="./icons/128(light).png"
-      alt="SignalizeAI"
-      width="128"
-    />
+    <source media="(prefers-color-scheme: dark)" srcset="./icons/128.png" />
+    <source media="(prefers-color-scheme: light)" srcset="./icons/128(light).png" />
+    <img src="./icons/128(light).png" alt="SignalizeAI" width="128" />
   </picture>
 </p>
 
-<h1 align="center">SignalizeAI</h1>
+<h1 align="center">SignalizeAI Extension</h1>
 
 <p align="center">
-  <strong>Sell to any company<br/>Get sales-ready insights and outreach in seconds</strong>
+  <strong>Sell to any company in seconds</strong><br />
+  Get sales-ready insights and outreach in seconds
 </p>
 
-SignalizeAI helps you move from company page to sales action faster.
+SignalizeAI is a Chrome and Firefox extension that turns any public company website into a usable prospect record. It helps users move from a website to sales context, outreach emails, follow-ups, and saved prospects without leaving the browser.
 
-With one click, it turns publicly available website content into:
+## What The Extension Does
 
-- Sales-ready context
-- Buyer signals
-- Positioning cues
-- Sales readiness score
-- Outreach direction
+- Prospects the current website or any URL through Quick Website Check
+- Generates sales-ready fields like:
+  - what they do
+  - target customer
+  - value proposition
+  - sales readiness
+  - best persona
+  - sales angle
+  - suggested message
+- Generates outreach emails:
+  - 3 approaches
+  - 1 recommended email
+  - follow-up emails
+- Supports Saved Prospects with:
+  - status tracking
+  - search and filtering
+  - CSV / Excel export on supported plans
+- Supports Batch Prospecting with:
+  - CSV upload or pasted URLs
+  - bulk prospecting
+  - per-row / bulk outreach generation
+  - follow-up generation
+  - save selected / save all
+- Syncs with the website dashboard for:
+  - auth state
+  - prospect status
+  - prospect content updates
+  - theme changes
 
-The extension runs directly inside a Chrome or Firefox side panel, letting you qualify targets and prep outreach without leaving the page.
+## Plans
 
-It is designed for sales professionals, founders, marketers, and business development teams who want faster decisions before outreach, demos, or account prioritization.
+- Free: 5 prospects/day, save up to 3 prospects
+- Pro: 50 prospects/day, batch prospecting, saved search/filter, export, priority support
+- Team: 500 prospects/day, larger batch limits, larger saved limits, team-scale workflows
 
-## ✨ Key features
+## Tech Stack
 
-- AI-powered website analysis
-- Sales readiness scoring
-- Ideal customer and persona detection
-- Save analyses and export on supported plans
-- Secure Google sign-in
-- Batch analysis for CSV/pasted URLs with retry + fallback handling
+- Manifest V3 browser extension
+- TypeScript + esbuild
+- Supabase for auth and saved prospect storage
+- Cloudflare Workers backend for AI and billing endpoints
 
-## 💳 Subscription plans
+## Project Structure
 
-- Free: 5 AI analyses/day, save up to 3 analyses
-- Pro: 50 AI analyses/day, save up to 200 analyses, detailed save/search/filter, CSV/Excel export, priority email support
-- Team: All Pro features, 500 AI analyses/day, save up to 5,000 analyses, priority email support
+```text
+SignalizeAI/
+├── background.ts
+├── build.ts
+├── content-auth-bridge.ts
+├── content-extractor.ts
+├── sidepanel.ts
+├── sidepanel-loader.ts
+├── sidepanel-partials/
+├── sidepanel-styles/
+├── src/
+│   ├── analysis/
+│   ├── handlers/
+│   ├── outreach-messages/
+│   ├── saved/
+│   └── sidepanel/
+├── manifest.chrome*.json
+└── manifest.firefox*.json
+```
 
-## 🔐 Authentication
+## Local Development
 
-Users can optionally sign in using Google to:
+1. Install dependencies:
 
-- Save analyses
-- Access them later
-- Export results as CSV or Excel
+```bash
+npm install
+```
 
-Authentication and storage are handled securely using **Supabase**.
+2. Create `.env.local` with at least:
 
-## 🧠 AI Processing
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+API_ENV=dev
+```
 
-- Only publicly visible website text is analyzed
-- No personal user data is sent to the AI
-- API keys are securely handled server-side
-- Requests are rate-limited and protected
+`API_ENV=dev` points the extension to:
+- `https://dev-api.signalizeai.org`
+- `http://localhost:3000`
 
-## 🔧 Tech Stack
+3. Choose the browser manifest and build.
 
-- Chrome & Firefox Extension (Manifest V3)
-- JavaScript
-- Supabase (Auth & Storage)
-- Cloudflare Workers (Backend)
-- AI API (Text analysis)
+Chrome local:
 
-## 🧩 Sidepanel Structure
+```bash
+cp manifest.chrome.dev.json manifest.json
+npm run build
+```
 
-The side panel uses a loader + partials + modular runtime architecture:
+Firefox local:
 
-- Entry and loading:
-  - [sidepanel.html](sidepanel.html): side panel shell
-  - [sidepanel-loader.ts](sidepanel-loader.ts): loads UI partials
-  - [sidepanel.ts](sidepanel.ts): runtime entrypoint
-- UI templates and styles:
-  - [sidepanel-partials/](sidepanel-partials): HTML partials used by the loader
-  - [sidepanel-styles/](sidepanel-styles): feature-level CSS files
-  - [sidepanel.css](sidepanel.css): style entry/imports
-- Runtime source:
-  - `src/sidepanel/init.ts`: side panel initialization and handler wiring
-  - `src/sidepanel/ui.ts`: core UI orchestration
-  - `src/sidepanel/handlers/`: feature handlers (auth, saved, filter, settings, batch)
-  - `src/sidepanel/analysis/`: extraction and analysis helpers
-  - `src/sidepanel/saved/`: saved/export utilities
-- Batch internals:
-  - [src/sidepanel/handlers/batch-handlers.ts](src/sidepanel/handlers/batch-handlers.ts): batch entry handler
-  - `src/sidepanel/handlers/batch/`: process, render, save, telemetry, state, constants, helpers, types
+```bash
+cp manifest.firefox.dev.json manifest.json
+npm run build
+```
 
-## ✅ Linting & Formatting
+4. Load the extension manually:
+
+- Chrome: load the `SignalizeAI/` folder as an unpacked extension
+- Firefox: load the `SignalizeAI/` folder as a temporary add-on
+
+## Build Commands
+
+- `npm run build`  
+  Builds using the current `manifest.json`
+
+- `npm run build:chrome`  
+  Production Chrome build
+
+- `npm run build:firefox`  
+  Production Firefox build
+
+- `npm run build:chrome:dev`  
+  Chrome dev manifest + build
+
+- `npm run build:firefox:dev`  
+  Firefox dev manifest + build
+
+- `npm run dev`  
+  Chromium watch flow with auto-reload
+
+- `npm run dev:firefox`  
+  Firefox watch flow
+
+## Quality Checks
 
 - `npm run lint`
 - `npm run format`
 - `npm run format:check`
 
-## 🛠 Building
+## Auth And Security Notes
 
-1. Install dependencies:
+- Google sign-in uses Supabase auth
+- Saved prospects live in Supabase
+- Production manifests only inject the website bridge on `signalizeai.org`
+- Dev manifests also allow localhost website syncing for local testing
 
-   ```bash
-   npm i
-   ```
+## Support
 
-2. Build for Chrome:
-
-   ```bash
-   npm run build:chrome
-   ```
-
-3. Build for Firefox:
-   ```bash
-   npm run build:firefox
-   ```
-
-## 🧪 CI & Dev
-
-- Pull requests run `lint` + `format:check`
-- `npm run dev` starts esbuild watch and auto-reloads the extension (Chromium)
-
-## 🔒 Backend
-
-The backend is deployed using **Cloudflare Workers** and is **not publicly accessible**.
-It exists solely to:
-
-- Secure API keys
-- Enforce rate limits
-- Process AI requests safely
-
-## 📄 Privacy
-
-SignalizeAI respects user privacy.
-
-- Only publicly available website content is analyzed
-- No browsing activity is tracked
-- No ads or data selling
-
-See [`PRIVACY.md`](./PRIVACY.md) for full details.
-
-## 📬 Contact
-
-For questions or feedback:
-
-📧 **[support@signalizeai.org](mailto:support@signalizeai.org)**
-
----
+- Website: https://signalizeai.org
+- Email: support@signalizeai.org
+- Privacy: https://signalizeai.org/privacy
