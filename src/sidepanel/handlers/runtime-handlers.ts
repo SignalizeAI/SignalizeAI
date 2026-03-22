@@ -7,6 +7,7 @@ import {
 } from '../analysis/index.js';
 import { loadQuotaFromAPI } from '../quota.js';
 import { loadSavedAnalyses } from '../saved/index.js';
+import { applyTheme, saveSettings } from '../settings.js';
 import { supabase } from '../supabase.js';
 import { state } from '../state.js';
 import { isMenuOpen, updateUI } from '../ui.js';
@@ -53,6 +54,16 @@ export function setupRuntimeHandlers(): void {
       }
       case 'EXTENSION_SIGNED_OUT': {
         await signOut();
+        break;
+      }
+      case 'EXTENSION_THEME_CHANGED': {
+        const theme = message.theme === 'light' ? 'light' : 'dark';
+        saveSettings({ theme });
+        applyTheme(theme);
+        const input = document.querySelector<HTMLInputElement>(
+          `input[name="theme"][value="${theme}"]`
+        );
+        if (input) input.checked = true;
         break;
       }
       case 'PAYMENT_SUCCESS': {

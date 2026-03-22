@@ -1,7 +1,8 @@
-import { loadSettings, saveSettings, updateReanalysisUI, applyTheme } from '../settings.js';
+import { loadSettings, saveSettings, updateReanalysisUI, applyTheme, resolveTheme } from '../settings.js';
 import { settingsMenu } from '../elements.js';
 import { navigateTo } from '../ui.js';
 import { state } from '../state.js';
+import { broadcastToWebsiteTabs } from '../website-sync.js';
 
 export function setupSettingsHandlers(): void {
   settingsMenu?.addEventListener('click', (e: MouseEvent) => {
@@ -64,6 +65,10 @@ export function setupSettingsHandlers(): void {
       const theme = target.value as 'light' | 'dark' | 'system';
       saveSettings({ theme });
       applyTheme(theme);
+      void broadcastToWebsiteTabs({
+        type: 'SYNC_EXTENSION_THEME',
+        theme: resolveTheme(theme),
+      });
     });
   });
 
@@ -71,6 +76,10 @@ export function setupSettingsHandlers(): void {
     const settings = await loadSettings();
     if (settings.theme === 'system') {
       applyTheme('system');
+      void broadcastToWebsiteTabs({
+        type: 'SYNC_EXTENSION_THEME',
+        theme: resolveTheme('system'),
+      });
     }
   });
 }

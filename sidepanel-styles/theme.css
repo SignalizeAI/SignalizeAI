@@ -59,6 +59,10 @@
   --reply-prob-low-border: rgba(244, 63, 94, 0.28);
   --reply-prob-low-bg: rgba(244, 63, 94, 0.14);
   --brand-ai: #00e5ff;
+  --status-control-bg: rgba(255, 255, 255, 0.06);
+  --status-control-border: rgba(255, 255, 255, 0.12);
+  --status-control-hover-bg: rgba(255, 255, 255, 0.1);
+  --status-control-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
 }
 
 [data-theme='light'] {
@@ -118,4 +122,8 @@
   --reply-prob-low-border: rgba(225, 29, 72, 0.18);
   --reply-prob-low-bg: rgba(244, 63, 94, 0.12);
   --brand-ai: #1a237e;
+  --status-control-bg: rgba(255, 255, 255, 0.92);
+  --status-control-border: rgba(15, 23, 42, 0.08);
+  --status-control-hover-bg: rgba(241, 245, 249, 1);
+  --status-control-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
 }

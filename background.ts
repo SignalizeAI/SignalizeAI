@@ -139,6 +139,20 @@ chrome.runtime.onMessage.addListener(
       return true;
     }
 
+    if (msg.type === 'WEBSITE_THEME_CHANGED') {
+      chrome.runtime.sendMessage(
+        {
+          type: 'EXTENSION_THEME_CHANGED',
+          theme: msg.theme,
+        },
+        () => {
+          void chrome.runtime.lastError;
+        }
+      );
+      sendResponse({ ok: true });
+      return true;
+    }
+
     if (msg.type === 'PROSPECT_STATUS_UPDATED') {
       chrome.runtime.sendMessage(
         {

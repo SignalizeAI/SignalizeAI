@@ -36,13 +36,15 @@ export function applySettingsToUI(settings: Settings): void {
   applyTheme(settings.theme);
 }
 
-export function applyTheme(theme: 'light' | 'dark' | 'system'): void {
+export function resolveTheme(theme: 'light' | 'dark' | 'system'): 'light' | 'dark' {
   if (theme === 'system') {
-    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-  } else {
-    document.documentElement.setAttribute('data-theme', theme);
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
+  return theme;
+}
+
+export function applyTheme(theme: 'light' | 'dark' | 'system'): void {
+  document.documentElement.setAttribute('data-theme', resolveTheme(theme));
 }
 
 export function updateReanalysisUI(settings: Settings): void {

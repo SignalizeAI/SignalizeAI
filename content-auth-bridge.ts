@@ -47,6 +47,14 @@ window.addEventListener('message', (event: MessageEvent) => {
     chrome.runtime.sendMessage({
       type: 'WEBSITE_SIGN_OUT',
     });
+    return;
+  }
+
+  if (event.data?.type === 'SIGNALIZE_WEBSITE_THEME_CHANGED') {
+    chrome.runtime.sendMessage({
+      type: 'WEBSITE_THEME_CHANGED',
+      theme: event.data.theme,
+    });
   }
 });
 
@@ -59,6 +67,17 @@ chrome.runtime.onMessage.addListener((message) => {
     window.postMessage(
       {
         type: 'SIGNALIZE_EXTENSION_SIGNED_OUT',
+      },
+      window.location.origin
+    );
+    return;
+  }
+
+  if (message?.type === 'SYNC_EXTENSION_THEME') {
+    window.postMessage(
+      {
+        type: 'SIGNALIZE_EXTENSION_THEME_CHANGED',
+        theme: message.theme,
       },
       window.location.origin
     );

@@ -6,6 +6,7 @@ import { openDashboardForSavedId } from '../dashboard-link.js';
 import { syncProspectStatusToWebsite } from '../status-sync.js';
 import { onCopyVariationClick } from '../outreach-messages/handlers.js';
 import { areFiltersActive } from './filtering.js';
+import { updateFilterBanner } from './filtering.js';
 import { generateSavedFollowUpPayload, generateSavedOutreachPayload } from './outreach-actions.js';
 import { updateDeleteState, updateSelectAllIcon } from './selection.js';
 import { showUndoToast } from './delete.js';
@@ -158,7 +159,33 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
 
     <div class="header-actions">
       <div class="saved-item-badge-row">
-        <span class="saved-status-pill saved-status-pill--${currentStatus}">${formatStatusLabel(currentStatus)}</span>
+        <div class="saved-status-inline">
+          <span class="saved-status-pill saved-status-pill--${currentStatus}">${formatStatusLabel(currentStatus)}</span>
+          <button class="saved-status-edit-btn" title="Edit status" aria-label="Edit status">
+            <svg viewBox="0 0 24 24" class="copy-icon">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"></path>
+            </svg>
+          </button>
+          <div class="saved-status-editor hidden">
+            <div class="saved-status-select-shell">
+              <button class="saved-status-select" type="button" aria-label="Status" aria-expanded="false">
+                <span class="saved-status-select-label">${formatStatusLabel(currentStatus)}</span>
+              </button>
+              <div class="saved-status-menu hidden">
+                <button class="saved-status-option${currentStatus === 'not_contacted' ? ' active' : ''}" type="button" data-value="not_contacted">
+                  Not contacted
+                </button>
+                <button class="saved-status-option${currentStatus === 'contacted' ? ' active' : ''}" type="button" data-value="contacted">
+                  Contacted
+                </button>
+                <button class="saved-status-option${currentStatus === 'follow_up' ? ' active' : ''}" type="button" data-value="follow_up">
+                  Follow-up due
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="header-actions-row">
         <button class="copy-btn copy-saved-btn" title="Copy prospect data">
@@ -186,6 +213,17 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
             <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
           </svg>
         </button>
+        <button class="saved-status-save-btn hidden" title="Save status" aria-label="Save status">
+          <svg viewBox="0 0 24 24" class="copy-icon">
+            <path d="M20 6 9 17l-5-5"></path>
+          </svg>
+        </button>
+        <button class="saved-status-cancel-btn hidden" title="Cancel" aria-label="Cancel status edit">
+          <svg viewBox="0 0 24 24" class="copy-icon">
+            <path d="m18 6-12 12"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
+        </button>
       </div>
     </div>
       <input
@@ -197,14 +235,6 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
   </div>
 
   <div class="saved-item-body hidden">
-    <div class="saved-status-row">
-      <div class="saved-status-label">Status</div>
-      <select class="saved-status-select" data-id="${item.id}" aria-label="Prospect status">
-        <option value="not_contacted"${currentStatus === 'not_contacted' ? ' selected' : ''}>Not contacted</option>
-        <option value="contacted"${currentStatus === 'contacted' ? ' selected' : ''}>Contacted</option>
-        <option value="follow_up"${currentStatus === 'follow_up' ? ' selected' : ''}>Follow-up due</option>
-      </select>
-    </div>
     <p><strong>Sales readiness:</strong> ${item.sales_readiness_score ?? '—'}</p>
     <p><strong>What they do:</strong> ${item.what_they_do || '—'}</p>
     <p><strong>Target customer:</strong> ${item.target_customer || '—'}</p>
@@ -280,8 +310,40 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
 
   const copySavedBtn = wrapper.querySelector<HTMLButtonElement>('.copy-saved-btn')!;
   const openDashboardBtn = wrapper.querySelector<HTMLButtonElement>('.open-dashboard-saved-btn')!;
-  const statusSelect = wrapper.querySelector<HTMLSelectElement>('.saved-status-select')!;
+  const deleteSavedBtn = wrapper.querySelector<HTMLButtonElement>('.delete-saved-btn')!;
+  const statusEditBtn = wrapper.querySelector<HTMLButtonElement>('.saved-status-edit-btn')!;
+  const statusSaveBtn = wrapper.querySelector<HTMLButtonElement>('.saved-status-save-btn')!;
+  const statusCancelBtn = wrapper.querySelector<HTMLButtonElement>('.saved-status-cancel-btn')!;
+  const statusEditor = wrapper.querySelector<HTMLElement>('.saved-status-editor')!;
+  const statusSelect = wrapper.querySelector<HTMLButtonElement>('.saved-status-select')!;
+  const statusSelectLabel = wrapper.querySelector<HTMLElement>('.saved-status-select-label')!;
+  const statusMenu = wrapper.querySelector<HTMLElement>('.saved-status-menu')!;
+  const statusOptions = Array.from(
+    wrapper.querySelectorAll<HTMLButtonElement>('.saved-status-option')
+  );
   const statusPill = wrapper.querySelector<HTMLElement>('.saved-status-pill');
+  let draftStatus = currentStatus;
+
+  const setStatusEditing = (isEditing: boolean): void => {
+    statusPill?.classList.toggle('hidden', isEditing);
+    statusEditBtn.classList.toggle('hidden', isEditing);
+    statusEditor.classList.toggle('hidden', !isEditing);
+    copySavedBtn.classList.toggle('hidden', isEditing);
+    openDashboardBtn.classList.toggle('hidden', isEditing);
+    deleteSavedBtn.classList.toggle('hidden', isEditing);
+    statusSaveBtn.classList.toggle('hidden', !isEditing);
+    statusCancelBtn.classList.toggle('hidden', !isEditing);
+    wrapper.dataset.statusEditing = isEditing ? 'true' : 'false';
+    if (isEditing) {
+      draftStatus = item.prospect_status || 'not_contacted';
+      statusSelectLabel.textContent = formatStatusLabel(draftStatus);
+      statusSelect.setAttribute('aria-expanded', 'false');
+      statusMenu.classList.add('hidden');
+      statusOptions.forEach((option) => {
+        option.classList.toggle('active', option.dataset.value === draftStatus);
+      });
+    }
+  };
 
   const rerenderOutreach = (expanded = false): void => {
     const shell = wrapper.querySelector<HTMLElement>('.saved-outreach-shell');
@@ -314,6 +376,7 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
   });
 
   wrapper.addEventListener('click', async (e: MouseEvent) => {
+    if (wrapper.dataset.statusEditing === 'true') return;
     const target = e.target as HTMLElement;
     const toggleBtn = target.closest('.saved-outreach-toggle-btn') as HTMLButtonElement | null;
     const followUpsBtn = target.closest('.saved-followups-btn') as HTMLButtonElement | null;
@@ -370,13 +433,45 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
     rerenderOutreach(true);
   });
 
-  statusSelect?.addEventListener('click', (e: MouseEvent) => {
+  statusEditBtn.addEventListener('click', (e: MouseEvent) => {
+    e.stopPropagation();
+    setStatusEditing(true);
+  });
+
+  statusCancelBtn.addEventListener('click', (e: MouseEvent) => {
+    e.stopPropagation();
+    setStatusEditing(false);
+  });
+
+  statusSaveBtn.addEventListener('mousedown', (e: MouseEvent) => e.stopPropagation());
+  statusCancelBtn.addEventListener('mousedown', (e: MouseEvent) => e.stopPropagation());
+  statusSaveBtn.addEventListener('touchstart', (e: TouchEvent) => e.stopPropagation(), {
+    passive: true,
+  });
+  statusCancelBtn.addEventListener('touchstart', (e: TouchEvent) => e.stopPropagation(), {
+    passive: true,
+  });
+
+  statusEditor.addEventListener('click', (e: MouseEvent) => {
     e.stopPropagation();
   });
 
-  statusSelect?.addEventListener('change', async () => {
+  statusSelect.addEventListener('click', (e: MouseEvent) => {
+    e.stopPropagation();
+    const nextExpanded = statusSelect.getAttribute('aria-expanded') !== 'true';
+    statusSelect.setAttribute('aria-expanded', nextExpanded ? 'true' : 'false');
+    statusMenu.classList.toggle('hidden', !nextExpanded);
+  });
+
+  statusSaveBtn.addEventListener('click', async (e: MouseEvent) => {
+    e.stopPropagation();
     const previousStatus = wrapper.dataset.status || 'not_contacted';
-    const nextStatus = statusSelect.value;
+    const nextStatus = draftStatus;
+
+    if (nextStatus === previousStatus) {
+      setStatusEditing(false);
+      return;
+    }
 
     try {
       await updateProspectStatus(item.id, nextStatus);
@@ -386,12 +481,28 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
         statusPill.textContent = formatStatusLabel(nextStatus);
         statusPill.className = `saved-status-pill saved-status-pill--${nextStatus}`;
       }
+      setStatusEditing(false);
       updateFilterBanner();
       void syncProspectStatusToWebsite(item.id, nextStatus);
     } catch (error) {
       console.error('Failed to update prospect status:', error);
-      statusSelect.value = previousStatus;
+      draftStatus = previousStatus;
+      statusSelectLabel.textContent = formatStatusLabel(previousStatus);
     }
+  });
+
+  statusOptions.forEach((option) => {
+    option.addEventListener('click', (e: MouseEvent) => {
+      e.stopPropagation();
+      const value = option.dataset.value || 'not_contacted';
+      draftStatus = value;
+      statusSelectLabel.textContent = formatStatusLabel(value);
+      statusSelect.setAttribute('aria-expanded', 'false');
+      statusMenu.classList.add('hidden');
+      statusOptions.forEach((itemOption) => {
+        itemOption.classList.toggle('active', itemOption === option);
+      });
+    });
   });
 
   const handleSelection = (isShift: boolean, forceState: boolean | null = null): void => {
@@ -434,9 +545,7 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
     handleSelection(e.shiftKey);
   });
 
-  wrapper
-    .querySelector<HTMLButtonElement>('.delete-saved-btn')!
-    .addEventListener('click', (e: MouseEvent) => {
+  deleteSavedBtn.addEventListener('click', (e: MouseEvent) => {
       if (state.selectionMode || state.isUndoToastActive) return;
       e.stopPropagation();
 
@@ -469,6 +578,14 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
 
   const startPress = (e: MouseEvent | TouchEvent): void => {
     if (state.selectionMode || (e instanceof MouseEvent && e.button !== 0)) return;
+    const target = e.target as HTMLElement | null;
+    if (
+      target?.closest('.saved-status-inline') ||
+      target?.closest('.saved-status-save-btn') ||
+      target?.closest('.saved-status-cancel-btn')
+    ) {
+      return;
+    }
 
     const visibleItems = Array.from(
       document.querySelectorAll<HTMLElement>('#saved-list .saved-item')
@@ -525,7 +642,10 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
       if (
         (e.target as HTMLElement).closest('.delete-saved-btn') ||
         (e.target as HTMLElement).closest('.copy-saved-btn') ||
-        (e.target as HTMLElement).closest('.open-dashboard-saved-btn')
+        (e.target as HTMLElement).closest('.open-dashboard-saved-btn') ||
+        (e.target as HTMLElement).closest('.saved-status-save-btn') ||
+        (e.target as HTMLElement).closest('.saved-status-cancel-btn') ||
+        (e.target as HTMLElement).closest('.saved-status-inline')
       ) {
         return;
       }
