@@ -13,12 +13,14 @@ import { loadSettings } from '../settings.js';
 import { loadQuotaFromAPI, renderQuotaBanner } from '../quota.js';
 import { supabase } from '../supabase.js';
 import { state, type ExtractedMeta } from '../state.js';
+import { updateAnalysisDashboardButton } from '../dashboard-link.js';
 import { showLimitModal } from '../modal.js';
 import { showToast } from '../toast.js';
 import { cleanTitle, endAnalysisLoading } from './utils.js';
 import { showContentBlocked, displayAIAnalysis } from './display.js';
 import { getActiveTab, ensureContentScriptLoaded } from '../utils.js';
 import { fetchAndExtractContent } from './fetcher.js';
+import { fetchSavedAnalysisById } from '../saved/data.js';
 
 interface ContentResponse {
   ok: boolean;
@@ -41,6 +43,128 @@ function setLoadingMessage(message: string): void {
   if (el) el.textContent = message;
 }
 
+function getProspectRouteSavedId(rawUrl: string): string | null {
+  try {
+    const url = new URL(rawUrl);
+    const isWebsiteHost =
+      url.hostname === 'signalizeai.org' ||
+      url.hostname === 'www.signalizeai.org' ||
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1';
+    if (!isWebsiteHost) return null;
+
+    const match = url.pathname.match(/^\/prospect\/([a-f0-9-]+)$/i);
+    return match?.[1] || null;
+  } catch {
+    return null;
+  }
+}
+
+async function updateSavedProspectAnalysis(
+  savedId: string,
+  meta: ExtractedMeta,
+  analysis: ReturnType<typeof mapSavedRowToAnalysis>,
+  contentHash: string | null
+): Promise<void> {
+  const { error } = await supabase
+    .from('saved_analyses')
+    .update({
+      content_hash: contentHash,
+      last_analyzed_at: new Date().toISOString(),
+      title: meta.title,
+      description: meta.description,
+      url: meta.url,
+      domain: meta.domain,
+      what_they_do: analysis.whatTheyDo,
+      target_customer: analysis.targetCustomer,
+      value_proposition: analysis.valueProposition,
+      sales_angle: analysis.salesAngle,
+      sales_readiness_score: analysis.salesReadinessScore,
+      best_sales_persona: analysis.bestSalesPersona?.persona,
+      best_sales_persona_reason: analysis.bestSalesPersona?.reason,
+      recommended_outreach_persona: analysis.recommendedOutreach?.persona,
+      recommended_outreach_goal: analysis.recommendedOutreach?.goal,
+      recommended_outreach_angle: analysis.recommendedOutreach?.angle,
+      recommended_outreach_message: analysis.recommendedOutreach?.message,
+      outreach_angles: null,
+    })
+    .eq('id', savedId);
+
+  if (error) {
+    console.error('Failed to update saved prospect after refresh:', error);
+    showToast('Failed to sync refreshed prospect data.');
+  }
+}
+
+function mapSavedRowToAnalysis(row: any) {
+  return {
+    whatTheyDo: row.what_they_do || '',
+    targetCustomer: row.target_customer || '',
+    valueProposition: row.value_proposition || '',
+    salesAngle: row.sales_angle || '',
+    salesReadinessScore: row.sales_readiness_score || 0,
+    bestSalesPersona: {
+      persona: row.best_sales_persona || '',
+      reason: row.best_sales_persona_reason || '',
+    },
+    recommendedOutreach: {
+      persona: row.recommended_outreach_persona || '',
+      goal: row.recommended_outreach_goal || '',
+      angle: row.recommended_outreach_angle || '',
+      message: row.recommended_outreach_message || '',
+    },
+  };
+}
+
+async function loadSavedProspectFromTab(savedId: string): Promise<boolean> {
+  const row = await fetchSavedAnalysisById(savedId);
+  if (!row) return false;
+
+  state.lastAnalysis = mapSavedRowToAnalysis(row);
+  state.lastContentHash = row.content_hash || null;
+  state.lastExtractedMeta = {
+    title: cleanTitle(row.title || row.domain || ''),
+    description: row.description || '',
+    url: row.url || '',
+    domain: row.domain || '',
+  };
+  state.lastExtractedEvidence = null;
+  state.lastAnalyzedDomain = row.domain || null;
+
+  const saveBtn = document.getElementById('saveButton') as HTMLButtonElement | null;
+  if (saveBtn) {
+    saveBtn.classList.add('active');
+    saveBtn.title = 'Remove';
+    saveBtn.dataset.savedId = row.id;
+  }
+  updateAnalysisDashboardButton(row.id);
+  displayAIAnalysis(state.lastAnalysis, row.outreach_angles ?? undefined);
+  return true;
+}
+
+async function clearSavedOutreachAfterRefresh(savedId: string | null | undefined): Promise<void> {
+  if (!savedId) return;
+
+  const { error } = await supabase
+    .from('saved_analyses')
+    .update({ outreach_angles: null })
+    .eq('id', savedId);
+
+  if (error) {
+    console.error('Failed to clear stale outreach emails after refresh:', error);
+  }
+}
+
+async function reanalyzeSavedProspectFromRoute(savedId: string): Promise<void> {
+  const row = await fetchSavedAnalysisById(savedId);
+  if (!row?.url) {
+    showContentBlocked('This saved prospect does not have a website URL to re-analyze.');
+    return;
+  }
+
+  await analyzeSpecificUrl(row.url, { preserveSavedId: savedId });
+}
+
 export async function refreshSaveButtonState(): Promise<void> {
   if (!state.lastExtractedMeta?.domain) return;
 
@@ -54,6 +178,7 @@ export async function refreshSaveButtonState(): Promise<void> {
     btn.classList.remove('active');
     btn.title = 'Save';
     delete btn.dataset.savedId;
+    updateAnalysisDashboardButton(null);
     return;
   }
 
@@ -72,10 +197,12 @@ export async function refreshSaveButtonState(): Promise<void> {
     btn.classList.add('active');
     btn.title = 'Remove';
     btn.dataset.savedId = existing.id;
+    updateAnalysisDashboardButton(existing.id);
   } else {
     btn.classList.remove('active');
     btn.title = 'Save';
     delete btn.dataset.savedId;
+    updateAnalysisDashboardButton(null);
   }
 }
 
@@ -139,6 +266,17 @@ export async function extractWebsiteContent(): Promise<void> {
       endAnalysisLoading();
       if (contentLoading) contentLoading.classList.add('hidden');
       showContentBlocked('Please navigate to a website to generate insights.');
+      return;
+    }
+
+    const prospectSavedId = getProspectRouteSavedId(tab.url);
+    if (prospectSavedId) {
+      const loaded = await loadSavedProspectFromTab(prospectSavedId);
+      if (!loaded) {
+        endAnalysisLoading();
+        if (contentLoading) contentLoading.classList.add('hidden');
+        showContentBlocked('This saved prospect could not be loaded in the extension.');
+      }
       return;
     }
 
@@ -254,8 +392,10 @@ export async function extractWebsiteContent(): Promise<void> {
                 btn?.classList.add('active');
                 if (btn) btn.title = 'Remove';
                 if (btn) btn.dataset.savedId = existing.id;
+                updateAnalysisDashboardButton(existing.id);
               } else if (btn) {
                 delete btn.dataset.savedId;
+                updateAnalysisDashboardButton(null);
               }
             }
 
@@ -392,6 +532,16 @@ export async function extractWebsiteContent(): Promise<void> {
                 }
 
                 const analysis = result.analysis;
+                const savedIdToInvalidate =
+                  existing?.id ||
+                  (document.getElementById('saveButton') as HTMLButtonElement | null)?.dataset
+                    .savedId ||
+                  null;
+
+                if (state.forceRefresh) {
+                  await clearSavedOutreachAfterRefresh(savedIdToInvalidate);
+                }
+
                 state.lastAnalysis = analysis;
                 displayAIAnalysis(analysis);
                 state.lastAnalyzedDomain = currentDomain;
@@ -563,7 +713,10 @@ export async function getHomepageAnalysisForSave(url: string): Promise<any> {
   return { analysis, meta, contentHash };
 }
 
-export async function analyzeSpecificUrl(url: string): Promise<void> {
+export async function analyzeSpecificUrl(
+  url: string,
+  options?: { preserveSavedId?: string | null }
+): Promise<void> {
   const { data } = await supabase.auth.getSession();
   if (!data?.session) return;
 
@@ -591,10 +744,13 @@ export async function analyzeSpecificUrl(url: string): Promise<void> {
 
   try {
     const saveBtn = document.getElementById('saveButton') as HTMLButtonElement | null;
-    if (saveBtn) {
+    if (saveBtn && !options?.preserveSavedId) {
       saveBtn.classList.remove('active');
       saveBtn.title = 'Save';
       delete saveBtn.dataset.savedId;
+    }
+    if (!options?.preserveSavedId) {
+      updateAnalysisDashboardButton(null);
     }
 
     const response = await fetchAndExtractContent(url);
@@ -638,7 +794,23 @@ export async function analyzeSpecificUrl(url: string): Promise<void> {
       if (state.lastAnalysis) {
         displayAIAnalysis(state.lastAnalysis);
       }
-      await refreshSaveButtonState();
+      if (options?.preserveSavedId) {
+        await updateSavedProspectAnalysis(
+          options.preserveSavedId,
+          state.lastExtractedMeta,
+          state.lastAnalysis!,
+          state.lastContentHash
+        );
+        const saveBtn = document.getElementById('saveButton') as HTMLButtonElement | null;
+        if (saveBtn) {
+          saveBtn.classList.add('active');
+          saveBtn.title = 'Remove';
+          saveBtn.dataset.savedId = options.preserveSavedId;
+        }
+        updateAnalysisDashboardButton(options.preserveSavedId);
+      } else {
+        await refreshSaveButtonState();
+      }
       return;
     }
 
@@ -682,10 +854,38 @@ export async function analyzeSpecificUrl(url: string): Promise<void> {
       meta: state.lastExtractedMeta,
     });
 
-    await refreshSaveButtonState();
+    if (options?.preserveSavedId) {
+      await updateSavedProspectAnalysis(
+        options.preserveSavedId,
+        state.lastExtractedMeta,
+        result.analysis!,
+        state.lastContentHash
+      );
+      const saveBtn = document.getElementById('saveButton') as HTMLButtonElement | null;
+      if (saveBtn) {
+        saveBtn.classList.add('active');
+        saveBtn.title = 'Remove';
+        saveBtn.dataset.savedId = options.preserveSavedId;
+      }
+      updateAnalysisDashboardButton(options.preserveSavedId);
+    } else {
+      await refreshSaveButtonState();
+    }
   } catch (err: any) {
     if (contentLoading) contentLoading.classList.add('hidden');
     state.isAnalysisLoading = false;
     showContentBlocked('Failed to generate insights for the URL: ' + err.message);
   }
+}
+
+export async function reanalyzeCurrentContext(): Promise<void> {
+  const tab = await getActiveTab();
+  const savedId = tab?.url ? getProspectRouteSavedId(tab.url) : null;
+
+  if (savedId) {
+    await reanalyzeSavedProspectFromRoute(savedId);
+    return;
+  }
+
+  await extractWebsiteContent();
 }

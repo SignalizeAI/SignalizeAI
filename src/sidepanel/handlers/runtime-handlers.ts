@@ -1,4 +1,4 @@
-import { restoreSessionFromStorage } from '../auth.js';
+import { restoreSessionFromStorage, signOut } from '../auth.js';
 import { AUTO_ANALYZE_DEBOUNCE, IRRELEVANT_DOMAINS } from '../constants.js';
 import {
   extractWebsiteContent,
@@ -6,6 +6,8 @@ import {
   showIrrelevantDomainView,
 } from '../analysis/index.js';
 import { loadQuotaFromAPI } from '../quota.js';
+import { loadSavedAnalyses } from '../saved/index.js';
+import { applyTheme, saveSettings } from '../settings.js';
 import { supabase } from '../supabase.js';
 import { state } from '../state.js';
 import { isMenuOpen, updateUI } from '../ui.js';
@@ -44,10 +46,34 @@ export function setupRuntimeHandlers(): void {
         break;
       }
       case 'SESSION_UPDATED': {
-        await restoreSessionFromStorage();
+        if (message.session?.access_token && message.session?.refresh_token) {
+          const { error } = await supabase.auth.setSession({
+            access_token: message.session.access_token,
+            refresh_token: message.session.refresh_token,
+          });
+          if (error) {
+            console.error('Failed to apply session from website sync', error);
+          }
+        } else {
+          await restoreSessionFromStorage();
+        }
         const { data } = await supabase.auth.getSession();
         if (!data?.session) return;
         updateUI(data.session);
+        break;
+      }
+      case 'EXTENSION_SIGNED_OUT': {
+        await signOut();
+        break;
+      }
+      case 'EXTENSION_THEME_CHANGED': {
+        const theme = message.theme === 'light' ? 'light' : 'dark';
+        saveSettings({ theme });
+        applyTheme(theme);
+        const input = document.querySelector<HTMLInputElement>(
+          `input[name="theme"][value="${theme}"]`
+        );
+        if (input) input.checked = true;
         break;
       }
       case 'PAYMENT_SUCCESS': {
@@ -65,6 +91,24 @@ export function setupRuntimeHandlers(): void {
         await new Promise((resolve) => setTimeout(resolve, 500));
         await loadQuotaFromAPI(true);
         updateUI(data.session);
+        break;
+      }
+      case 'PROSPECT_STATUS_UPDATED': {
+        if (state.currentView === 'analysis') {
+          setTimeout(extractWebsiteContent, 50);
+        }
+        if (state.currentView === 'saved') {
+          void loadSavedAnalyses();
+        }
+        break;
+      }
+      case 'PROSPECT_CONTENT_UPDATED': {
+        if (state.currentView === 'analysis') {
+          setTimeout(extractWebsiteContent, 50);
+        }
+        if (state.currentView === 'saved') {
+          void loadSavedAnalyses();
+        }
         break;
       }
       default:

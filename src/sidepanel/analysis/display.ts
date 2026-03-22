@@ -1,8 +1,12 @@
 import { state, type Analysis } from '../state.js';
+import { updateAnalysisDashboardButton } from '../dashboard-link.js';
 import { endAnalysisLoading } from './utils.js';
 import { hideOutreachSection, renderOutreachAngles } from '../outreach-messages/render.js';
 import { attachOutreachHandlers, resetOutreachState } from '../outreach-messages/handlers.js';
-import type { OutreachAnglesResult } from '../outreach-messages/types.js';
+import {
+  normalizeStoredOutreachPayload,
+  type OutreachAnglesResult,
+} from '../outreach-messages/types.js';
 
 interface ShowBlockedOptions {
   allowHomepageFallback?: boolean;
@@ -58,6 +62,7 @@ export function showContentBlocked(message: string, options: ShowBlockedOptions 
   if (saveBtn) {
     saveBtn.classList.remove('active');
   }
+  updateAnalysisDashboardButton(null);
 
   hideOutreachSection();
 
@@ -97,6 +102,9 @@ export function displayAIAnalysis(analysis: Analysis, savedAngles?: OutreachAngl
   if (aiLoading) aiLoading.classList.add('hidden');
   if (aiData) aiData.classList.remove('hidden');
   if (refreshBtn) refreshBtn.disabled = false;
+  updateAnalysisDashboardButton(
+    (document.getElementById('saveButton') as HTMLButtonElement | null)?.dataset.savedId || null
+  );
 
   const aiTitleEl = document.getElementById('ai-title-text');
   if (aiTitleEl) {
@@ -155,8 +163,13 @@ export function displayAIAnalysis(analysis: Analysis, savedAngles?: OutreachAngl
   resetOutreachState();
   attachOutreachHandlers();
 
-  if (savedAngles?.angles?.length) {
-    state.outreachAngles = savedAngles;
-    renderOutreachAngles(savedAngles, analysis);
+  const normalizedSaved = normalizeStoredOutreachPayload(savedAngles);
+  if (normalizedSaved.followUpEmails) {
+    state.followUpEmails = normalizedSaved.followUpEmails;
+  }
+
+  if (normalizedSaved.outreachAngles?.angles?.length) {
+    state.outreachAngles = normalizedSaved.outreachAngles;
+    renderOutreachAngles(normalizedSaved.outreachAngles, analysis);
   }
 }

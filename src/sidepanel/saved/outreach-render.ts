@@ -24,6 +24,9 @@ interface SavedOutreachPayload {
   generated_at?: string;
   recommended_angle_id?: string;
   angles?: SavedOutreachAngle[];
+  follow_ups?: {
+    emails?: Array<{ id?: string; label?: string; subject?: string; body?: string }>;
+  };
 }
 
 interface SavedItemLike {
@@ -122,35 +125,113 @@ function buildApproachMarkup(
   `;
 }
 
-export function buildSavedOutreachMarkup(item: SavedItemLike): string {
-  const payload = item.outreach_angles;
-  const angles = Array.isArray(payload?.angles) ? payload.angles : [];
-  const recommended = payload ? getRecommendedAngle(payload) : null;
-  if (!payload || angles.length === 0 || !recommended) return '';
-  const recommendedAngleId = recommended.id || payload.recommended_angle_id || 'observation';
+function buildFollowUpMarkup(item: SavedItemLike, payload: SavedOutreachPayload): string {
+  const emails = Array.isArray(payload.follow_ups?.emails) ? payload.follow_ups?.emails : [];
+  if (!emails.length) return '';
   const companyName = getCompanyDisplayName(item.title, item.domain);
 
   return `
-    <hr style="margin:8px 0; opacity:0.3" />
-    <div class="saved-outreach-section">
-      <div class="saved-outreach-heading">Suggested outreach emails</div>
-      <div class="saved-outreach-block">
-        <div class="saved-outreach-card saved-outreach-card--recommended">
-          <div class="saved-outreach-recommended-head">
-            <div class="saved-outreach-recommended-kicker">★ Recommended Email</div>
-            ${buildProbabilityBadge('High')}
-          </div>
-          ${buildEmailMarkup(getPrimaryVariation(recommended), companyName)}
-        </div>
+    <div class="saved-outreach-block">
+      <div class="saved-outreach-list">
+        ${emails
+          .map(
+            (email) => `
+              <div class="saved-outreach-card">
+                <div class="saved-outreach-card-header">
+                  <div class="saved-outreach-card-title">${escapeHtml(email.label || 'Follow-Up')}</div>
+                </div>
+                ${buildEmailMarkup(
+                  { subject: email.subject || '', body: email.body || '' },
+                  companyName
+                )}
+              </div>
+            `
+          )
+          .join('')}
       </div>
+    </div>
+  `;
+}
 
-      <div class="saved-outreach-block">
-        <div class="saved-outreach-list">
-          ${angles
-            .filter((angle) => angle.id !== recommended.id)
-            .map((angle) => buildApproachMarkup(angle, item, recommendedAngleId))
-            .join('')}
+function buildControls(
+  payload: SavedOutreachPayload | null | undefined,
+  expanded: boolean
+): string {
+  const hasOutreach = Boolean(payload?.angles?.length);
+  const hasFollowUps = Boolean(payload?.follow_ups?.emails?.length);
+  const primaryLabel = hasOutreach
+    ? expanded
+      ? 'Hide emails'
+      : 'Show generated emails'
+    : 'Suggest outreach emails';
+
+  return `
+    <div class="saved-outreach-controls">
+      <button type="button" class="saved-outreach-action-btn saved-outreach-toggle-btn">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+          <path d="m3 7 9 6 9-6"></path>
+        </svg>
+        ${primaryLabel}
+      </button>
+      ${
+        hasOutreach && !hasFollowUps
+          ? `
+            <button type="button" class="saved-outreach-action-btn saved-followups-btn">
+              Generate follow-ups
+            </button>
+          `
+          : ''
+      }
+    </div>
+  `;
+}
+
+export function buildSavedOutreachMarkup(item: SavedItemLike, expanded = false): string {
+  const payload = item.outreach_angles;
+  const angles = Array.isArray(payload?.angles) ? payload.angles : [];
+  const recommended = payload ? getRecommendedAngle(payload) : null;
+  const companyName = getCompanyDisplayName(item.title, item.domain);
+  const content =
+    payload && angles.length > 0 && recommended
+      ? `
+        <div class="saved-outreach-content${expanded ? '' : ' hidden'}">
+          ${buildFollowUpMarkup(item, payload)}
+          <div class="saved-outreach-block">
+            <div class="saved-outreach-card saved-outreach-card--recommended">
+              <div class="saved-outreach-recommended-head">
+                <div class="saved-outreach-recommended-kicker">★ Recommended Email</div>
+                ${buildProbabilityBadge('High')}
+              </div>
+              ${buildEmailMarkup(getPrimaryVariation(recommended), companyName)}
+            </div>
+          </div>
+
+          <div class="saved-outreach-block">
+            <div class="saved-outreach-list">
+              ${angles
+                .filter((angle) => angle.id !== recommended.id)
+                .map((angle) =>
+                  buildApproachMarkup(
+                    angle,
+                    item,
+                    recommended.id || payload.recommended_angle_id || 'observation'
+                  )
+                )
+                .join('')}
+            </div>
+          </div>
         </div>
+      `
+      : '';
+
+  return `
+    <div class="saved-outreach-shell">
+      <div class="saved-outreach-section">
+        <div class="saved-outreach-heading">Suggested outreach emails</div>
+        ${buildControls(payload, expanded)}
+        ${content}
       </div>
     </div>
   `;

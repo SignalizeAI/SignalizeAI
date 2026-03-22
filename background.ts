@@ -1,3 +1,10 @@
+import { SUPABASE_ANON_KEY, SUPABASE_URL, WEBSITE_BASE_URL } from './src/config.js';
+
+type WebsiteSession = {
+  access_token: string;
+  refresh_token: string;
+};
+
 // Open side panel when extension icon is clicked
 chrome.runtime.onInstalled.addListener(() => {
   if (chrome.sidePanel?.setPanelBehavior) {
@@ -97,6 +104,30 @@ async function fetchWithTimeout(
   }
 }
 
+async function validateWebsiteSession(session: WebsiteSession): Promise<boolean> {
+  if (!session.access_token || !session.refresh_token) return false;
+
+  try {
+    const res = await fetchWithTimeout(
+      `${SUPABASE_URL}/auth/v1/user`,
+      {
+        method: 'GET',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        credentials: 'omit',
+      },
+      10000
+    );
+
+    return res.ok;
+  } catch (error) {
+    console.error('Failed to validate website session', error);
+    return false;
+  }
+}
+
 // Handle messages from side panel and website
 chrome.runtime.onMessage.addListener(
   (msg: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
@@ -106,7 +137,7 @@ chrome.runtime.onMessage.addListener(
         'https://qcvnfvbzxbnrquxtjihp.supabase.co/auth/v1/authorize' +
         '?provider=google' +
         '&redirect_to=' +
-        encodeURIComponent('https://signalizeai.org/auth/callback');
+        encodeURIComponent(`${WEBSITE_BASE_URL}/auth/callback`);
 
       chrome.tabs.create({ url: authUrl });
 
@@ -115,14 +146,58 @@ chrome.runtime.onMessage.addListener(
     }
 
     if (msg.type === 'AUTH_SUCCESS_FROM_WEBSITE') {
-      if (!msg.session?.access_token || !msg.session?.refresh_token) {
-        console.error('Missing session in AUTH_SUCCESS_FROM_WEBSITE');
-        return;
-      }
+      (async () => {
+        if (!(await validateWebsiteSession(msg.session))) {
+          await chrome.storage.local.remove('supabaseSession');
+          sendResponse({ ok: false, error: 'Invalid website session' });
+          return;
+        }
 
-      chrome.storage.local.set({ supabaseSession: msg.session }, () => {
-        chrome.runtime.sendMessage({ type: 'SESSION_UPDATED' });
+        chrome.storage.local.set({ supabaseSession: msg.session }, () => {
+          chrome.runtime.sendMessage({ type: 'SESSION_UPDATED', session: msg.session }, () => {
+            void chrome.runtime.lastError;
+          });
+        });
+        sendResponse({ ok: true });
+      })();
+      return true;
+    }
+
+    if (msg.type === 'WEBSITE_SIGN_OUT') {
+      chrome.storage.local.remove('supabaseSession', () => {
+        chrome.runtime.sendMessage({ type: 'EXTENSION_SIGNED_OUT' }, () => {
+          void chrome.runtime.lastError;
+        });
       });
+      sendResponse({ ok: true });
+      return true;
+    }
+
+    if (msg.type === 'WEBSITE_THEME_CHANGED') {
+      chrome.runtime.sendMessage(
+        {
+          type: 'EXTENSION_THEME_CHANGED',
+          theme: msg.theme,
+        },
+        () => {
+          void chrome.runtime.lastError;
+        }
+      );
+      sendResponse({ ok: true });
+      return true;
+    }
+
+    if (msg.type === 'PROSPECT_STATUS_UPDATED') {
+      chrome.runtime.sendMessage(
+        {
+          type: 'PROSPECT_STATUS_UPDATED',
+          savedId: msg.savedId,
+          status: msg.status,
+        },
+        () => {
+          void chrome.runtime.lastError;
+        }
+      );
       sendResponse({ ok: true });
       return true;
     }

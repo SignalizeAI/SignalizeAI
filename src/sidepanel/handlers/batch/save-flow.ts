@@ -179,6 +179,7 @@ async function performSave(res: BatchResult) {
     description: res.content.metaDescription,
     content_hash: res.contentHash,
     last_analyzed_at: new Date().toISOString(),
+    prospect_status: 'not_contacted',
     what_they_do: res.analysis.whatTheyDo,
     target_customer: res.analysis.targetCustomer,
     value_proposition: res.analysis.valueProposition,
@@ -196,6 +197,7 @@ async function performSave(res: BatchResult) {
             generated_at: res.outreachGeneratedAt || new Date().toISOString(),
             recommended_angle_id: res.outreachAngles.recommendedAngleId,
             angles: res.outreachAngles.angles,
+            ...(res.followUpEmails?.emails?.length ? { follow_ups: res.followUpEmails } : {}),
           },
         }
       : {}),

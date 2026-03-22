@@ -40,7 +40,29 @@
 
   --success-color: #10b981;
   --warning-color: #f59e0b;
+  --status-not-contacted-text: #93c5fd;
+  --status-not-contacted-border: rgba(96, 165, 250, 0.28);
+  --status-not-contacted-bg: rgba(59, 130, 246, 0.14);
+  --status-contacted-text: #6ee7b7;
+  --status-contacted-border: rgba(16, 185, 129, 0.28);
+  --status-contacted-bg: rgba(16, 185, 129, 0.14);
+  --status-follow-up-text: #fcd34d;
+  --status-follow-up-border: rgba(245, 158, 11, 0.28);
+  --status-follow-up-bg: rgba(245, 158, 11, 0.16);
+  --reply-prob-high: #6ee7b7;
+  --reply-prob-high-border: rgba(16, 185, 129, 0.28);
+  --reply-prob-high-bg: rgba(16, 185, 129, 0.14);
+  --reply-prob-medium: #fcd34d;
+  --reply-prob-medium-border: rgba(245, 158, 11, 0.28);
+  --reply-prob-medium-bg: rgba(245, 158, 11, 0.16);
+  --reply-prob-low: #fda4af;
+  --reply-prob-low-border: rgba(244, 63, 94, 0.28);
+  --reply-prob-low-bg: rgba(244, 63, 94, 0.14);
   --brand-ai: #00e5ff;
+  --status-control-bg: rgba(255, 255, 255, 0.06);
+  --status-control-border: rgba(255, 255, 255, 0.12);
+  --status-control-hover-bg: rgba(255, 255, 255, 0.1);
+  --status-control-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
 }
 
 [data-theme='light'] {
@@ -81,5 +103,27 @@
 
   --success-color: #059669;
   --warning-color: #d97706;
+  --status-not-contacted-text: #1d4ed8;
+  --status-not-contacted-border: rgba(37, 99, 235, 0.18);
+  --status-not-contacted-bg: rgba(59, 130, 246, 0.12);
+  --status-contacted-text: #047857;
+  --status-contacted-border: rgba(5, 150, 105, 0.18);
+  --status-contacted-bg: rgba(16, 185, 129, 0.12);
+  --status-follow-up-text: #b45309;
+  --status-follow-up-border: rgba(217, 119, 6, 0.18);
+  --status-follow-up-bg: rgba(245, 158, 11, 0.14);
+  --reply-prob-high: #047857;
+  --reply-prob-high-border: rgba(5, 150, 105, 0.18);
+  --reply-prob-high-bg: rgba(16, 185, 129, 0.12);
+  --reply-prob-medium: #b45309;
+  --reply-prob-medium-border: rgba(217, 119, 6, 0.18);
+  --reply-prob-medium-bg: rgba(245, 158, 11, 0.14);
+  --reply-prob-low: #be123c;
+  --reply-prob-low-border: rgba(225, 29, 72, 0.18);
+  --reply-prob-low-bg: rgba(244, 63, 94, 0.12);
   --brand-ai: #1a237e;
+  --status-control-bg: rgba(255, 255, 255, 0.92);
+  --status-control-border: rgba(15, 23, 42, 0.08);
+  --status-control-hover-bg: rgba(241, 245, 249, 1);
+  --status-control-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
 }

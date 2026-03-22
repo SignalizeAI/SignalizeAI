@@ -1,6 +1,6 @@
 {
   "name": "signalizeai",
-  "version": "5.1.0",
+  "version": "5.2.0",
   "description": "Sell to any company. Get sales-ready insights and outreach in seconds.",
   "main": "background.js",
   "scripts": {

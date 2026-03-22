@@ -6,6 +6,7 @@ export function areFiltersActive(): boolean {
     state.activeFilters.minScore > 0 ||
     state.activeFilters.maxScore < 100 ||
     state.activeFilters.persona !== '' ||
+    state.activeFilters.status !== '' ||
     (state.activeFilters.searchQuery && state.activeFilters.searchQuery.length > 0) ||
     state.activeFilters.sort !== 'created_at_desc'
   );

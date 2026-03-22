@@ -1,4 +1,4 @@
-import type { OutreachAnglesResult } from './outreach-messages/types.js';
+import type { FollowUpEmailsResult, OutreachAnglesResult } from './outreach-messages/types.js';
 
 export interface PendingDelete {
   element: HTMLElement;
@@ -45,6 +45,7 @@ export interface ActiveFilters {
   minScore: number;
   maxScore: number;
   persona: string;
+  status: string;
   searchQuery: string;
   sort: string;
 }
@@ -81,6 +82,8 @@ export interface State {
   activeFilters: ActiveFilters;
   outreachAngles: OutreachAnglesResult | null;
   outreachAnglesLoading: boolean;
+  followUpEmails: FollowUpEmailsResult | null;
+  followUpEmailsLoading: boolean;
   currentUserName: string;
 }
 
@@ -117,10 +120,13 @@ export const state: State = {
     minScore: 0,
     maxScore: 100,
     persona: '',
+    status: '',
     searchQuery: '',
     sort: 'created_at_desc',
   },
   outreachAngles: null,
   outreachAnglesLoading: false,
+  followUpEmails: null,
+  followUpEmailsLoading: false,
   currentUserName: '',
 };

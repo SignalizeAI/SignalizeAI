@@ -20,6 +20,7 @@ interface SavedAnalysis {
   recommended_outreach_goal?: string;
   recommended_outreach_angle?: string;
   recommended_outreach_message?: string;
+  prospect_status?: string;
   outreach_angles?: {
     generated_at?: string;
     angles?: Array<{
@@ -65,6 +66,7 @@ export function exportToCSV(rows: SavedAnalysis[]): void {
     'Outreach Goal',
     'Outreach Angle',
     'Outreach Message',
+    'Prospect Status',
     ...OUTREACH_EXPORT_HEADERS,
     'Saved At',
   ];
@@ -89,6 +91,7 @@ export function exportToCSV(rows: SavedAnalysis[]): void {
         csvEscape(item.recommended_outreach_goal),
         csvEscape(item.recommended_outreach_angle),
         csvEscape(item.recommended_outreach_message),
+        csvEscape(item.prospect_status),
         csvEscape(item.outreach_generated_at),
         csvEscape(item.pain_point_subject_1),
         csvEscape(item.pain_point_body_1),
@@ -136,6 +139,7 @@ export async function exportToExcel(rows: SavedAnalysis[]): Promise<void> {
     { header: 'Outreach Goal', key: 'recommended_outreach_goal', width: 30 },
     { header: 'Outreach Angle', key: 'recommended_outreach_angle', width: 35 },
     { header: 'Outreach Message', key: 'recommended_outreach_message', width: 45 },
+    { header: 'Prospect Status', key: 'prospect_status', width: 18 },
     ...OUTREACH_EXPORT_COLUMNS,
     { header: 'Saved At', key: 'created_at', width: 22 },
   ];
