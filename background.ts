@@ -1,3 +1,5 @@
+import { WEBSITE_BASE_URL } from './src/config.js';
+
 // Open side panel when extension icon is clicked
 chrome.runtime.onInstalled.addListener(() => {
   if (chrome.sidePanel?.setPanelBehavior) {
@@ -106,7 +108,7 @@ chrome.runtime.onMessage.addListener(
         'https://qcvnfvbzxbnrquxtjihp.supabase.co/auth/v1/authorize' +
         '?provider=google' +
         '&redirect_to=' +
-        encodeURIComponent('https://signalizeai.org/auth/callback');
+        encodeURIComponent(`${WEBSITE_BASE_URL}/auth/callback`);
 
       chrome.tabs.create({ url: authUrl });
 
