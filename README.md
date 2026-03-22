@@ -98,6 +98,7 @@ API_ENV=dev
 ```
 
 `API_ENV=dev` points the extension to:
+
 - `https://dev-api.signalizeai.org`
 - `http://localhost:3000`
 
