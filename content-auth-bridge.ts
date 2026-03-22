@@ -12,10 +12,7 @@ function extractSession(candidate: unknown): WebsiteSession | null {
   if (!candidate || typeof candidate !== 'object') return null;
 
   const direct = candidate as Record<string, unknown>;
-  if (
-    typeof direct.access_token === 'string' &&
-    typeof direct.refresh_token === 'string'
-  ) {
+  if (typeof direct.access_token === 'string' && typeof direct.refresh_token === 'string') {
     return {
       access_token: direct.access_token,
       refresh_token: direct.refresh_token,
