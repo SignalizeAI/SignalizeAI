@@ -546,32 +546,32 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
   });
 
   deleteSavedBtn.addEventListener('click', (e: MouseEvent) => {
-      if (state.selectionMode || state.isUndoToastActive) return;
-      e.stopPropagation();
+    if (state.selectionMode || state.isUndoToastActive) return;
+    e.stopPropagation();
 
-      const itemId = item.id;
+    const itemId = item.id;
 
-      wrapper.dataset.isPendingDelete = 'true';
-      wrapper.classList.add('pending-delete');
+    wrapper.dataset.isPendingDelete = 'true';
+    wrapper.classList.add('pending-delete');
 
-      state.pendingDeleteMap.set(itemId, {
-        element: wrapper,
-        finalize: async () => {
-          const { data } = await supabase.auth.getSession();
-          if (!data?.session?.user) return;
+    state.pendingDeleteMap.set(itemId, {
+      element: wrapper,
+      finalize: async () => {
+        const { data } = await supabase.auth.getSession();
+        if (!data?.session?.user) return;
 
-          await supabase
-            .from('saved_analyses')
-            .delete()
-            .eq('user_id', data.session.user.id)
-            .eq('id', itemId);
+        await supabase
+          .from('saved_analyses')
+          .delete()
+          .eq('user_id', data.session.user.id)
+          .eq('id', itemId);
 
-          wrapper.remove();
-        },
-      });
-
-      showUndoToast();
+        wrapper.remove();
+      },
     });
+
+    showUndoToast();
+  });
 
   let pressTimer: ReturnType<typeof setTimeout>;
   let preventNextClick = false;

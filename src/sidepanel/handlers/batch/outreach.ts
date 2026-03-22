@@ -171,7 +171,11 @@ async function generateFollowUpsForResult(index: number): Promise<boolean> {
   const openingEmail = recommended?.variations?.[0];
   if (!result || !openingEmail?.subject || !openingEmail?.body) return false;
 
-  const followUps = await generateFollowUpEmails(result.analysis as Analysis, buildMeta(result), openingEmail);
+  const followUps = await generateFollowUpEmails(
+    result.analysis as Analysis,
+    buildMeta(result),
+    openingEmail
+  );
   if (!followUps?.emails?.length) return false;
 
   result.followUpEmails = followUps;

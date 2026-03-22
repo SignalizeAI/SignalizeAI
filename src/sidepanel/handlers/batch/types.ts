@@ -1,7 +1,4 @@
-import type {
-  FollowUpEmailsResult,
-  OutreachAnglesResult,
-} from '../../outreach-messages/types.js';
+import type { FollowUpEmailsResult, OutreachAnglesResult } from '../../outreach-messages/types.js';
 
 export interface Content {
   url: string;

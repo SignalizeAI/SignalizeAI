@@ -1,4 +1,10 @@
-import { loadSettings, saveSettings, updateReanalysisUI, applyTheme, resolveTheme } from '../settings.js';
+import {
+  loadSettings,
+  saveSettings,
+  updateReanalysisUI,
+  applyTheme,
+  resolveTheme,
+} from '../settings.js';
 import { settingsMenu } from '../elements.js';
 import { navigateTo } from '../ui.js';
 import { state } from '../state.js';
