@@ -1,4 +1,3 @@
-import { extractWebsiteContent } from '../analysis/index.js';
 import { state } from '../state.js';
 import { navigateTo } from '../ui.js';
 
@@ -26,7 +25,8 @@ export function setupAnalysisHandlers(): void {
     document.getElementById('ai-loading')?.classList.remove('hidden');
 
     try {
-      await extractWebsiteContent();
+      const { reanalyzeCurrentContext } = await import('../analysis/extraction.js');
+      await reanalyzeCurrentContext();
     } finally {
       state.forceRefresh = false;
       refreshBtn.disabled = false;

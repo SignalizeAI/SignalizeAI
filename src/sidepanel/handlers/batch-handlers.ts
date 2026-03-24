@@ -395,6 +395,7 @@ export function setupBatchHandlers() {
 
     if (dropZoneTitle) dropZoneTitle.textContent = 'Upload CSV file';
     if (dropZoneDesc) dropZoneDesc.textContent = 'Drag & drop or click';
+    dropZone?.classList.remove('has-file');
     if (submitBtn) submitBtn.classList.remove('has-file');
     if (csvWarning) csvWarning.classList.add('hidden');
     if (fileInput) fileInput.value = '';
@@ -442,6 +443,7 @@ async function handleFileUpload(file: File) {
 
   if (dropZoneTitle) dropZoneTitle.textContent = file.name;
   if (dropZoneDesc) dropZoneDesc.textContent = `${urls.length} URLs detected`;
+  document.getElementById('csv-drop-zone')?.classList.add('has-file');
   if (submitBtn) submitBtn.classList.add('has-file');
 
   const isTeamPlan = (state.currentPlan || '').toLowerCase() === 'team';

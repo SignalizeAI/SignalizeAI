@@ -2,6 +2,7 @@ import { signInBtn } from './elements.js';
 import { supabase } from './supabase.js';
 import { state } from './state.js';
 import { updateUI } from './ui.js';
+import { broadcastToWebsiteTabs } from './website-sync.js';
 
 let loginTimeout: ReturnType<typeof setTimeout> | null = null;
 let msgHideTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -112,6 +113,8 @@ export async function signOut(): Promise<void> {
       console.error('Sign out error:', error);
     }
   }
+
+  await broadcastToWebsiteTabs({ type: 'SYNC_EXTENSION_SIGNED_OUT' });
 
   updateUI(null);
 }

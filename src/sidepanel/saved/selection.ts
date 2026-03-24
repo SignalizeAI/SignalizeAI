@@ -7,6 +7,7 @@ const selectionBackBtn = document.getElementById('selection-back-btn');
 const selectAllBtn = document.getElementById('select-all-btn');
 const exportToggle = document.getElementById('export-menu-toggle');
 const filterToggle = document.getElementById('filter-toggle');
+const searchToggle = document.getElementById('search-toggle');
 
 export function updateDeleteState(): void {
   if (!multiSelectToggle) return;
@@ -36,16 +37,19 @@ export function updateSelectionUI(): void {
   const toggleItemSelectionUI = (itemEl: HTMLElement, enable: boolean): void => {
     const checkbox = itemEl.querySelector<HTMLInputElement>('.saved-select-checkbox');
     const copyBtn = itemEl.querySelector<HTMLElement>('.copy-saved-btn');
+    const openWebsiteBtn = itemEl.querySelector<HTMLElement>('.open-dashboard-saved-btn');
     const deleteBtn = itemEl.querySelector<HTMLElement>('.delete-saved-btn');
 
     if (enable) {
       checkbox?.classList.remove('hidden');
       copyBtn?.classList.add('hidden');
+      openWebsiteBtn?.classList.add('hidden');
       deleteBtn?.classList.add('hidden');
     } else {
       if (checkbox) checkbox.checked = false;
       checkbox?.classList.add('hidden');
       copyBtn?.classList.remove('hidden');
+      openWebsiteBtn?.classList.remove('hidden');
       deleteBtn?.classList.remove('hidden');
     }
   };
@@ -60,6 +64,10 @@ export function updateSelectionUI(): void {
 
   if (filterToggle) {
     filterToggle.classList.toggle('hidden', state.selectionMode);
+  }
+
+  if (searchToggle) {
+    searchToggle.classList.toggle('hidden', state.selectionMode);
   }
 
   if (selectionBackBtn) {

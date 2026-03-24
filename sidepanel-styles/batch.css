@@ -58,10 +58,73 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
+.csv-drop-zone.has-file {
+  border-color: var(--accent-light);
+  background: linear-gradient(180deg, var(--accent-blue-bg) 0%, var(--bg-primary) 100%);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08);
+}
+
+.csv-drop-zone.has-file .drop-zone-icon-wrapper {
+  background: rgba(59, 130, 246, 0.16);
+  color: var(--accent-light);
+}
+
 .csv-drop-zone.dragover {
   border-color: var(--accent-color);
   background: var(--accent-blue-bg);
   transform: scale(1.02);
+}
+
+.batch-result-actions {
+  flex-shrink: 0;
+}
+
+.batch-result-actions .header-actions-row {
+  flex-wrap: nowrap;
+}
+
+.batch-selection-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+}
+
+.batch-selection-info .batch-item-checkbox {
+  margin-top: 2px;
+  flex: 0 0 auto;
+}
+
+.batch-outreach-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+
+.batch-generate-emails-btn,
+.batch-outreach-inline .saved-followups-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.batch-outreach-footer.hidden {
+  display: none;
+}
+
+.batch-outreach-status {
+  font-size: 12px;
+  color: var(--danger-color);
+}
+
+.batch-outreach-inline {
+  margin-top: 14px;
+}
+
+.batch-outreach-inline.hidden {
+  display: none;
 }
 
 .drop-zone-icon-wrapper {

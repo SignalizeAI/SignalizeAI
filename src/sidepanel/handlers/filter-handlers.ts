@@ -43,6 +43,11 @@ export function setupFilterHandlers(): void {
     )?.value
       .toLowerCase()
       .trim();
+    state.activeFilters.status = (
+      document.getElementById('filter-status') as HTMLInputElement
+    )?.value
+      .toLowerCase()
+      .trim();
 
     const sortValue = document.querySelector<HTMLInputElement>('input[name="sort"]:checked')?.value;
     if (sortValue) {
@@ -62,17 +67,20 @@ export function setupFilterHandlers(): void {
   const maxSlider = document.getElementById('filter-max-score') as HTMLInputElement | null;
   const scoreLabel = document.getElementById('filter-score-value');
   const personaInput = document.getElementById('filter-persona') as HTMLInputElement | null;
+  const statusInput = document.getElementById('filter-status') as HTMLInputElement | null;
 
   filterResetBtn?.addEventListener('click', async () => {
     state.activeFilters.minScore = 0;
     state.activeFilters.maxScore = 100;
     state.activeFilters.persona = '';
+    state.activeFilters.status = '';
     state.activeFilters.searchQuery = '';
     state.activeFilters.sort = 'created_at_desc';
 
     if (minSlider) minSlider.value = '0';
     if (maxSlider) maxSlider.value = '100';
     if (personaInput) personaInput.value = '';
+    if (statusInput) statusInput.value = '';
     if (scoreLabel) scoreLabel.textContent = '0 – 100';
 
     document
@@ -112,12 +120,14 @@ export function setupFilterHandlers(): void {
     state.activeFilters.minScore = 0;
     state.activeFilters.maxScore = 100;
     state.activeFilters.persona = '';
+    state.activeFilters.status = '';
     state.activeFilters.searchQuery = '';
     state.activeFilters.sort = 'created_at_desc';
 
     if (minSlider) minSlider.value = '0';
     if (maxSlider) maxSlider.value = '100';
     if (personaInput) personaInput.value = '';
+    if (statusInput) statusInput.value = '';
     if (scoreLabel) scoreLabel.textContent = '0 – 100';
 
     if (searchInput) searchInput.value = '';

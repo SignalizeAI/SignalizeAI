@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SignalizeAI",
-  "version": "5.1.0",
+  "version": "5.2.0",
   "description": "Sell to any company. Get sales-ready insights and outreach in seconds.",
   "permissions": ["activeTab", "sidePanel", "storage", "tabs", "scripting"],
   "host_permissions": [
@@ -26,7 +26,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://signalizeai.org/*"],
+      "matches": [
+        "https://signalizeai.org/*",
+        "https://www.signalizeai.org/*",
+        "http://localhost:3000/*",
+        "http://127.0.0.1:3000/*"
+      ],
       "js": ["extension/content-auth-bridge.js"],
       "run_at": "document_start"
     },

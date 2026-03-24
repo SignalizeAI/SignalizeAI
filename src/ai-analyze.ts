@@ -218,6 +218,41 @@ export async function generateOutreachAngles(
   }
 }
 
+export async function generateFollowUpEmails(
+  analysis: Analysis,
+  meta: {
+    title: string;
+    url: string;
+    domain: string;
+    evidence?: {
+      metaDescription?: string;
+      headings?: string[];
+      paragraphs?: string[];
+    };
+  },
+  openingEmail: { subject: string; body: string }
+): Promise<import('./sidepanel/outreach-messages/types.js').FollowUpEmailsResult | null> {
+  const token = await getAccessToken();
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/outreach-followups`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: 'omit',
+      mode: 'cors',
+      body: JSON.stringify({ analysis, meta, openingEmail }),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 function normalizeAnalysis(raw: any): Analysis {
   const BUYER_PERSONAS = [
     'Founder / CEO',

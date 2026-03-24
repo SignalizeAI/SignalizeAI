@@ -32,13 +32,15 @@
   stroke-linejoin: round;
 }
 
-.copy-btn.copy-saved-btn {
+.copy-btn.copy-saved-btn,
+.copy-btn.open-dashboard-saved-btn {
   color: var(--text-tertiary);
   width: 34px;
   height: 34px;
   padding: 0;
 }
 
-.copy-btn.copy-saved-btn:hover {
+.copy-btn.copy-saved-btn:hover,
+.copy-btn.open-dashboard-saved-btn:hover {
   color: var(--text-primary);
 }

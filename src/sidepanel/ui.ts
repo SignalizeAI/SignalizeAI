@@ -3,6 +3,7 @@ import { loadQuotaFromAPI } from './quota.js';
 import { loadSettings, applySettingsToUI } from './settings.js';
 import { state } from './state.js';
 import { extractWebsiteContent } from './analysis/index.js';
+import { attachAnalysisDashboardHandler } from './dashboard-link.js';
 import { exitSelectionMode, loadSavedAnalyses } from './saved/index.js';
 import type { Session } from '@supabase/supabase-js';
 
@@ -103,6 +104,7 @@ export function navigateTo(view: 'analysis' | 'saved' | 'batch' | 'profile' | 's
 
 export async function updateUI(session: Session | null): Promise<void> {
   if (session) {
+    attachAnalysisDashboardHandler();
     const isAlreadyLoggedIn = welcomeView && !welcomeView.classList.contains('hidden');
 
     loginView?.classList.add('hidden');

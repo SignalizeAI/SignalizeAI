@@ -15,6 +15,7 @@ import {
   getCompanyDisplayName,
   getOutreachReplyProbability,
 } from './format.js';
+import { syncFollowUpUi } from './followup-render.js';
 
 function setToggleButtonState(
   label: string,
@@ -86,6 +87,7 @@ function getCurrentCompanyName(): string {
 export function showOutreachSection(): void {
   document.getElementById('outreach-messages-section')?.classList.remove('hidden');
   setToggleButtonState('Hide Outreach Emails', false, 'hide');
+  syncFollowUpUi();
 }
 
 export function hideOutreachSection(): void {
@@ -100,6 +102,7 @@ export function resetToCtaState(): void {
   document.getElementById('outreach-messages-list')?.classList.add('hidden');
   document.getElementById('outreach-messages-section')?.classList.add('hidden');
   setToggleButtonState('Suggest Outreach Emails');
+  syncFollowUpUi();
 }
 
 export function renderOutreachLoading(): void {
@@ -162,6 +165,7 @@ export function renderOutreachAngles(result: OutreachAnglesResult, analysis: Ana
   listEl.classList.remove('hidden');
   document.getElementById('outreach-messages-section')?.classList.remove('hidden');
   setToggleButtonState('Hide Outreach Emails', false, 'hide');
+  syncFollowUpUi();
 }
 
 export function showExistingOutreachAngles(): void {
@@ -169,6 +173,7 @@ export function showExistingOutreachAngles(): void {
   document.getElementById('outreach-messages-loading')?.classList.add('hidden');
   document.getElementById('outreach-messages-list')?.classList.remove('hidden');
   setToggleButtonState('Hide Outreach Emails', false, 'hide');
+  syncFollowUpUi();
 }
 
 export function collapseOutreachAngles(): void {
