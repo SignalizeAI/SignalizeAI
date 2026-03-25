@@ -201,7 +201,7 @@ export function buildSavedOutreachMarkup(item: SavedItemLike, expanded = false):
           <div class="saved-outreach-block">
             <div class="saved-outreach-card saved-outreach-card--recommended">
               <div class="saved-outreach-recommended-head">
-                <div class="saved-outreach-recommended-kicker">★ Recommended Email</div>
+                <div class="saved-outreach-recommended-kicker">★ Recommended</div>
                 ${buildProbabilityBadge('High')}
               </div>
               ${buildEmailMarkup(getPrimaryVariation(recommended), companyName)}

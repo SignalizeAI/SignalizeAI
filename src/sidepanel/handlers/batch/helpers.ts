@@ -1,3 +1,4 @@
+import { buildPersistedOutreachAngle } from '../../analysis/outreach-angle.js';
 import type { BatchResult, Content } from './types.js';
 
 export function parseUrlsFromText(text: string): string[] {
@@ -64,11 +65,8 @@ export function mapBatchResultToExportItem(r: BatchResult) {
     value_proposition: r.analysis.valueProposition,
     best_sales_persona: r.analysis.bestSalesPersona?.persona,
     best_sales_persona_reason: r.analysis.bestSalesPersona?.reason,
-    sales_angle: r.analysis.salesAngle,
-    recommended_outreach_persona: r.analysis.recommendedOutreach?.persona,
     recommended_outreach_goal: r.analysis.recommendedOutreach?.goal,
-    recommended_outreach_angle: r.analysis.recommendedOutreach?.angle,
-    recommended_outreach_message: r.analysis.recommendedOutreach?.message,
+    recommended_outreach_angle: buildPersistedOutreachAngle(r.analysis),
     outreach_angles: outreachAngles,
   };
 }

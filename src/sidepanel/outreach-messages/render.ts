@@ -17,6 +17,29 @@ import {
 } from './format.js';
 import { syncFollowUpUi } from './followup-render.js';
 
+function syncOutreachTabHint(): void {
+  const hint = document.getElementById('outreach-tab-hint');
+  if (!hint) return;
+  if (state.followUpEmails?.emails?.length) {
+    hint.classList.add('hidden');
+    return;
+  }
+
+  if (state.outreachAngles?.angles?.length) {
+    hint.textContent = 'Go below and click on Generate follow-ups to build the next-touch emails.';
+    hint.classList.remove('hidden');
+    return;
+  }
+
+  if (state.outreachAnglesLoading) {
+    hint.classList.add('hidden');
+    return;
+  }
+
+  hint.textContent = 'Generate outreach emails here and we’ll keep the full email set in this tab.';
+  hint.classList.remove('hidden');
+}
+
 function setToggleButtonState(
   label: string,
   disabled = false,
@@ -33,6 +56,34 @@ function setToggleButtonState(
       <polyline points="22,6 12,13 2,6"/>
     </svg>
     ${label}`;
+}
+
+function getCollapsedToggleLabel(): string {
+  return state.followUpEmails?.emails?.length ? 'Show Emails' : 'Show Outreach Emails';
+}
+
+function getExpandedToggleLabel(): string {
+  return state.followUpEmails?.emails?.length ? 'Hide Emails' : 'Hide Outreach Emails';
+}
+
+export function refreshOutreachUiState(): void {
+  syncOutreachTabHint();
+  refreshOutreachToggleState();
+}
+
+export function refreshOutreachToggleState(): void {
+  const btn = document.getElementById('generate-outreach-btn') as HTMLButtonElement | null;
+  const section = document.getElementById('outreach-messages-section');
+  if (!btn) return;
+  if (section && !section.classList.contains('hidden')) {
+    setToggleButtonState(getExpandedToggleLabel(), false, 'hide');
+    return;
+  }
+  if (state.outreachAngles?.angles?.length) {
+    setToggleButtonState(getCollapsedToggleLabel(), false, 'show');
+    return;
+  }
+  setToggleButtonState('Suggest Outreach Emails');
 }
 
 function getPrimaryVariation(angle: OutreachAngle): { subject: string; body: string } {
@@ -86,7 +137,8 @@ function getCurrentCompanyName(): string {
 
 export function showOutreachSection(): void {
   document.getElementById('outreach-messages-section')?.classList.remove('hidden');
-  setToggleButtonState('Hide Outreach Emails', false, 'hide');
+  document.getElementById('outreach-messages-list')?.classList.remove('hidden');
+  refreshOutreachUiState();
   syncFollowUpUi();
 }
 
@@ -94,14 +146,15 @@ export function hideOutreachSection(): void {
   const section = document.getElementById('outreach-messages-section');
   if (!section) return;
   section.classList.add('hidden');
-  resetToCtaState();
+  document.getElementById('outreach-messages-list')?.classList.add('hidden');
+  refreshOutreachUiState();
 }
 
 export function resetToCtaState(): void {
   document.getElementById('outreach-messages-loading')?.classList.add('hidden');
   document.getElementById('outreach-messages-list')?.classList.add('hidden');
   document.getElementById('outreach-messages-section')?.classList.add('hidden');
-  setToggleButtonState('Suggest Outreach Emails');
+  refreshOutreachUiState();
   syncFollowUpUi();
 }
 
@@ -119,6 +172,7 @@ export function renderOutreachLoading(): void {
   }
 
   document.getElementById('outreach-messages-section')?.classList.remove('hidden');
+  refreshOutreachUiState();
   loadingEl.classList.remove('hidden');
   setToggleButtonState('Generating Outreach Emails...', true);
 }
@@ -143,7 +197,7 @@ export function renderOutreachError(onRetry: () => void): void {
   listEl.appendChild(err);
   listEl.classList.remove('hidden');
   document.getElementById('outreach-messages-section')?.classList.remove('hidden');
-  setToggleButtonState('Show Outreach Emails', false, 'show');
+  refreshOutreachUiState();
 }
 
 export function renderOutreachAngles(result: OutreachAnglesResult, analysis: Analysis): void {
@@ -164,7 +218,7 @@ export function renderOutreachAngles(result: OutreachAnglesResult, analysis: Ana
 
   listEl.classList.remove('hidden');
   document.getElementById('outreach-messages-section')?.classList.remove('hidden');
-  setToggleButtonState('Hide Outreach Emails', false, 'hide');
+  refreshOutreachUiState();
   syncFollowUpUi();
 }
 
@@ -172,14 +226,24 @@ export function showExistingOutreachAngles(): void {
   document.getElementById('outreach-messages-section')?.classList.remove('hidden');
   document.getElementById('outreach-messages-loading')?.classList.add('hidden');
   document.getElementById('outreach-messages-list')?.classList.remove('hidden');
-  setToggleButtonState('Hide Outreach Emails', false, 'hide');
+  if (state.followUpEmails?.emails?.length) {
+    document.getElementById('follow-up-section')?.classList.remove('hidden');
+  }
+  refreshOutreachUiState();
   syncFollowUpUi();
 }
 
 export function collapseOutreachAngles(): void {
   document.getElementById('outreach-messages-section')?.classList.add('hidden');
+  document.getElementById('outreach-messages-list')?.classList.add('hidden');
   document.getElementById('outreach-messages-loading')?.classList.add('hidden');
-  setToggleButtonState('Show Outreach Emails', false, 'show');
+  document.getElementById('follow-up-section')?.classList.add('hidden');
+  if (!state.followUpEmails?.emails?.length && state.outreachAngles?.angles?.length) {
+    document.getElementById('follow-up-actions')?.classList.remove('hidden');
+  } else {
+    document.getElementById('follow-up-actions')?.classList.add('hidden');
+  }
+  refreshOutreachUiState();
 }
 
 function buildRecommendedSection(angle: OutreachAngle, analysis: Analysis): HTMLElement {
@@ -194,7 +258,7 @@ function buildRecommendedSection(angle: OutreachAngle, analysis: Analysis): HTML
 
   const kicker = document.createElement('div');
   kicker.className = 'outreach-recommended-kicker';
-  kicker.textContent = '★ Recommended Email';
+  kicker.textContent = '★ Recommended';
   head.appendChild(kicker);
   head.appendChild(buildProbabilityBadge(angle.id, angle.id, analysis));
 

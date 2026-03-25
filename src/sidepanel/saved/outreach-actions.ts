@@ -12,14 +12,11 @@ type SavedItemLike = {
   what_they_do?: string;
   target_customer?: string;
   value_proposition?: string;
-  sales_angle?: string;
   sales_readiness_score?: number;
   best_sales_persona?: string;
   best_sales_persona_reason?: string;
-  recommended_outreach_persona?: string;
   recommended_outreach_goal?: string;
   recommended_outreach_angle?: string;
-  recommended_outreach_message?: string;
   outreach_angles?: any;
 };
 
@@ -28,17 +25,16 @@ function buildAnalysis(item: SavedItemLike) {
     whatTheyDo: item.what_they_do || '',
     targetCustomer: item.target_customer || '',
     valueProposition: item.value_proposition || '',
-    salesAngle: item.sales_angle || '',
+    salesAngle: '',
     salesReadinessScore: Number(item.sales_readiness_score ?? 0),
     bestSalesPersona: {
       persona: item.best_sales_persona || 'Mid-Market AE',
       reason: item.best_sales_persona_reason || '',
     },
     recommendedOutreach: {
-      persona: item.recommended_outreach_persona || 'SDR',
       goal: item.recommended_outreach_goal || '',
       angle: item.recommended_outreach_angle || '',
-      message: item.recommended_outreach_message || '',
+      message: '',
     },
   };
 }

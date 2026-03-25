@@ -4,6 +4,7 @@ import { renderQuotaBanner, loadQuotaFromAPI } from './quota.js';
 import { showLimitModal } from './modal.js';
 import { showToast } from './toast.js';
 import { updateAnalysisDashboardButton } from './dashboard-link.js';
+import { buildPersistedOutreachAngle } from './analysis/outreach-angle.js';
 import { getHomepageAnalysisForSave } from './analysis/extraction.js';
 import { loadSavedAnalyses } from './saved/index.js';
 
@@ -91,15 +92,12 @@ export async function ensureCurrentAnalysisSaved(): Promise<string | null> {
       what_they_do: saveAnalysis.whatTheyDo,
       target_customer: saveAnalysis.targetCustomer,
       value_proposition: saveAnalysis.valueProposition,
-      sales_angle: saveAnalysis.salesAngle,
       prospect_status: 'not_contacted',
       sales_readiness_score: saveAnalysis.salesReadinessScore,
       best_sales_persona: saveAnalysis.bestSalesPersona?.persona,
       best_sales_persona_reason: saveAnalysis.bestSalesPersona?.reason,
-      recommended_outreach_persona: saveAnalysis.recommendedOutreach?.persona,
       recommended_outreach_goal: saveAnalysis.recommendedOutreach?.goal,
-      recommended_outreach_angle: saveAnalysis.recommendedOutreach?.angle,
-      recommended_outreach_message: saveAnalysis.recommendedOutreach?.message,
+      recommended_outreach_angle: buildPersistedOutreachAngle(saveAnalysis),
       ...(state.outreachAngles
         ? {
             outreach_angles: {

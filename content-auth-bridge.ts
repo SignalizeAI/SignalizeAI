@@ -56,12 +56,33 @@ function syncStoredWebsiteSession(): void {
   });
 }
 
+function syncExtensionSessionToWebsite(): void {
+  chrome.runtime.sendMessage({ type: 'GET_EXTENSION_SESSION' }, (response) => {
+    if (chrome.runtime.lastError) return;
+    const session = extractSession(response?.session);
+    if (!session) return;
+
+    window.postMessage(
+      {
+        type: 'SIGNALIZE_EXTENSION_SESSION_SYNC',
+        session,
+      },
+      window.location.origin
+    );
+  });
+}
+
 window.addEventListener('message', (event: MessageEvent) => {
   if (event.source !== window) return;
   if (event.origin !== window.location.origin) return;
 
   if (event.data?.type === 'SIGNALIZE_WEBSITE_AUTH_STATE_CHANGED') {
     syncStoredWebsiteSession();
+    return;
+  }
+
+  if (event.data?.type === 'SIGNALIZE_REQUEST_EXTENSION_SESSION_SYNC') {
+    syncExtensionSessionToWebsite();
     return;
   }
 
@@ -147,3 +168,4 @@ chrome.runtime.onMessage.addListener((message) => {
 });
 
 syncStoredWebsiteSession();
+syncExtensionSessionToWebsite();

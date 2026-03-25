@@ -24,8 +24,7 @@ SignalizeAI is a Chrome and Firefox extension that turns any public company webs
   - value proposition
   - sales readiness
   - best persona
-  - sales angle
-  - suggested message
+  - outreach angle
 - Generates outreach emails:
   - 3 approaches
   - 1 recommended email

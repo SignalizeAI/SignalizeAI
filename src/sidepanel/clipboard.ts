@@ -28,19 +28,13 @@ ${state.lastAnalysis.salesReadinessScore ?? '—'}
 Value proposition:
 ${state.lastAnalysis.valueProposition || '—'}
 
-Sales angle:
-${state.lastAnalysis.salesAngle || '—'}
-
-Best sales persona:
+Best persona recommendation:
 ${state.lastAnalysis.bestSalesPersona?.persona || '—'}
 ${state.lastAnalysis.bestSalesPersona?.reason ? `(${state.lastAnalysis.bestSalesPersona.reason})` : ''}
 
-Recommended outreach:
-Who: ${state.lastAnalysis.recommendedOutreach?.persona || '—'}
+Outreach plan:
 Goal: ${state.lastAnalysis.recommendedOutreach?.goal || '—'}
 Angle: ${state.lastAnalysis.recommendedOutreach?.angle || '—'}
-Message:
-${state.lastAnalysis.recommendedOutreach?.message || '—'}
 `;
   }
 
@@ -72,19 +66,13 @@ ${item.sales_readiness_score ?? '—'}
 Value proposition:
 ${item.value_proposition || '—'}
 
-Sales angle:
-${item.sales_angle || '—'}
-
-Best sales persona:
+Best persona recommendation:
 ${item.best_sales_persona || '—'}
 ${item.best_sales_persona_reason ? `(${item.best_sales_persona_reason})` : ''}
 
-Recommended outreach:
-Who: ${item.recommended_outreach_persona || '—'}
+Outreach plan:
 Goal: ${item.recommended_outreach_goal || '—'}
 Angle: ${item.recommended_outreach_angle || '—'}
-Message:
-${item.recommended_outreach_message || '—'}
 `;
   }
 

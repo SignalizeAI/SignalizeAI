@@ -1,5 +1,6 @@
 import { analyzeWebsiteContent } from '../../ai-analyze.js';
 import {
+  clearCachedOutreach,
   extractRootDomain,
   getCachedAnalysis,
   getCachedAnalysisByDomain,
@@ -16,6 +17,7 @@ import { state, type ExtractedMeta } from '../state.js';
 import { updateAnalysisDashboardButton } from '../dashboard-link.js';
 import { showLimitModal } from '../modal.js';
 import { showToast } from '../toast.js';
+import { buildPersistedOutreachAngle } from './outreach-angle.js';
 import { cleanTitle, endAnalysisLoading } from './utils.js';
 import { showContentBlocked, displayAIAnalysis } from './display.js';
 import { getActiveTab, ensureContentScriptLoaded } from '../utils.js';
@@ -27,6 +29,47 @@ interface ContentResponse {
   content?: any;
   reason?: string;
   error?: string;
+}
+
+function buildCurrentOutreachPayload(): Record<string, unknown> | undefined {
+  if (!state.outreachAngles?.angles?.length) return undefined;
+
+  return {
+    generated_at: new Date().toISOString(),
+    recommended_angle_id: state.outreachAngles.recommendedAngleId,
+    angles: state.outreachAngles.angles,
+    ...(state.followUpEmails?.emails?.length ? { follow_ups: state.followUpEmails } : {}),
+  };
+}
+
+function getReusableOutreachPayload(options: {
+  existingPayload?: Record<string, unknown> | null;
+  previousDomain?: string | null;
+  currentDomain: string;
+}): Record<string, unknown> | undefined {
+  if (state.forceRefresh) return undefined;
+  if (options.existingPayload) return options.existingPayload;
+  if (options.previousDomain === options.currentDomain) {
+    return buildCurrentOutreachPayload();
+  }
+  return undefined;
+}
+
+async function fetchSavedProspectByDomain(domain: string) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData?.session?.user;
+  if (!user || !domain) return null;
+
+  const { data } = await supabase
+    .from('saved_analyses')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('domain', domain)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return data;
 }
 
 function isHomepageUrl(url: string): boolean {
@@ -78,14 +121,11 @@ async function updateSavedProspectAnalysis(
       what_they_do: analysis.whatTheyDo,
       target_customer: analysis.targetCustomer,
       value_proposition: analysis.valueProposition,
-      sales_angle: analysis.salesAngle,
       sales_readiness_score: analysis.salesReadinessScore,
       best_sales_persona: analysis.bestSalesPersona?.persona,
       best_sales_persona_reason: analysis.bestSalesPersona?.reason,
-      recommended_outreach_persona: analysis.recommendedOutreach?.persona,
       recommended_outreach_goal: analysis.recommendedOutreach?.goal,
-      recommended_outreach_angle: analysis.recommendedOutreach?.angle,
-      recommended_outreach_message: analysis.recommendedOutreach?.message,
+      recommended_outreach_angle: buildPersistedOutreachAngle(analysis),
       outreach_angles: null,
     })
     .eq('id', savedId);
@@ -101,25 +141,21 @@ function mapSavedRowToAnalysis(row: any) {
     whatTheyDo: row.what_they_do || '',
     targetCustomer: row.target_customer || '',
     valueProposition: row.value_proposition || '',
-    salesAngle: row.sales_angle || '',
+    salesAngle: '',
     salesReadinessScore: row.sales_readiness_score || 0,
     bestSalesPersona: {
       persona: row.best_sales_persona || '',
       reason: row.best_sales_persona_reason || '',
     },
     recommendedOutreach: {
-      persona: row.recommended_outreach_persona || '',
       goal: row.recommended_outreach_goal || '',
       angle: row.recommended_outreach_angle || '',
-      message: row.recommended_outreach_message || '',
+      message: '',
     },
   };
 }
 
-async function loadSavedProspectFromTab(savedId: string): Promise<boolean> {
-  const row = await fetchSavedAnalysisById(savedId);
-  if (!row) return false;
-
+function displaySavedProspectRow(row: any): void {
   state.lastAnalysis = mapSavedRowToAnalysis(row);
   state.lastContentHash = row.content_hash || null;
   state.lastExtractedMeta = {
@@ -137,8 +173,16 @@ async function loadSavedProspectFromTab(savedId: string): Promise<boolean> {
     saveBtn.title = 'Remove';
     saveBtn.dataset.savedId = row.id;
   }
+
   updateAnalysisDashboardButton(row.id);
   displayAIAnalysis(state.lastAnalysis, row.outreach_angles ?? undefined);
+}
+
+async function loadSavedProspectFromTab(savedId: string): Promise<boolean> {
+  const row = await fetchSavedAnalysisById(savedId);
+  if (!row) return false;
+
+  displaySavedProspectRow(row);
   return true;
 }
 
@@ -153,6 +197,12 @@ async function clearSavedOutreachAfterRefresh(savedId: string | null | undefined
   if (error) {
     console.error('Failed to clear stale outreach emails after refresh:', error);
   }
+}
+
+async function clearCachedOutreachAfterRefresh(): Promise<void> {
+  const meta = state.lastExtractedMeta;
+  if (!meta) return;
+  await clearCachedOutreach(meta.url, meta.domain);
 }
 
 async function reanalyzeSavedProspectFromRoute(savedId: string): Promise<void> {
@@ -345,6 +395,8 @@ export async function extractWebsiteContent(): Promise<void> {
 
           if (response?.ok && response.content) {
             const previousUrl = state.lastExtractedMeta?.url || null;
+            const previousDomain = state.lastExtractedMeta?.domain || null;
+            const aiLoading = document.getElementById('ai-loading');
 
             state.lastExtractedMeta = {
               title: cleanTitle(response.content.title),
@@ -397,13 +449,20 @@ export async function extractWebsiteContent(): Promise<void> {
                 delete btn.dataset.savedId;
                 updateAnalysisDashboardButton(null);
               }
+
+              if (existing && !isPendingDelete && !state.forceRefresh) {
+                if (aiLoading) aiLoading.classList.add('hidden');
+                displaySavedProspectRow(existing);
+                endAnalysisLoading();
+                resolve();
+                return;
+              }
             }
 
             cached = await getCachedAnalysis(currentUrl);
 
             try {
               const aiCard = document.getElementById('ai-analysis');
-              const aiLoading = document.getElementById('ai-loading');
               const aiData = document.getElementById('ai-data');
 
               if (aiCard) aiCard.classList.remove('hidden');
@@ -427,17 +486,16 @@ export async function extractWebsiteContent(): Promise<void> {
                     whatTheyDo: existing.what_they_do,
                     targetCustomer: existing.target_customer,
                     valueProposition: existing.value_proposition,
-                    salesAngle: existing.sales_angle,
+                    salesAngle: '',
                     salesReadinessScore: existing.sales_readiness_score,
                     bestSalesPersona: {
                       persona: existing.best_sales_persona,
                       reason: existing.best_sales_persona_reason,
                     },
                     recommendedOutreach: {
-                      persona: existing?.recommended_outreach_persona || '',
                       goal: existing?.recommended_outreach_goal || '',
                       angle: existing?.recommended_outreach_angle || '',
-                      message: existing?.recommended_outreach_message || '',
+                      message: '',
                     },
                   };
 
@@ -454,7 +512,13 @@ export async function extractWebsiteContent(): Promise<void> {
 
                 displayAIAnalysis(
                   state.lastAnalysis!,
-                  canReuseExisting ? (existing?.outreach_angles ?? undefined) : undefined
+                  getReusableOutreachPayload({
+                    existingPayload: canReuseExisting
+                      ? existing?.outreach_angles
+                      : (cached?.outreachPayload ?? null),
+                    previousDomain,
+                    currentDomain,
+                  })
                 );
                 endAnalysisLoading();
 
@@ -540,20 +604,30 @@ export async function extractWebsiteContent(): Promise<void> {
 
                 if (state.forceRefresh) {
                   await clearSavedOutreachAfterRefresh(savedIdToInvalidate);
+                  await clearCachedOutreachAfterRefresh();
                 }
 
                 state.lastAnalysis = analysis;
-                displayAIAnalysis(analysis);
+                displayAIAnalysis(
+                  analysis,
+                  getReusableOutreachPayload({
+                    existingPayload: existing?.outreach_angles,
+                    previousDomain,
+                    currentDomain,
+                  })
+                );
                 state.lastAnalyzedDomain = currentDomain;
                 markDomainAnalyzedToday(currentDomain);
 
                 setCachedAnalysis(currentUrl, {
                   analysis,
                   meta: state.lastExtractedMeta,
+                  outreachPayload: undefined,
                 });
                 setCachedAnalysisByDomain(currentDomain, {
                   analysis,
                   meta: state.lastExtractedMeta,
+                  outreachPayload: undefined,
                 });
 
                 if (existing && isHomepageUrl(currentUrl)) {
@@ -568,14 +642,11 @@ export async function extractWebsiteContent(): Promise<void> {
                       what_they_do: analysis.whatTheyDo,
                       target_customer: analysis.targetCustomer,
                       value_proposition: analysis.valueProposition,
-                      sales_angle: analysis.salesAngle,
                       sales_readiness_score: analysis.salesReadinessScore,
                       best_sales_persona: analysis.bestSalesPersona?.persona,
                       best_sales_persona_reason: analysis.bestSalesPersona?.reason,
-                      recommended_outreach_persona: analysis.recommendedOutreach?.persona,
                       recommended_outreach_goal: analysis.recommendedOutreach?.goal,
-                      recommended_outreach_angle: analysis.recommendedOutreach?.angle,
-                      recommended_outreach_message: analysis.recommendedOutreach?.message,
+                      recommended_outreach_angle: buildPersistedOutreachAngle(analysis),
                     })
                     .eq('id', existing.id);
 
@@ -743,6 +814,7 @@ export async function analyzeSpecificUrl(
   state.isAnalysisLoading = true;
 
   try {
+    const previousDomain = state.lastExtractedMeta?.domain || null;
     const saveBtn = document.getElementById('saveButton') as HTMLButtonElement | null;
     if (saveBtn && !options?.preserveSavedId) {
       saveBtn.classList.remove('active');
@@ -780,6 +852,11 @@ export async function analyzeSpecificUrl(
 
     state.lastContentHash = await hashContent(response.content);
     state.lastAnalyzedDomain = state.lastExtractedMeta.domain;
+    const existingSaved = await fetchSavedProspectByDomain(state.lastAnalyzedDomain);
+    if (existingSaved && !state.forceRefresh) {
+      displaySavedProspectRow(existingSaved);
+      return;
+    }
     const settings = await loadSettings();
     const reuseAllowed = settings.reanalysisMode === 'content-change' && !state.forceRefresh;
     const cached = await getCachedAnalysisByDomain(state.lastAnalyzedDomain);
@@ -791,13 +868,21 @@ export async function analyzeSpecificUrl(
         url,
         domain: state.lastAnalyzedDomain,
       };
+      const currentMeta = state.lastExtractedMeta;
       if (state.lastAnalysis) {
-        displayAIAnalysis(state.lastAnalysis);
+        displayAIAnalysis(
+          state.lastAnalysis,
+          getReusableOutreachPayload({
+            existingPayload: existingSaved?.outreach_angles || cached.outreachPayload,
+            previousDomain,
+            currentDomain: state.lastAnalyzedDomain,
+          })
+        );
       }
-      if (options?.preserveSavedId) {
+      if (options?.preserveSavedId && currentMeta) {
         await updateSavedProspectAnalysis(
           options.preserveSavedId,
-          state.lastExtractedMeta,
+          currentMeta,
           state.lastAnalysis!,
           state.lastContentHash
         );
@@ -842,22 +927,32 @@ export async function analyzeSpecificUrl(
     }
 
     state.lastAnalysis = result.analysis!;
-    displayAIAnalysis(result.analysis!);
+    const currentMeta = state.lastExtractedMeta;
+    displayAIAnalysis(
+      result.analysis!,
+      getReusableOutreachPayload({
+        existingPayload: existingSaved?.outreach_angles,
+        previousDomain,
+        currentDomain: state.lastAnalyzedDomain,
+      })
+    );
     markDomainAnalyzedToday(state.lastAnalyzedDomain);
 
     setCachedAnalysis(state.lastExtractedMeta.url, {
       analysis: result.analysis!,
       meta: state.lastExtractedMeta,
+      outreachPayload: undefined,
     });
     setCachedAnalysisByDomain(state.lastAnalyzedDomain, {
       analysis: result.analysis!,
       meta: state.lastExtractedMeta,
+      outreachPayload: undefined,
     });
 
-    if (options?.preserveSavedId) {
+    if (options?.preserveSavedId && currentMeta) {
       await updateSavedProspectAnalysis(
         options.preserveSavedId,
-        state.lastExtractedMeta,
+        currentMeta,
         result.analysis!,
         state.lastContentHash
       );

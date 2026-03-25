@@ -4,6 +4,10 @@
   border-top: none;
 }
 
+.analysis-tab-panel[data-analysis-panel='strategy'] .outreach-section::before {
+  display: none;
+}
+
 .outreach-section::before {
   content: '';
   display: block;
@@ -31,6 +35,36 @@
   font-size: 14px;
   color: var(--text-tertiary);
   line-height: 1.6;
+}
+
+.outreach-bullet-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-tertiary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.outreach-bullet-list li {
+  margin: 0;
+  position: relative;
+  padding-left: 14px;
+}
+
+.outreach-bullet-list li::before {
+  content: '';
+  position: absolute;
+  left: 1px;
+  top: 0.72em;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--text-secondary);
+  transform: translateY(-50%);
 }
 
 .outreach-message {

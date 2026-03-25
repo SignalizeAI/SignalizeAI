@@ -15,11 +15,8 @@ interface SavedAnalysis {
   value_proposition?: string;
   best_sales_persona?: string;
   best_sales_persona_reason?: string;
-  sales_angle?: string;
-  recommended_outreach_persona?: string;
   recommended_outreach_goal?: string;
   recommended_outreach_angle?: string;
-  recommended_outreach_message?: string;
   prospect_status?: string;
   outreach_angles?: {
     generated_at?: string;
@@ -61,11 +58,8 @@ export function exportToCSV(rows: SavedAnalysis[]): void {
     'Value Proposition',
     'Best Sales Persona',
     'Persona Reason',
-    'Sales Angle',
-    'Outreach Persona',
-    'Outreach Goal',
+    'Goal',
     'Outreach Angle',
-    'Outreach Message',
     'Prospect Status',
     ...OUTREACH_EXPORT_HEADERS,
     'Saved At',
@@ -86,11 +80,8 @@ export function exportToCSV(rows: SavedAnalysis[]): void {
         csvEscape(item.value_proposition),
         csvEscape(item.best_sales_persona),
         csvEscape(item.best_sales_persona_reason),
-        csvEscape(item.sales_angle),
-        csvEscape(item.recommended_outreach_persona),
         csvEscape(item.recommended_outreach_goal),
         csvEscape(item.recommended_outreach_angle),
-        csvEscape(item.recommended_outreach_message),
         csvEscape(item.prospect_status),
         csvEscape(item.outreach_generated_at),
         csvEscape(item.pain_point_subject_1),
@@ -134,11 +125,8 @@ export async function exportToExcel(rows: SavedAnalysis[]): Promise<void> {
     { header: 'Value Proposition', key: 'value_proposition', width: 35 },
     { header: 'Best Sales Persona', key: 'best_sales_persona', width: 22 },
     { header: 'Persona Reason', key: 'best_sales_persona_reason', width: 30 },
-    { header: 'Sales Angle', key: 'sales_angle', width: 35 },
-    { header: 'Outreach Persona', key: 'recommended_outreach_persona', width: 24 },
-    { header: 'Outreach Goal', key: 'recommended_outreach_goal', width: 30 },
+    { header: 'Goal', key: 'recommended_outreach_goal', width: 30 },
     { header: 'Outreach Angle', key: 'recommended_outreach_angle', width: 35 },
-    { header: 'Outreach Message', key: 'recommended_outreach_message', width: 45 },
     { header: 'Prospect Status', key: 'prospect_status', width: 18 },
     ...OUTREACH_EXPORT_COLUMNS,
     { header: 'Saved At', key: 'created_at', width: 22 },
