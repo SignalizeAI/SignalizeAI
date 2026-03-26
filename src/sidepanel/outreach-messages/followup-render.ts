@@ -1,5 +1,6 @@
 import { state } from '../state.js';
 import { formatOutreachEmailBody, getCompanyDisplayName } from './format.js';
+import { refreshOutreachUiState } from './render.js';
 import type { FollowUpEmail, FollowUpEmailsResult } from './types.js';
 
 function escapeAttr(value: string): string {
@@ -20,6 +21,11 @@ function setButtonState(
 
 function companyName(): string {
   return getCompanyDisplayName(state.lastExtractedMeta?.title, state.lastExtractedMeta?.domain);
+}
+
+function emailsAreCollapsed(): boolean {
+  const toggle = document.getElementById('generate-outreach-btn') as HTMLButtonElement | null;
+  return toggle?.dataset.mode === 'show';
 }
 
 function buildCopyButton(email: FollowUpEmail): string {
@@ -60,6 +66,7 @@ export function resetFollowUpUi(): void {
   document.getElementById('follow-up-loading')?.classList.add('hidden');
   document.getElementById('follow-up-actions')?.classList.add('hidden');
   setButtonState('Generate follow-ups');
+  refreshOutreachUiState();
 }
 
 export function syncFollowUpUi(): void {
@@ -68,16 +75,26 @@ export function syncFollowUpUi(): void {
     return;
   }
   if (state.followUpEmails?.emails?.length) {
+    if (emailsAreCollapsed()) {
+      document.getElementById('follow-up-actions')?.classList.add('hidden');
+      document.getElementById('follow-up-section')?.classList.add('hidden');
+      document.getElementById('follow-up-list')?.classList.add('hidden');
+      refreshOutreachUiState();
+      return;
+    }
     renderFollowUpEmails(state.followUpEmails);
     return;
   }
   document.getElementById('follow-up-actions')?.classList.remove('hidden');
   document.getElementById('follow-up-section')?.classList.add('hidden');
   setButtonState('Generate follow-ups');
+  refreshOutreachUiState();
 }
 
 export function renderFollowUpLoading(): void {
   document.getElementById('follow-up-actions')?.classList.remove('hidden');
+  document.getElementById('outreach-messages-section')?.classList.remove('hidden');
+  document.getElementById('outreach-messages-list')?.classList.remove('hidden');
   document.getElementById('follow-up-section')?.classList.remove('hidden');
   document.getElementById('follow-up-list')?.classList.add('hidden');
   const loading = document.getElementById('follow-up-loading');
@@ -86,23 +103,28 @@ export function renderFollowUpLoading(): void {
     '<div class="outreach-skeleton-card"></div><div class="outreach-skeleton-card"></div>';
   loading.classList.remove('hidden');
   setButtonState('Generating follow-ups...', true);
+  refreshOutreachUiState();
 }
 
 export function renderFollowUpError(): void {
   document.getElementById('follow-up-loading')?.classList.add('hidden');
   document.getElementById('follow-up-section')?.classList.add('hidden');
   setButtonState('Generate follow-ups');
+  refreshOutreachUiState();
 }
 
 export function renderFollowUpEmails(result: FollowUpEmailsResult): void {
   document.getElementById('follow-up-loading')?.classList.add('hidden');
   document.getElementById('follow-up-actions')?.classList.add('hidden');
-  document.getElementById('follow-up-section')?.classList.remove('hidden');
   const list = document.getElementById('follow-up-list');
   if (!list) return;
   list.innerHTML = result.emails.map(buildCard).join('');
+  document.getElementById('outreach-messages-section')?.classList.remove('hidden');
+  document.getElementById('outreach-messages-list')?.classList.remove('hidden');
+  document.getElementById('follow-up-section')?.classList.remove('hidden');
   list.classList.remove('hidden');
   setButtonState('Generate follow-ups');
+  refreshOutreachUiState();
 }
 
 export function collapseFollowUpEmails(): void {

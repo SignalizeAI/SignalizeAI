@@ -63,6 +63,27 @@
   --status-control-border: rgba(255, 255, 255, 0.12);
   --status-control-hover-bg: rgba(255, 255, 255, 0.1);
   --status-control-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+  --analysis-tabs-shell-bg: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.055),
+    rgba(255, 255, 255, 0.03)
+  );
+  --analysis-tabs-shell-border: rgba(255, 255, 255, 0.09);
+  --analysis-tabs-shell-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --analysis-tab-text: rgba(255, 255, 255, 0.68);
+  --analysis-tab-hover-bg: rgba(255, 255, 255, 0.075);
+  --analysis-tab-hover-text: rgba(255, 255, 255, 0.96);
+  --analysis-tab-active-bg: linear-gradient(
+    135deg,
+    rgba(37, 99, 235, 0.34),
+    rgba(14, 165, 233, 0.2)
+  );
+  --analysis-tab-active-border: rgba(125, 211, 252, 0.26);
+  --analysis-tab-active-text: #ffffff;
+  --analysis-tab-active-shadow:
+    0 10px 22px rgba(2, 6, 23, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --analysis-tab-focus-ring: rgba(56, 189, 248, 0.28);
 }
 
 [data-theme='light'] {
@@ -126,4 +147,25 @@
   --status-control-border: rgba(15, 23, 42, 0.08);
   --status-control-hover-bg: rgba(241, 245, 249, 1);
   --status-control-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+  --analysis-tabs-shell-bg: linear-gradient(
+    180deg,
+    rgba(248, 250, 252, 0.96),
+    rgba(241, 245, 249, 0.92)
+  );
+  --analysis-tabs-shell-border: rgba(148, 163, 184, 0.16);
+  --analysis-tabs-shell-shadow:
+    0 12px 24px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --analysis-tab-text: #5f6f85;
+  --analysis-tab-hover-bg: rgba(255, 255, 255, 0.98);
+  --analysis-tab-hover-text: #0f172a;
+  --analysis-tab-active-bg: linear-gradient(
+    135deg,
+    rgba(219, 234, 254, 0.96),
+    rgba(224, 242, 254, 0.92)
+  );
+  --analysis-tab-active-border: rgba(96, 165, 250, 0.24);
+  --analysis-tab-active-text: #1e3a8a;
+  --analysis-tab-active-shadow:
+    0 10px 20px rgba(37, 99, 235, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --analysis-tab-focus-ring: rgba(59, 130, 246, 0.22);
 }

@@ -2,6 +2,7 @@ import { supabase } from '../../supabase.js';
 import { loadQuotaFromAPI, renderQuotaBanner } from '../../quota.js';
 import { showActionTooltip } from '../../clipboard.js';
 import { showToast } from '../../toast.js';
+import { buildPersistedOutreachAngle } from '../../analysis/outreach-angle.js';
 import { batchState } from './state.js';
 import { cleanTitle } from './helpers.js';
 import type { BatchResult } from './types.js';
@@ -183,14 +184,11 @@ async function performSave(res: BatchResult) {
     what_they_do: res.analysis.whatTheyDo,
     target_customer: res.analysis.targetCustomer,
     value_proposition: res.analysis.valueProposition,
-    sales_angle: res.analysis.salesAngle,
     sales_readiness_score: res.analysis.salesReadinessScore,
     best_sales_persona: res.analysis.bestSalesPersona?.persona,
     best_sales_persona_reason: res.analysis.bestSalesPersona?.reason,
-    recommended_outreach_persona: res.analysis.recommendedOutreach?.persona,
     recommended_outreach_goal: res.analysis.recommendedOutreach?.goal,
-    recommended_outreach_angle: res.analysis.recommendedOutreach?.angle,
-    recommended_outreach_message: res.analysis.recommendedOutreach?.message,
+    recommended_outreach_angle: buildPersistedOutreachAngle(res.analysis),
     ...(res.outreachAngles?.angles?.length
       ? {
           outreach_angles: {

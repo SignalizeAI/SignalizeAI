@@ -96,18 +96,7 @@ export async function fetchAndRenderPage(options?: {
     state.currentPage = totalPages;
   }
 
-  let dataQuery = supabase
-    .from('saved_analyses')
-    .select(
-      `
-      *,
-      recommended_outreach_persona,
-      recommended_outreach_goal,
-      recommended_outreach_angle,
-      recommended_outreach_message
-    `
-    )
-    .eq('user_id', user.id);
+  let dataQuery = supabase.from('saved_analyses').select('*').eq('user_id', user.id);
 
   if (state.activeFilters.minScore > 0) {
     dataQuery = dataQuery.gte('sales_readiness_score', state.activeFilters.minScore);

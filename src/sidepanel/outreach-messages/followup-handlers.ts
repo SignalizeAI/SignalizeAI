@@ -1,4 +1,5 @@
 import { generateFollowUpEmails } from '../../ai-analyze.js';
+import { updateCachedOutreach } from '../cache.js';
 import { state } from '../state.js';
 import { supabase } from '../supabase.js';
 import { showToast } from '../toast.js';
@@ -36,6 +37,18 @@ async function persistFollowUpsIfSaved(): Promise<void> {
   if (error) showToast('Follow-ups generated, but failed to sync them to the saved prospect.');
 }
 
+async function syncFollowUpsToCache(): Promise<void> {
+  const meta = state.lastExtractedMeta;
+  if (!meta || !state.outreachAngles || !state.followUpEmails) return;
+
+  await updateCachedOutreach(meta.url, meta.domain, {
+    generated_at: new Date().toISOString(),
+    recommended_angle_id: state.outreachAngles.recommendedAngleId,
+    angles: state.outreachAngles.angles,
+    follow_ups: state.followUpEmails,
+  });
+}
+
 async function runGenerateFollowUps(): Promise<void> {
   const analysis = state.lastAnalysis;
   const meta = state.lastExtractedMeta;
@@ -69,6 +82,7 @@ async function runGenerateFollowUps(): Promise<void> {
   }
 
   state.followUpEmails = result;
+  await syncFollowUpsToCache();
   await persistFollowUpsIfSaved();
   renderFollowUpEmails(result);
 }

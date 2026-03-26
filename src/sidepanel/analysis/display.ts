@@ -1,16 +1,38 @@
 import { state, type Analysis } from '../state.js';
 import { updateAnalysisDashboardButton } from '../dashboard-link.js';
 import { endAnalysisLoading } from './utils.js';
+import { initAnalysisTabs, setActiveAnalysisTab } from './tabs.js';
+import { buildOutreachAngleItems } from './outreach-angle.js';
 import { hideOutreachSection, renderOutreachAngles } from '../outreach-messages/render.js';
 import { attachOutreachHandlers, resetOutreachState } from '../outreach-messages/handlers.js';
-import {
-  normalizeStoredOutreachPayload,
-  type OutreachAnglesResult,
-} from '../outreach-messages/types.js';
+import { normalizeStoredOutreachPayload } from '../outreach-messages/types.js';
+
+type StoredOutreachPayload = Parameters<typeof normalizeStoredOutreachPayload>[0];
 
 interface ShowBlockedOptions {
   allowHomepageFallback?: boolean;
   originalUrl?: string;
+}
+
+function renderOutreachAngle(analysis: Analysis): void {
+  const outreachAngleEl = document.getElementById('ai-outreach-angle');
+  if (!outreachAngleEl) return;
+
+  const items = buildOutreachAngleItems(analysis);
+  outreachAngleEl.innerHTML = '';
+
+  if (!items.length) {
+    const item = document.createElement('li');
+    item.textContent = '—';
+    outreachAngleEl.appendChild(item);
+    return;
+  }
+
+  items.forEach((text) => {
+    const item = document.createElement('li');
+    item.textContent = text;
+    outreachAngleEl.appendChild(item);
+  });
 }
 
 export function showContentBlocked(message: string, options: ShowBlockedOptions = {}): void {
@@ -90,7 +112,7 @@ export function showIrrelevantDomainView(): void {
   }
 }
 
-export function displayAIAnalysis(analysis: Analysis, savedAngles?: OutreachAnglesResult): void {
+export function displayAIAnalysis(analysis: Analysis, savedAngles?: StoredOutreachPayload): void {
   endAnalysisLoading();
 
   const aiCard = document.getElementById('ai-analysis');
@@ -102,6 +124,9 @@ export function displayAIAnalysis(analysis: Analysis, savedAngles?: OutreachAngl
   if (aiLoading) aiLoading.classList.add('hidden');
   if (aiData) aiData.classList.remove('hidden');
   if (refreshBtn) refreshBtn.disabled = false;
+  state.analysisTab = 'strategy';
+  initAnalysisTabs();
+  setActiveAnalysisTab('strategy');
   updateAnalysisDashboardButton(
     (document.getElementById('saveButton') as HTMLButtonElement | null)?.dataset.savedId || null
   );
@@ -126,19 +151,14 @@ export function displayAIAnalysis(analysis: Analysis, savedAngles?: OutreachAngl
   const whatEl = document.getElementById('ai-what-they-do');
   const targetEl = document.getElementById('ai-target-customer');
   const valueEl = document.getElementById('ai-value-prop');
-  const salesEl = document.getElementById('ai-sales-angle');
   const scoreEl = document.getElementById('ai-sales-score');
   const personaEl = document.getElementById('ai-sales-persona');
   const personaReasonEl = document.getElementById('ai-sales-persona-reason');
-  const outreachPersonaEl = document.getElementById('ai-outreach-persona');
   const outreachGoalEl = document.getElementById('ai-outreach-goal');
-  const outreachAngleEl = document.getElementById('ai-outreach-angle');
-  const outreachMessageEl = document.getElementById('ai-outreach-message');
 
   if (whatEl) whatEl.textContent = analysis.whatTheyDo || '—';
   if (targetEl) targetEl.textContent = analysis.targetCustomer || '—';
   if (valueEl) valueEl.textContent = analysis.valueProposition || '—';
-  if (salesEl) salesEl.textContent = analysis.salesAngle || '—';
   if (scoreEl) scoreEl.textContent = String(analysis.salesReadinessScore ?? '—');
   if (personaEl) {
     personaEl.textContent = analysis.bestSalesPersona?.persona || 'Mid-Market AE';
@@ -147,18 +167,10 @@ export function displayAIAnalysis(analysis: Analysis, savedAngles?: OutreachAngl
     const reason = analysis.bestSalesPersona?.reason || '';
     personaReasonEl.textContent = reason ? `(${reason})` : '—';
   }
-  if (outreachPersonaEl) {
-    outreachPersonaEl.textContent = analysis.recommendedOutreach?.persona || '—';
-  }
   if (outreachGoalEl) {
     outreachGoalEl.textContent = analysis.recommendedOutreach?.goal || '—';
   }
-  if (outreachAngleEl) {
-    outreachAngleEl.textContent = analysis.recommendedOutreach?.angle || '—';
-  }
-  if (outreachMessageEl) {
-    outreachMessageEl.textContent = analysis.recommendedOutreach?.message || '—';
-  }
+  renderOutreachAngle(analysis);
 
   resetOutreachState();
   attachOutreachHandlers();
