@@ -4,6 +4,7 @@ import { analyzeWebsiteContent } from '../../../ai-analyze.js';
 import { hashContent } from '../../cache.js';
 import { fetchAndExtractContent } from '../../analysis/fetcher.js';
 import {
+  buildDegradedAnalysis,
   isQuotaError,
   isRetryableError,
   normalizeErrorMessage,
@@ -14,6 +15,7 @@ import {
   BATCH_DELAY_BETWEEN_GROUPS,
   ANALYZE_FAILURE_COOLDOWN_MS,
   ANALYZE_MIN_INTERVAL_MS,
+  ANALYZE_REQUEST_CONCURRENCY,
   ANALYZE_ADAPTIVE_COOLDOWN_BASE_MS,
   ANALYZE_ADAPTIVE_COOLDOWN_MAX_MS,
   ANALYZE_ADAPTIVE_COOLDOWN_STEP_DOWN_MS,
@@ -61,6 +63,7 @@ export async function startBatchProcess(urls: string[], deps: ProcessFlowDeps) {
   batchState.currentBatchSize = urls.length;
   batchState.tempBatchResults = [];
   batchState.analyzeQueue = Promise.resolve();
+  batchState.analyzeActiveCount = 0;
   batchState.lastAnalyzeAt = 0;
   batchState.analyzeBackoffUntil = 0;
   batchState.analyzeCooldownMs = ANALYZE_ADAPTIVE_COOLDOWN_BASE_MS;
@@ -81,6 +84,37 @@ export async function startBatchProcess(urls: string[], deps: ProcessFlowDeps) {
   const telemetry = new Map<string, BatchTelemetryEntry>();
   let sawTransientAnalyzeFailureInBatch = false;
 
+  const handleBatchResult = (result: any) => {
+    if ('error' in result && result.error) {
+      markTelemetryFailure(telemetry, result.url, result.error);
+      const errMessage = normalizeErrorMessage(result.error);
+      appendResultItem(result.url, errMessage, true);
+      if (isQuotaError(result.error)) {
+        stopDueToQuota = true;
+      }
+      if (isTransientAnalyzeFailure(result.error)) {
+        sawTransientAnalyzeFailureInBatch = true;
+      }
+    } else {
+      markTelemetrySuccess(telemetry, result.url);
+      batchState.tempBatchResults.push({
+        url: result.url,
+        domain: new URL(result.url).hostname,
+        content: result.content,
+        analysis: result.analysis,
+        contentHash: result.contentHash,
+        status: 'ready',
+        outreachAngles: null,
+        outreachGeneratedAt: null,
+        outreachError: null,
+      });
+      appendResultItem(result.url, 'Analyzed', false);
+    }
+
+    processedCount += 1;
+    updateProgress(Math.min(processedCount, urls.length), urls.length);
+  };
+
   for (let i = 0; i < urls.length; i += BATCH_CONCURRENCY) {
     if (batchState.isBatchCancelled) {
       appendResultItem('Batch cancelled', 'Stopped', true);
@@ -89,41 +123,15 @@ export async function startBatchProcess(urls: string[], deps: ProcessFlowDeps) {
 
     const batchUrls = urls.slice(i, i + BATCH_CONCURRENCY);
     const batchPromises = batchUrls.map((url) =>
-      processSingleUrlWithRetry(url, telemetry).catch((err) => ({ url, error: err }))
+      processSingleUrlWithRetry(url, telemetry)
+        .catch((err) => ({ url, error: err }))
+        .then((result) => {
+          handleBatchResult(result);
+          return result;
+        })
     );
 
-    const batchResults = await Promise.all(batchPromises);
-
-    for (const result of batchResults) {
-      if ('error' in result && result.error) {
-        markTelemetryFailure(telemetry, result.url, result.error);
-        const errMessage = normalizeErrorMessage(result.error);
-        appendResultItem(result.url, errMessage, true);
-        if (isQuotaError(result.error)) {
-          stopDueToQuota = true;
-        }
-        if (isTransientAnalyzeFailure(result.error)) {
-          sawTransientAnalyzeFailureInBatch = true;
-        }
-      } else {
-        markTelemetrySuccess(telemetry, result.url);
-        batchState.tempBatchResults.push({
-          url: result.url,
-          domain: new URL(result.url).hostname,
-          content: result.content,
-          analysis: result.analysis,
-          contentHash: result.contentHash,
-          status: 'ready',
-          outreachAngles: null,
-          outreachGeneratedAt: null,
-          outreachError: null,
-        });
-        appendResultItem(result.url, 'Analyzed', false);
-      }
-    }
-
-    processedCount += batchUrls.length;
-    updateProgress(Math.min(processedCount, urls.length), urls.length);
+    await Promise.all(batchPromises);
 
     if (stopDueToQuota) {
       appendResultItem('Batch stopped', 'Daily limit reached', true);
@@ -155,7 +163,7 @@ async function processSingleUrl(url: string, telemetry: Map<string, BatchTelemet
   const entry = getOrCreateTelemetryEntry(telemetry, url);
   entry.extractAttempts += 1;
 
-  const response = await fetchAndExtractContent(url, true);
+  const response = await fetchAndExtractContent(url, true, true);
   const extractErrorMessage = response?.error || response?.reason || 'Extraction failed';
   const contentForAnalyze = response?.ok && response.content ? response.content : null;
 
@@ -169,6 +177,14 @@ async function processSingleUrl(url: string, telemetry: Map<string, BatchTelemet
       analyzeWebsiteContent(trimmedContent, false, false, true)
     );
   } catch (err: unknown) {
+    if (isRetryableError(err)) {
+      return {
+        url,
+        content: contentForAnalyze,
+        analysis: buildDegradedAnalysis(contentForAnalyze, normalizeErrorMessage(err)),
+        contentHash: await hashContent(contentForAnalyze),
+      };
+    }
     throw withStageError('analyze', normalizeErrorMessage(err));
   }
 
@@ -194,21 +210,31 @@ async function processSingleUrl(url: string, telemetry: Map<string, BatchTelemet
 
 function enqueueAnalyzeCall<T>(task: () => Promise<T>): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const runTask = async () => {
+    const claimSlot = async () => {
+      while (batchState.analyzeActiveCount >= ANALYZE_REQUEST_CONCURRENCY) {
+        await sleep(80);
+      }
       await waitForAnalyzeWindow();
+      batchState.analyzeActiveCount += 1;
+    };
+
+    const slotPromise = batchState.analyzeQueue.then(claimSlot, claimSlot);
+    batchState.analyzeQueue = slotPromise.then(
+      () => undefined,
+      () => undefined
+    );
+
+    slotPromise.then(async () => {
       try {
         const result = await task();
         decayAnalyzeCooldown();
         resolve(result);
       } catch (err) {
         reject(err);
+      } finally {
+        batchState.analyzeActiveCount = Math.max(0, batchState.analyzeActiveCount - 1);
       }
-    };
-
-    batchState.analyzeQueue = batchState.analyzeQueue.then(runTask, runTask).then(
-      () => undefined,
-      () => undefined
-    );
+    }, reject);
   });
 }
 

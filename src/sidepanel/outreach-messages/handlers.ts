@@ -12,7 +12,6 @@ import { formatOutreachEmailBody } from './format.js';
 import { onGenerateFollowUpsClick } from './followup-handlers.js';
 import { resetFollowUpUi } from './followup-render.js';
 import {
-  collapseOutreachAngles,
   renderOutreachAngles,
   renderOutreachError,
   renderOutreachLoading,
@@ -147,8 +146,6 @@ export function onGenerateClick(): void {
     const section = document.getElementById('outreach-messages-section');
     if (section?.classList.contains('hidden')) {
       showExistingOutreachAngles();
-    } else {
-      collapseOutreachAngles();
     }
     return;
   }

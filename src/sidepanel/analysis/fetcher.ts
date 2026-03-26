@@ -60,14 +60,14 @@ function isThinContent(content: ExtractedContent): boolean {
   return totalTextLength < 50;
 }
 
-function extractHeadings(doc: Document): string[] {
+function extractHeadings(doc: Document, limit = 15): string[] {
   return Array.from(doc.querySelectorAll('h1, h2, h3'))
     .map((h) => cleanText(h.textContent || ''))
     .filter(Boolean)
-    .slice(0, 15);
+    .slice(0, limit);
 }
 
-function extractParagraphs(doc: Document): string[] {
+function extractParagraphs(doc: Document, limit = 50): string[] {
   // We look everywhere in the body if no semantic tags are found
   const container =
     doc.querySelector('main') ||
@@ -86,10 +86,10 @@ function extractParagraphs(doc: Document): string[] {
   const unique = Array.from(new Set(texts));
 
   // Return more content items for AI to have better context
-  return unique.slice(0, 50);
+  return unique.slice(0, limit);
 }
 
-function extractContentFromDoc(doc: Document, url: string): ExtractedContent {
+function extractContentFromDoc(doc: Document, url: string, compact = false): ExtractedContent {
   // Capture various types of description tags
   const description =
     doc.querySelector("meta[name='description']")?.getAttribute('content') ||
@@ -102,14 +102,15 @@ function extractContentFromDoc(doc: Document, url: string): ExtractedContent {
     url,
     title: doc.title || '',
     metaDescription: description,
-    headings: extractHeadings(doc),
-    paragraphs: extractParagraphs(doc),
+    headings: extractHeadings(doc, compact ? 8 : 15),
+    paragraphs: extractParagraphs(doc, compact ? 20 : 50),
   };
 }
 
 export async function fetchAndExtractContent(
   url: string,
-  viaBackground: boolean = false
+  viaBackground: boolean = false,
+  compact: boolean = false
 ): Promise<{ ok: boolean; content?: ExtractedContent; reason?: string; error?: string }> {
   try {
     const fetchRes = viaBackground
@@ -172,7 +173,7 @@ export async function fetchAndExtractContent(
     `;
 
     const doc = new DOMParser().parseFromString(cleanHtml, 'text/html');
-    const content = extractContentFromDoc(doc, url);
+    const content = extractContentFromDoc(doc, url, compact);
 
     if (isThinContent(content)) {
       return { ok: false, reason: 'THIN_CONTENT' };

@@ -1,5 +1,3 @@
-type AngleId = 'observation' | 'pain_point' | 'curiosity';
-
 interface VariationLike {
   subject?: string;
   body?: string;
@@ -7,12 +5,23 @@ interface VariationLike {
 
 interface AngleLike {
   id?: string;
+  label?: string;
   variations?: VariationLike[];
+}
+
+interface FollowUpLike {
+  label?: string;
+  subject?: string;
+  body?: string;
 }
 
 interface OutreachPayloadLike {
   generated_at?: string;
+  recommended_angle_id?: string;
   angles?: AngleLike[];
+  follow_ups?: {
+    emails?: FollowUpLike[];
+  };
 }
 
 function readPayload(row: Record<string, any>): OutreachPayloadLike | null {
@@ -21,64 +30,112 @@ function readPayload(row: Record<string, any>): OutreachPayloadLike | null {
   return payload as OutreachPayloadLike;
 }
 
-function getAngleMap(row: Record<string, any>): Map<string, AngleLike> {
-  const payload = readPayload(row);
+function normalizeText(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function getRecommendedAngle(payload: OutreachPayloadLike | null): AngleLike | null {
   const angles = Array.isArray(payload?.angles) ? payload.angles : [];
-  return new Map(
-    angles
-      .filter((angle) => angle && typeof angle === 'object' && typeof angle.id === 'string')
-      .map((angle) => [angle.id as string, angle as AngleLike])
+  if (!angles.length) return null;
+  return (
+    angles.find((angle) => angle?.id && angle.id === payload?.recommended_angle_id) || angles[0]
   );
 }
 
-function readVariation(
-  row: Record<string, any>,
-  angleId: AngleId,
-  index: number,
-  field: 'subject' | 'body'
-): string {
-  const angleMap = getAngleMap(row);
-  const angle = angleMap.get(angleId);
-  const value = angle?.variations?.[index]?.[field];
-  if (typeof value === 'string') return value;
+function getSecondaryAngles(payload: OutreachPayloadLike | null, recommendedId?: string): AngleLike[] {
+  const angles = Array.isArray(payload?.angles) ? payload.angles : [];
+  return angles.filter((angle) => angle?.id !== recommendedId);
+}
 
-  const flatKey = `${angleId}_${field}_${index + 1}`;
-  return typeof row[flatKey] === 'string' ? row[flatKey] : '';
+function getPrimaryVariation(angle: AngleLike | null): VariationLike {
+  return angle?.variations?.[0] || {};
+}
+
+function getAngleLabel(angle: AngleLike | null, fallback: string): string {
+  return normalizeText(angle?.label) || fallback;
+}
+
+function getFollowUps(payload: OutreachPayloadLike | null): FollowUpLike[] {
+  return Array.isArray(payload?.follow_ups?.emails) ? payload.follow_ups?.emails : [];
 }
 
 export const OUTREACH_EXPORT_HEADERS = [
   'Outreach Generated At',
-  'Pain Point Subject 1',
-  'Pain Point Body 1',
-  'Observation Subject 1',
-  'Observation Body 1',
-  'Curiosity Subject 1',
-  'Curiosity Body 1',
+  'Recommended Label',
+  'Recommended Subject',
+  'Recommended Body',
+  'Email 2 Label',
+  'Email 2 Subject',
+  'Email 2 Body',
+  'Email 3 Label',
+  'Email 3 Subject',
+  'Email 3 Body',
+  'Follow-Up 1 Label',
+  'Follow-Up 1 Subject',
+  'Follow-Up 1 Body',
+  'Follow-Up 2 Label',
+  'Follow-Up 2 Subject',
+  'Follow-Up 2 Body',
+  'Follow-Up 3 Label',
+  'Follow-Up 3 Subject',
+  'Follow-Up 3 Body',
 ] as const;
 
 export const OUTREACH_EXPORT_COLUMNS = [
   { header: 'Outreach Generated At', key: 'outreach_generated_at', width: 24 },
-  { header: 'Pain Point Subject 1', key: 'pain_point_subject_1', width: 28 },
-  { header: 'Pain Point Body 1', key: 'pain_point_body_1', width: 42 },
-  { header: 'Observation Subject 1', key: 'observation_subject_1', width: 28 },
-  { header: 'Observation Body 1', key: 'observation_body_1', width: 42 },
-  { header: 'Curiosity Subject 1', key: 'curiosity_subject_1', width: 28 },
-  { header: 'Curiosity Body 1', key: 'curiosity_body_1', width: 42 },
+  { header: 'Recommended Label', key: 'recommended_email_label', width: 24 },
+  { header: 'Recommended Subject', key: 'recommended_email_subject', width: 32 },
+  { header: 'Recommended Body', key: 'recommended_email_body', width: 46 },
+  { header: 'Email 2 Label', key: 'secondary_email_1_label', width: 22 },
+  { header: 'Email 2 Subject', key: 'secondary_email_1_subject', width: 32 },
+  { header: 'Email 2 Body', key: 'secondary_email_1_body', width: 46 },
+  { header: 'Email 3 Label', key: 'secondary_email_2_label', width: 22 },
+  { header: 'Email 3 Subject', key: 'secondary_email_2_subject', width: 32 },
+  { header: 'Email 3 Body', key: 'secondary_email_2_body', width: 46 },
+  { header: 'Follow-Up 1 Label', key: 'follow_up_1_label', width: 22 },
+  { header: 'Follow-Up 1 Subject', key: 'follow_up_1_subject', width: 32 },
+  { header: 'Follow-Up 1 Body', key: 'follow_up_1_body', width: 46 },
+  { header: 'Follow-Up 2 Label', key: 'follow_up_2_label', width: 22 },
+  { header: 'Follow-Up 2 Subject', key: 'follow_up_2_subject', width: 32 },
+  { header: 'Follow-Up 2 Body', key: 'follow_up_2_body', width: 46 },
+  { header: 'Follow-Up 3 Label', key: 'follow_up_3_label', width: 22 },
+  { header: 'Follow-Up 3 Subject', key: 'follow_up_3_subject', width: 32 },
+  { header: 'Follow-Up 3 Body', key: 'follow_up_3_body', width: 46 },
 ] as const;
 
 export function flattenOutreachExportFields(row: Record<string, any>): Record<string, string> {
   const payload = readPayload(row);
+  const recommended = getRecommendedAngle(payload);
+  const secondaryAngles = getSecondaryAngles(payload, recommended?.id);
+  const secondaryOne = secondaryAngles[0] || null;
+  const secondaryTwo = secondaryAngles[1] || null;
+  const followUps = getFollowUps(payload);
+  const followUpOne = followUps[0] || null;
+  const followUpTwo = followUps[1] || null;
+  const followUpThree = followUps[2] || null;
 
   return {
     outreach_generated_at:
       typeof row.outreach_generated_at === 'string'
         ? row.outreach_generated_at
-        : payload?.generated_at || '',
-    pain_point_subject_1: readVariation(row, 'pain_point', 0, 'subject'),
-    pain_point_body_1: readVariation(row, 'pain_point', 0, 'body'),
-    observation_subject_1: readVariation(row, 'observation', 0, 'subject'),
-    observation_body_1: readVariation(row, 'observation', 0, 'body'),
-    curiosity_subject_1: readVariation(row, 'curiosity', 0, 'subject'),
-    curiosity_body_1: readVariation(row, 'curiosity', 0, 'body'),
+        : normalizeText(payload?.generated_at),
+    recommended_email_label: getAngleLabel(recommended, 'Recommended'),
+    recommended_email_subject: normalizeText(getPrimaryVariation(recommended).subject),
+    recommended_email_body: normalizeText(getPrimaryVariation(recommended).body),
+    secondary_email_1_label: getAngleLabel(secondaryOne, ''),
+    secondary_email_1_subject: normalizeText(getPrimaryVariation(secondaryOne).subject),
+    secondary_email_1_body: normalizeText(getPrimaryVariation(secondaryOne).body),
+    secondary_email_2_label: getAngleLabel(secondaryTwo, ''),
+    secondary_email_2_subject: normalizeText(getPrimaryVariation(secondaryTwo).subject),
+    secondary_email_2_body: normalizeText(getPrimaryVariation(secondaryTwo).body),
+    follow_up_1_label: normalizeText(followUpOne?.label),
+    follow_up_1_subject: normalizeText(followUpOne?.subject),
+    follow_up_1_body: normalizeText(followUpOne?.body),
+    follow_up_2_label: normalizeText(followUpTwo?.label),
+    follow_up_2_subject: normalizeText(followUpTwo?.subject),
+    follow_up_2_body: normalizeText(followUpTwo?.body),
+    follow_up_3_label: normalizeText(followUpThree?.label),
+    follow_up_3_subject: normalizeText(followUpThree?.subject),
+    follow_up_3_body: normalizeText(followUpThree?.body),
   };
 }

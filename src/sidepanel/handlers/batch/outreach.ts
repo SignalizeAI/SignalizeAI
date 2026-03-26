@@ -1,11 +1,27 @@
 import { generateFollowUpEmails, generateOutreachAngles } from '../../../ai-analyze.js';
 import { onCopyVariationClick } from '../../outreach-messages/handlers.js';
+import type {
+  FollowUpEmailsResult,
+  OutreachAnglesResult,
+} from '../../outreach-messages/types.js';
 import { getRecommendedAngleId } from '../../outreach-messages/types.js';
 import { buildSavedOutreachMarkup } from '../../saved/outreach-render.js';
 import { supabase } from '../../supabase.js';
 import { showToast } from '../../toast.js';
 import type { Analysis } from '../../state.js';
-import { BATCH_OUTREACH_DELAY_MS } from './constants.js';
+import {
+  BATCH_OUTREACH_CONCURRENCY,
+  BATCH_OUTREACH_COOLDOWN_STEP_DOWN_MS,
+  BATCH_OUTREACH_DELAY_MS,
+  BATCH_OUTREACH_FAILURE_COOLDOWN_BASE_MS,
+  BATCH_OUTREACH_FAILURE_COOLDOWN_MAX_MS,
+  BATCH_OUTREACH_RETRY_ATTEMPTS,
+  BATCH_OUTREACH_RETRY_BASE_DELAY_MS,
+} from './constants.js';
+import {
+  buildFallbackFollowUpEmails,
+  buildFallbackOutreachAngles,
+} from './fallback-emails.js';
 import { batchState } from './state.js';
 import type { BatchResult } from './types.js';
 
@@ -18,6 +34,7 @@ const EMAIL_BUTTON_ICON = `
 
 let isGeneratingAll = false;
 let cancelGenerateAll = false;
+let adaptiveOutreachDelayMs = BATCH_OUTREACH_DELAY_MS;
 
 function withEmailIcon(label: string): string {
   return `${EMAIL_BUTTON_ICON} ${label}`;
@@ -27,12 +44,40 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
+function increaseOutreachCooldown(multiplier: number): void {
+  adaptiveOutreachDelayMs = Math.min(
+    BATCH_OUTREACH_FAILURE_COOLDOWN_MAX_MS,
+    Math.max(
+      adaptiveOutreachDelayMs,
+      BATCH_OUTREACH_FAILURE_COOLDOWN_BASE_MS * multiplier
+    )
+  );
+}
+
+function decreaseOutreachCooldown(): void {
+  adaptiveOutreachDelayMs = Math.max(
+    BATCH_OUTREACH_DELAY_MS,
+    adaptiveOutreachDelayMs - BATCH_OUTREACH_COOLDOWN_STEP_DOWN_MS
+  );
+}
+
+function getRetryDelay(attempt: number): number {
+  return Math.min(
+    BATCH_OUTREACH_FAILURE_COOLDOWN_MAX_MS,
+    BATCH_OUTREACH_RETRY_BASE_DELAY_MS * attempt
+  );
+}
+
 function hasOutreachAngles(result: BatchResult): boolean {
   return Boolean(result.outreachAngles?.angles?.length);
 }
 
 function hasFollowUpEmails(result: BatchResult): boolean {
   return Boolean(result.followUpEmails?.emails?.length);
+}
+
+function needsAnyEmailGeneration(result: BatchResult): boolean {
+  return !hasOutreachAngles(result) || !hasFollowUpEmails(result);
 }
 
 function buildMeta(result: BatchResult) {
@@ -49,13 +94,25 @@ function buildMeta(result: BatchResult) {
 }
 
 function buildSavedOutreachPayload(result: BatchResult) {
-  if (!result.outreachAngles?.angles?.length) return null;
-  return {
+  const outreachAngles = result.outreachAngles;
+  if (!outreachAngles?.angles?.length) return null;
+
+  const payload: {
+    generated_at: string;
+    recommended_angle_id: OutreachAnglesResult['recommendedAngleId'];
+    angles: OutreachAnglesResult['angles'];
+    follow_ups?: FollowUpEmailsResult;
+  } = {
     generated_at: result.outreachGeneratedAt || new Date().toISOString(),
-    recommended_angle_id: result.outreachAngles.recommendedAngleId,
-    angles: result.outreachAngles.angles,
-    ...(hasFollowUpEmails(result) ? { follow_ups: result.followUpEmails } : {}),
+    recommended_angle_id: outreachAngles.recommendedAngleId,
+    angles: outreachAngles.angles,
   };
+
+  if (result.followUpEmails?.emails?.length) {
+    payload.follow_ups = result.followUpEmails;
+  }
+
+  return payload;
 }
 
 async function syncSavedProspectOutreach(result: BatchResult): Promise<void> {
@@ -142,7 +199,10 @@ function syncVisibleFooter(index: number): void {
   setButtonState(btn, 'Generate Outreach Emails', false, 'default');
 }
 
-async function generateForResult(index: number, maxAttempts = 3): Promise<boolean> {
+async function generateForResult(
+  index: number,
+  maxAttempts = BATCH_OUTREACH_RETRY_ATTEMPTS
+): Promise<boolean> {
   const result = batchState.tempBatchResults[index];
   if (!result) return false;
 
@@ -154,32 +214,59 @@ async function generateForResult(index: number, maxAttempts = 3): Promise<boolea
       result.followUpEmails = null;
       result.outreachExpanded = true;
       result.outreachGeneratedAt = new Date().toISOString();
+      decreaseOutreachCooldown();
       await syncSavedProspectOutreach(result);
       return true;
     }
+
+    increaseOutreachCooldown(attempt);
+    if (attempt < maxAttempts) {
+      await wait(getRetryDelay(attempt));
+    }
   }
 
-  result.outreachError = 'Failed to generate emails.';
-  return false;
+  result.outreachAngles = buildFallbackOutreachAngles(result.analysis as Analysis, buildMeta(result));
+  result.followUpEmails = null;
+  result.outreachExpanded = false;
+  result.outreachGeneratedAt = new Date().toISOString();
+  result.outreachError = null;
+  await syncSavedProspectOutreach(result);
+  return true;
 }
 
 async function generateFollowUpsForResult(index: number): Promise<boolean> {
   const result = batchState.tempBatchResults[index];
-  const recommended = result?.outreachAngles?.angles?.find(
-    (angle) => angle.id === getRecommendedAngleId(result.outreachAngles)
+  const outreachAngles = result?.outreachAngles;
+  if (!result || !outreachAngles) return false;
+
+  const recommended = outreachAngles.angles.find(
+    (angle) => angle.id === getRecommendedAngleId(outreachAngles)
   );
   const openingEmail = recommended?.variations?.[0];
-  if (!result || !openingEmail?.subject || !openingEmail?.body) return false;
+  if (!openingEmail?.subject || !openingEmail?.body) return false;
 
-  const followUps = await generateFollowUpEmails(
-    result.analysis as Analysis,
-    buildMeta(result),
-    openingEmail
-  );
-  if (!followUps?.emails?.length) return false;
+  for (let attempt = 1; attempt <= BATCH_OUTREACH_RETRY_ATTEMPTS; attempt += 1) {
+    const followUps = await generateFollowUpEmails(
+      result.analysis as Analysis,
+      buildMeta(result),
+      openingEmail
+    );
+    if (followUps?.emails?.length) {
+      result.followUpEmails = followUps;
+      result.outreachExpanded = true;
+      decreaseOutreachCooldown();
+      await syncSavedProspectOutreach(result);
+      return true;
+    }
 
-  result.followUpEmails = followUps;
-  result.outreachExpanded = true;
+    increaseOutreachCooldown(attempt);
+    if (attempt < BATCH_OUTREACH_RETRY_ATTEMPTS) {
+      await wait(getRetryDelay(attempt));
+    }
+  }
+
+  result.followUpEmails = buildFallbackFollowUpEmails(result.analysis as Analysis, buildMeta(result));
+  result.outreachExpanded = false;
   await syncSavedProspectOutreach(result);
   return true;
 }
@@ -189,7 +276,6 @@ function showLoadingShell(host: HTMLElement): void {
   host.innerHTML = `
     <div class="saved-outreach-shell">
       <div class="saved-outreach-section">
-        <div class="saved-outreach-heading">Suggested outreach emails</div>
         <div class="saved-outreach-content">
           <div class="outreach-skeleton-card"></div>
           <div class="outreach-skeleton-card"></div>
@@ -203,6 +289,39 @@ function focusOutreachArea(host: HTMLElement): void {
   window.setTimeout(() => {
     host.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, 80);
+}
+
+async function processBulkTarget(index: number): Promise<boolean> {
+  const footer = findBatchFooter(index);
+  const btn = footer?.querySelector('.batch-generate-emails-btn') as HTMLButtonElement | null;
+  const host = document.querySelector(
+    `.batch-outreach-inline[data-batch-index="${index}"]`
+  ) as HTMLElement | null;
+  const body = host?.closest('.saved-item-body') as HTMLElement | null;
+
+  if (btn && host && body) {
+    setButtonState(btn, 'Generating...', true, 'loading');
+    if (!body.classList.contains('hidden')) {
+      showLoadingShell(host);
+    }
+  }
+
+  const result = batchState.tempBatchResults[index];
+  let success = Boolean(result);
+
+  if (result && !hasOutreachAngles(result)) {
+    success = await generateForResult(index);
+  }
+
+  if (success && result && !hasFollowUpEmails(result)) {
+    success = await generateFollowUpsForResult(index);
+  }
+
+  if (host) {
+    renderInlineOutreach(batchState.tempBatchResults[index], host);
+  }
+  syncVisibleFooter(index);
+  return success;
 }
 
 async function runCardGenerate(
@@ -319,7 +438,7 @@ export async function generateEmailsForIndices(
 
   const targets = indices.filter((index) => {
     const result = batchState.tempBatchResults[index];
-    return result && !hasOutreachAngles(result);
+    return result && needsAnyEmailGeneration(result);
   });
   if (targets.length === 0) {
     onDone({ cancelled: false, completed: 0, total: 0, failed: 0 });
@@ -328,37 +447,32 @@ export async function generateEmailsForIndices(
 
   isGeneratingAll = true;
   cancelGenerateAll = false;
+  adaptiveOutreachDelayMs = BATCH_OUTREACH_DELAY_MS;
   let completed = 0;
   let failed = 0;
+  let nextTargetIndex = 0;
+  const workerCount = Math.min(BATCH_OUTREACH_CONCURRENCY, targets.length);
 
-  for (const index of targets) {
-    if (cancelGenerateAll) break;
-    const footer = findBatchFooter(index);
-    const btn = footer?.querySelector('.batch-generate-emails-btn') as HTMLButtonElement | null;
-    const host = document.querySelector(
-      `.batch-outreach-inline[data-batch-index="${index}"]`
-    ) as HTMLElement | null;
-    const body = host?.closest('.saved-item-body') as HTMLElement | null;
+  async function worker(): Promise<void> {
+    while (!cancelGenerateAll) {
+      const targetPosition = nextTargetIndex;
+      const index = targets[targetPosition];
+      if (index === undefined) return;
+      nextTargetIndex += 1;
 
-    if (btn && host && body) {
-      setButtonState(btn, 'Generating...', true, 'loading');
-      body.classList.remove('hidden');
-      showLoadingShell(host);
-      focusOutreachArea(host);
+      const success = await processBulkTarget(index);
+      if (!success) failed += 1;
+
+      completed += 1;
+      onProgress(completed, targets.length);
+
+      if (!cancelGenerateAll && nextTargetIndex < targets.length) {
+        await wait(adaptiveOutreachDelayMs);
+      }
     }
-
-    const success = await generateForResult(index);
-    if (!success) failed++;
-    if (host) {
-      renderInlineOutreach(batchState.tempBatchResults[index], host);
-      if (success) focusOutreachArea(host);
-    }
-    syncVisibleFooter(index);
-
-    completed++;
-    onProgress(completed, targets.length);
-    if (!cancelGenerateAll && completed < targets.length) await wait(BATCH_OUTREACH_DELAY_MS);
   }
+
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
 
   const cancelled = cancelGenerateAll;
   isGeneratingAll = false;

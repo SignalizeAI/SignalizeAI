@@ -40,6 +40,16 @@ function syncOutreachTabHint(): void {
   hint.classList.remove('hidden');
 }
 
+function syncOutreachHeadingVisibility(): void {
+  const heading = document.getElementById('outreach-messages-heading');
+  if (!heading) return;
+  if (state.outreachAngles?.angles?.length) {
+    heading.classList.remove('hidden');
+    return;
+  }
+  heading.classList.add('hidden');
+}
+
 function setToggleButtonState(
   label: string,
   disabled = false,
@@ -68,6 +78,7 @@ function getExpandedToggleLabel(): string {
 
 export function refreshOutreachUiState(): void {
   syncOutreachTabHint();
+  syncOutreachHeadingVisibility();
   refreshOutreachToggleState();
 }
 
@@ -75,10 +86,11 @@ export function refreshOutreachToggleState(): void {
   const btn = document.getElementById('generate-outreach-btn') as HTMLButtonElement | null;
   const section = document.getElementById('outreach-messages-section');
   if (!btn) return;
-  if (section && !section.classList.contains('hidden')) {
-    setToggleButtonState(getExpandedToggleLabel(), false, 'hide');
+  if (section && !section.classList.contains('hidden') && state.outreachAngles?.angles?.length) {
+    btn.classList.add('hidden');
     return;
   }
+  btn.classList.remove('hidden');
   if (state.outreachAngles?.angles?.length) {
     setToggleButtonState(getCollapsedToggleLabel(), false, 'show');
     return;

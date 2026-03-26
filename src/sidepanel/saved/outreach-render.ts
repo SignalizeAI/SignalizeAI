@@ -191,13 +191,13 @@ function buildControls(
 export function buildSavedOutreachMarkup(item: SavedItemLike, expanded = false): string {
   const payload = item.outreach_angles;
   const angles = Array.isArray(payload?.angles) ? payload.angles : [];
+  const hasOutreach = angles.length > 0;
   const recommended = payload ? getRecommendedAngle(payload) : null;
   const companyName = getCompanyDisplayName(item.title, item.domain);
   const content =
-    payload && angles.length > 0 && recommended
+    payload && hasOutreach && recommended
       ? `
         <div class="saved-outreach-content${expanded ? '' : ' hidden'}">
-          ${buildFollowUpMarkup(item, payload)}
           <div class="saved-outreach-block">
             <div class="saved-outreach-card saved-outreach-card--recommended">
               <div class="saved-outreach-recommended-head">
@@ -222,6 +222,7 @@ export function buildSavedOutreachMarkup(item: SavedItemLike, expanded = false):
                 .join('')}
             </div>
           </div>
+          ${buildFollowUpMarkup(item, payload)}
         </div>
       `
       : '';
@@ -229,7 +230,6 @@ export function buildSavedOutreachMarkup(item: SavedItemLike, expanded = false):
   return `
     <div class="saved-outreach-shell">
       <div class="saved-outreach-section">
-        <div class="saved-outreach-heading">Suggested outreach emails</div>
         ${buildControls(payload, expanded)}
         ${content}
       </div>
