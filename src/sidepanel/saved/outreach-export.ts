@@ -42,7 +42,10 @@ function getRecommendedAngle(payload: OutreachPayloadLike | null): AngleLike | n
   );
 }
 
-function getSecondaryAngles(payload: OutreachPayloadLike | null, recommendedId?: string): AngleLike[] {
+function getSecondaryAngles(
+  payload: OutreachPayloadLike | null,
+  recommendedId?: string
+): AngleLike[] {
   const angles = Array.isArray(payload?.angles) ? payload.angles : [];
   return angles.filter((angle) => angle?.id !== recommendedId);
 }

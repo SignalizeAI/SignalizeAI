@@ -72,10 +72,6 @@ function getCollapsedToggleLabel(): string {
   return state.followUpEmails?.emails?.length ? 'Show Emails' : 'Show Outreach Emails';
 }
 
-function getExpandedToggleLabel(): string {
-  return state.followUpEmails?.emails?.length ? 'Hide Emails' : 'Hide Outreach Emails';
-}
-
 export function refreshOutreachUiState(): void {
   syncOutreachTabHint();
   syncOutreachHeadingVisibility();

@@ -1,8 +1,5 @@
 import type { Analysis } from '../../state.js';
-import type {
-  FollowUpEmailsResult,
-  OutreachAnglesResult,
-} from '../../outreach-messages/types.js';
+import type { FollowUpEmailsResult, OutreachAnglesResult } from '../../outreach-messages/types.js';
 
 type BatchMeta = {
   title: string;
@@ -67,10 +64,6 @@ export function buildFallbackOutreachAngles(
 ): OutreachAnglesResult {
   const company = cleanCompany(meta);
   const whatTheyDo = safeAnalysisValue(analysis.whatTheyDo, 'a fast-moving commercial team');
-  const value = safeAnalysisValue(
-    analysis.valueProposition,
-    'less manual work before outreach starts'
-  );
 
   return {
     recommendedAngleId: 'observation',
@@ -91,7 +84,8 @@ export function buildFallbackOutreachAngles(
       {
         id: 'pain_point',
         label: 'Pain-Point Approach',
-        rationale: 'Center the note on the time lost to manual research and inconsistent follow-through.',
+        rationale:
+          'Center the note on the time lost to manual research and inconsistent follow-through.',
         variations: [
           {
             subject: finalize('Cut research time?', 48),
@@ -123,7 +117,10 @@ export function buildFallbackFollowUpEmails(
   meta: BatchMeta
 ): FollowUpEmailsResult {
   const company = cleanCompany(meta);
-  const value = safeAnalysisValue(analysis.valueProposition, 'save time and tighten outreach quality');
+  const value = safeAnalysisValue(
+    analysis.valueProposition,
+    'save time and tighten outreach quality'
+  );
 
   return {
     emails: [

@@ -77,7 +77,9 @@ function buildEmailsSection(payload: CopyOutreachPayloadLike | null): string {
   const blocks: string[] = [];
 
   if (recommendedVariation) {
-    blocks.push(formatEmailBlock('Recommended', recommendedVariation.subject, recommendedVariation.body));
+    blocks.push(
+      formatEmailBlock('Recommended', recommendedVariation.subject, recommendedVariation.body)
+    );
   }
 
   otherAngles.forEach((angle, index) => {
@@ -220,7 +222,9 @@ export async function buildCopyText(): Promise<string> {
       },
       isShort
     ),
-  ].join('\n\n').trim();
+  ]
+    .join('\n\n')
+    .trim();
 }
 
 export async function buildSavedCopyText(item: any): Promise<string> {
@@ -232,7 +236,10 @@ export async function buildSavedCopyText(item: any): Promise<string> {
       : null;
 
   return [
-    buildStrategySection(item.recommended_outreach_goal || '', item.recommended_outreach_angle || ''),
+    buildStrategySection(
+      item.recommended_outreach_goal || '',
+      item.recommended_outreach_angle || ''
+    ),
     buildEmailsSection(payload),
     buildSnapshotSection(
       {
@@ -249,7 +256,9 @@ export async function buildSavedCopyText(item: any): Promise<string> {
       },
       isShort
     ),
-  ].join('\n\n').trim();
+  ]
+    .join('\n\n')
+    .trim();
 }
 
 export function showActionTooltip(anchorEl: HTMLElement, message: string): void {

@@ -1,9 +1,6 @@
 import { generateFollowUpEmails, generateOutreachAngles } from '../../../ai-analyze.js';
 import { onCopyVariationClick } from '../../outreach-messages/handlers.js';
-import type {
-  FollowUpEmailsResult,
-  OutreachAnglesResult,
-} from '../../outreach-messages/types.js';
+import type { FollowUpEmailsResult, OutreachAnglesResult } from '../../outreach-messages/types.js';
 import { getRecommendedAngleId } from '../../outreach-messages/types.js';
 import { buildSavedOutreachMarkup } from '../../saved/outreach-render.js';
 import { supabase } from '../../supabase.js';
@@ -18,10 +15,7 @@ import {
   BATCH_OUTREACH_RETRY_ATTEMPTS,
   BATCH_OUTREACH_RETRY_BASE_DELAY_MS,
 } from './constants.js';
-import {
-  buildFallbackFollowUpEmails,
-  buildFallbackOutreachAngles,
-} from './fallback-emails.js';
+import { buildFallbackFollowUpEmails, buildFallbackOutreachAngles } from './fallback-emails.js';
 import { batchState } from './state.js';
 import type { BatchResult } from './types.js';
 
@@ -47,10 +41,7 @@ function wait(ms: number): Promise<void> {
 function increaseOutreachCooldown(multiplier: number): void {
   adaptiveOutreachDelayMs = Math.min(
     BATCH_OUTREACH_FAILURE_COOLDOWN_MAX_MS,
-    Math.max(
-      adaptiveOutreachDelayMs,
-      BATCH_OUTREACH_FAILURE_COOLDOWN_BASE_MS * multiplier
-    )
+    Math.max(adaptiveOutreachDelayMs, BATCH_OUTREACH_FAILURE_COOLDOWN_BASE_MS * multiplier)
   );
 }
 
@@ -225,7 +216,10 @@ async function generateForResult(
     }
   }
 
-  result.outreachAngles = buildFallbackOutreachAngles(result.analysis as Analysis, buildMeta(result));
+  result.outreachAngles = buildFallbackOutreachAngles(
+    result.analysis as Analysis,
+    buildMeta(result)
+  );
   result.followUpEmails = null;
   result.outreachExpanded = false;
   result.outreachGeneratedAt = new Date().toISOString();
@@ -265,7 +259,10 @@ async function generateFollowUpsForResult(index: number): Promise<boolean> {
     }
   }
 
-  result.followUpEmails = buildFallbackFollowUpEmails(result.analysis as Analysis, buildMeta(result));
+  result.followUpEmails = buildFallbackFollowUpEmails(
+    result.analysis as Analysis,
+    buildMeta(result)
+  );
   result.outreachExpanded = false;
   await syncSavedProspectOutreach(result);
   return true;
