@@ -23,6 +23,10 @@
   margin-bottom: 12px;
 }
 
+.outreach-section .outreach-row:last-child {
+  margin-bottom: 0;
+}
+
 .outreach-label {
   font-size: 12px;
   font-weight: 600;
