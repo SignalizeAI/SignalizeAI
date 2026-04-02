@@ -146,7 +146,7 @@ export function buildUrlOnlyContent(url: string, reason: string): Content {
   };
 }
 
-export function buildDegradedAnalysis(content: Content, reason: string) {
+export function buildDegradedAnalysis(content: Content) {
   const domain = new URL(content.url).hostname.replace(/^www\./, '');
   const fallbackSummary =
     content.metaDescription?.replace(/\s+/g, ' ').trim().slice(0, 140) ||

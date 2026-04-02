@@ -1,8 +1,6 @@
 import { broadcastToWebsiteTabs } from './website-sync.js';
 
-export async function syncProspectContentToWebsite(
-  savedIds: string[] = []
-): Promise<void> {
+export async function syncProspectContentToWebsite(savedIds: string[] = []): Promise<void> {
   const ids = savedIds.filter(Boolean);
 
   await broadcastToWebsiteTabs({
