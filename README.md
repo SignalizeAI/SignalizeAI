@@ -2,7 +2,7 @@
 
 SignalizeAI is the browser extension for turning public company websites into usable prospect records.
 
-Current version: `5.3.0`
+Current version: `5.4.0`
 
 ## What it does
 
@@ -27,6 +27,7 @@ Current version: `5.3.0`
 - Saves prospects to Supabase
 - Shows saved prospects instead of re-prospecting the same saved website by default
 - Opens saved or unsaved analyses on the website through `Open in website`
+- Syncs with the website saved prospects workspace at `/prospects`
 - Supports Batch Prospecting:
   - CSV upload
   - pasted URLs
@@ -43,6 +44,7 @@ Current version: `5.3.0`
 - copy / open in website / delete actions
 - inline status editing
 - shared data with the website prospect page
+- live reflection on the website saved prospects workspace
 
 ## Website Sync
 

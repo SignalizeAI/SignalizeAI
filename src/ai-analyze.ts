@@ -253,6 +253,7 @@ export async function generateFollowUpEmails(
 }
 
 function normalizeAnalysis(raw: any): Analysis {
+  const DEFAULT_OUTREACH_GOAL = 'Get a quick response';
   const BUYER_PERSONAS = [
     'Founder / CEO',
     'Enterprise Account Executive',
@@ -317,7 +318,7 @@ function normalizeAnalysis(raw: any): Analysis {
     },
 
     recommendedOutreach: {
-      goal: cleanText(raw.recommendedOutreach?.goal, 160),
+      goal: cleanText(raw.recommendedOutreach?.goal, 160) || DEFAULT_OUTREACH_GOAL,
       angle: cleanBulletLines(raw.recommendedOutreach?.angle, 260),
       message: cleanText(raw.recommendedOutreach?.message, 420),
     },

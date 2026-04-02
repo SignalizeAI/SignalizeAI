@@ -1,5 +1,18 @@
 import type { Analysis } from '../state.js';
 
+const SALES_ANGLE_SKIP_PATTERNS = [
+  /limited context/i,
+  /discovery questions/i,
+  /verify fit manually/i,
+  /ai service/i,
+  /\bself-serve\b/i,
+  /\bproduct-led\b/i,
+  /\bplg\b/i,
+  /\bfounder-led\b/i,
+  /\bsales-led\b/i,
+  /\bbuying style\b/i,
+];
+
 function normalizeLines(value: string): string[] {
   return value
     .trim()
@@ -32,6 +45,9 @@ export function buildOutreachAngleItems(analysis: Analysis): string[] {
   const salesAngleLines = normalizeLines(analysis.salesAngle || '');
 
   salesAngleLines.forEach((line) => {
+    if (bulletLines.length >= 4) return;
+    if (SALES_ANGLE_SKIP_PATTERNS.some((pattern) => pattern.test(line))) return;
+
     const hasMatchingLine = bulletLines.some(
       (existingLine) => existingLine.toLowerCase() === line.toLowerCase()
     );

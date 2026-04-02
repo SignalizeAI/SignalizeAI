@@ -5,6 +5,7 @@ import { showLimitModal } from './modal.js';
 import { showToast } from './toast.js';
 import { updateAnalysisDashboardButton } from './dashboard-link.js';
 import { buildPersistedOutreachAngle } from './analysis/outreach-angle.js';
+import { syncProspectContentToWebsite } from './content-sync.js';
 import { getHomepageAnalysisForSave } from './analysis/extraction.js';
 import { loadSavedAnalyses } from './saved/index.js';
 
@@ -129,6 +130,9 @@ export async function ensureCurrentAnalysisSaved(): Promise<string | null> {
   if (insertData?.id) {
     if (saveButton) saveButton.dataset.savedId = insertData.id;
     updateAnalysisDashboardButton(insertData.id);
+    await syncProspectContentToWebsite([insertData.id]);
+  } else {
+    await syncProspectContentToWebsite();
   }
   if (Number.isFinite(state.totalSavedCount)) {
     state.totalSavedCount += 1;
