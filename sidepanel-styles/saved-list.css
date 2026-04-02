@@ -325,8 +325,9 @@
 
 .saved-outreach-controls {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
 }
 
 .saved-outreach-action-btn {
@@ -334,16 +335,21 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-primary);
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--border-medium);
+  background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
   color: var(--text-primary);
-  height: 34px;
-  padding: 0 12px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  font-weight: 700;
   cursor: pointer;
-  transition: border-color 0.2s ease;
+  box-shadow: inset 0 1px 0 var(--border-light);
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .saved-outreach-action-btn svg {
@@ -352,12 +358,15 @@
 }
 
 .saved-outreach-action-btn:hover {
-  border-color: var(--border-strong);
+  border-color: var(--accent-light);
+  background: color-mix(in srgb, var(--accent-blue-bg) 18%, var(--bg-primary) 82%);
+  transform: translateY(-1px);
 }
 
 .saved-outreach-action-btn:disabled {
   opacity: 0.7;
   cursor: wait;
+  transform: none;
 }
 
 .saved-outreach-subheading {

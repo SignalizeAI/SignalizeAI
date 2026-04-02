@@ -173,6 +173,13 @@ chrome.runtime.onMessage.addListener(
       return true;
     }
 
+    if (msg.type === 'GET_EXTENSION_SESSION') {
+      chrome.storage.local.get('supabaseSession', ({ supabaseSession }) => {
+        sendResponse({ ok: true, session: supabaseSession || null });
+      });
+      return true;
+    }
+
     if (msg.type === 'WEBSITE_THEME_CHANGED') {
       chrome.runtime.sendMessage(
         {
@@ -193,6 +200,20 @@ chrome.runtime.onMessage.addListener(
           type: 'PROSPECT_STATUS_UPDATED',
           savedId: msg.savedId,
           status: msg.status,
+        },
+        () => {
+          void chrome.runtime.lastError;
+        }
+      );
+      sendResponse({ ok: true });
+      return true;
+    }
+
+    if (msg.type === 'PROSPECT_CONTENT_UPDATED') {
+      chrome.runtime.sendMessage(
+        {
+          type: 'PROSPECT_CONTENT_UPDATED',
+          savedId: msg.savedId,
         },
         () => {
           void chrome.runtime.lastError;

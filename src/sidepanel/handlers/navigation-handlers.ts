@@ -3,6 +3,7 @@ import { supabase } from '../supabase.js';
 import { state } from '../state.js';
 import { buildCopyText, copyAnalysisText } from '../clipboard.js';
 import { loadSettings } from '../settings.js';
+import { WEBSITE_BASE_URL } from '../../config.js';
 
 export function setupNavigationHandlers(): void {
   const dropdownHeader = document.getElementById('dropdown-header');
@@ -82,7 +83,7 @@ export function setupNavigationHandlers(): void {
 
   subscriptionMenu?.addEventListener('click', (e: MouseEvent) => {
     e.preventDefault();
-    chrome.tabs.create({ url: 'https://signalizeai.org/pricing' });
+    chrome.tabs.create({ url: `${WEBSITE_BASE_URL}/pricing` });
   });
 
   const profileMenuItem = document.getElementById('menu-profile');
@@ -116,38 +117,5 @@ export function setupNavigationHandlers(): void {
 
     const text = await buildCopyText();
     copyAnalysisText(text, copyBtn, formatLabel);
-  });
-
-  const outreachQuickCopy = document.getElementById('ai-outreach-quick-copy');
-
-  outreachQuickCopy?.addEventListener('click', async () => {
-    const outreachMessage = document.getElementById('ai-outreach-message')?.textContent || '';
-    if (!outreachMessage || outreachMessage === '—') return;
-
-    try {
-      await navigator.clipboard.writeText(outreachMessage);
-      const span = outreachQuickCopy.querySelector('span');
-      if (span) span.textContent = 'Copied!';
-
-      const svg = outreachQuickCopy.querySelector('svg');
-      if (svg) {
-        svg.innerHTML = '<polyline points="20 6 9 17 4 12"></polyline>';
-      }
-
-      setTimeout(() => {
-        if (span) span.textContent = 'Copy';
-        if (svg) {
-          svg.innerHTML =
-            '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>';
-        }
-      }, 2000);
-    } catch {
-      const span = outreachQuickCopy.querySelector('span');
-      if (span) span.textContent = 'Copy failed';
-
-      setTimeout(() => {
-        if (span) span.textContent = 'Copy';
-      }, 2000);
-    }
   });
 }

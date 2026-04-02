@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SignalizeAI",
-  "version": "5.2.0",
+  "version": "5.3.0",
   "description": "Sell to any company. Get sales-ready insights and outreach in seconds.",
   "permissions": ["activeTab", "storage", "tabs", "scripting"],
   "host_permissions": [

@@ -39,18 +39,21 @@ export function updateSelectionUI(): void {
     const copyBtn = itemEl.querySelector<HTMLElement>('.copy-saved-btn');
     const openWebsiteBtn = itemEl.querySelector<HTMLElement>('.open-dashboard-saved-btn');
     const deleteBtn = itemEl.querySelector<HTMLElement>('.delete-saved-btn');
+    const statusEditBtn = itemEl.querySelector<HTMLElement>('.saved-status-edit-btn');
 
     if (enable) {
       checkbox?.classList.remove('hidden');
       copyBtn?.classList.add('hidden');
       openWebsiteBtn?.classList.add('hidden');
       deleteBtn?.classList.add('hidden');
+      statusEditBtn?.classList.add('hidden');
     } else {
       if (checkbox) checkbox.checked = false;
       checkbox?.classList.add('hidden');
       copyBtn?.classList.remove('hidden');
       openWebsiteBtn?.classList.remove('hidden');
       deleteBtn?.classList.remove('hidden');
+      statusEditBtn?.classList.remove('hidden');
     }
   };
 

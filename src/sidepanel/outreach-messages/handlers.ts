@@ -6,11 +6,12 @@ import { state } from '../state.js';
 import { supabase } from '../supabase.js';
 import { showToast } from '../toast.js';
 import { generateOutreachAngles } from '../../ai-analyze.js';
+import { updateCachedOutreach } from '../cache.js';
+import { setActiveAnalysisTab } from '../analysis/tabs.js';
 import { formatOutreachEmailBody } from './format.js';
 import { onGenerateFollowUpsClick } from './followup-handlers.js';
 import { resetFollowUpUi } from './followup-render.js';
 import {
-  collapseOutreachAngles,
   renderOutreachAngles,
   renderOutreachError,
   renderOutreachLoading,
@@ -33,13 +34,12 @@ const CHECK_ICON = `
   </svg>`;
 
 function jumpToOutreachArea(): void {
-  const section = document.getElementById('outreach-messages-section');
   const btn = document.getElementById('generate-outreach-btn') as HTMLButtonElement | null;
-  const target =
-    section && !section.classList.contains('hidden') ? section : (btn as HTMLElement | null);
-  if (!target || !btn) return;
+  const analysisCard = document.getElementById('ai-analysis');
+  if (!btn || !analysisCard) return;
 
-  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setActiveAnalysisTab('outreach');
+  analysisCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const jumpBtn = document.getElementById('outreach-jump-btn') as HTMLButtonElement | null;
   jumpBtn?.classList.add('outreach-jump-btn--highlight');
   window.setTimeout(() => {
@@ -90,6 +90,18 @@ async function persistOutreachAnglesIfSaved(): Promise<void> {
   }
 }
 
+async function syncOutreachToCache(): Promise<void> {
+  const meta = state.lastExtractedMeta;
+  if (!meta || !state.outreachAngles) return;
+
+  await updateCachedOutreach(meta.url, meta.domain, {
+    generated_at: new Date().toISOString(),
+    recommended_angle_id: state.outreachAngles.recommendedAngleId,
+    angles: state.outreachAngles.angles,
+    ...(state.followUpEmails ? { follow_ups: state.followUpEmails } : {}),
+  });
+}
+
 async function runGenerate(): Promise<void> {
   const analysis = state.lastAnalysis;
   const meta = state.lastExtractedMeta;
@@ -121,19 +133,19 @@ async function runGenerate(): Promise<void> {
   }
 
   state.outreachAngles = result;
+  await syncOutreachToCache();
   await persistOutreachAnglesIfSaved();
   renderOutreachAngles(result, analysis);
 }
 
 export function onGenerateClick(): void {
   if (state.outreachAnglesLoading) return;
+  setActiveAnalysisTab('outreach');
 
   if (state.outreachAngles?.angles?.length) {
     const section = document.getElementById('outreach-messages-section');
     if (section?.classList.contains('hidden')) {
       showExistingOutreachAngles();
-    } else {
-      collapseOutreachAngles();
     }
     return;
   }

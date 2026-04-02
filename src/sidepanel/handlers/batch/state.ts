@@ -9,6 +9,7 @@ export interface BatchRuntimeState {
   isBatchSelectionMode: boolean;
   lastBatchInputMode: 'csv' | 'paste';
   analyzeQueue: Promise<void>;
+  analyzeActiveCount: number;
   currentBatchSize: number;
   isBatchPageTransitioning: boolean;
   lastAnalyzeAt: number;
@@ -25,6 +26,7 @@ export const batchState: BatchRuntimeState = {
   isBatchSelectionMode: false,
   lastBatchInputMode: 'csv',
   analyzeQueue: Promise.resolve(),
+  analyzeActiveCount: 0,
   currentBatchSize: 0,
   isBatchPageTransitioning: false,
   lastAnalyzeAt: 0,

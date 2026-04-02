@@ -1,5 +1,9 @@
 import { state } from '../../state.js';
 import { supabase } from '../../supabase.js';
+import {
+  buildPersistedOutreachAngle,
+  splitPersistedOutreachAngle,
+} from '../../analysis/outreach-angle.js';
 import { normalizeStoredOutreachPayload } from '../../outreach-messages/types.js';
 import { mapBatchResultToExportItem } from './helpers.js';
 import { batchState } from './state.js';
@@ -26,6 +30,23 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
       `;
       reviewList.appendChild(row);
     }
+  }
+
+  function buildAngleMarkup(value?: string): string {
+    const escapeHtml = (text: string): string =>
+      text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    const items = splitPersistedOutreachAngle(value || '');
+    if (!items.length) return '—';
+    return `
+      <ul class="outreach-bullet-list">
+        ${items.map((entry) => `<li>${escapeHtml(entry)}</li>`).join('')}
+      </ul>
+    `;
   }
 
   async function navigateBatchPage(page: number) {
@@ -424,12 +445,29 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
       });
 
       body.innerHTML = `
-      <p><strong>Sales readiness:</strong> ${res.analysis.salesReadinessScore ?? '—'}</p>
-      <p><strong>What they do:</strong> ${res.analysis.whatTheyDo || '—'}</p>
-      <p><strong>Target customer:</strong> ${res.analysis.targetCustomer || '—'}</p>
-      <p><strong>Value proposition:</strong> ${res.analysis.valueProposition || '—'}</p>
       <p>
-        <strong>Best sales persona:</strong> ${res.analysis.bestSalesPersona?.persona || '—'}
+        <strong>Goal:</strong>
+        ${res.analysis.recommendedOutreach?.goal || '—'}
+      </p>
+      <div>
+        <strong>Outreach angle:</strong>
+        ${buildAngleMarkup(buildPersistedOutreachAngle(res.analysis))}
+      </div>
+
+      <div class="batch-outreach-inline hidden" data-batch-index="${index}"></div>
+
+      <hr style="margin:8px 0; opacity:0.3" />
+
+      <p><strong>What they do:</strong> ${res.analysis.whatTheyDo || '—'}</p>
+      <p style="opacity:0.85">
+        <strong>Company overview:</strong>
+        ${res.content.metaDescription || '—'}
+      </p>
+      <p><strong>Value proposition:</strong> ${res.analysis.valueProposition || '—'}</p>
+      <p><strong>Target customer:</strong> ${res.analysis.targetCustomer || '—'}</p>
+      <p><strong>Sales readiness:</strong> ${res.analysis.salesReadinessScore ?? '—'}</p>
+      <p>
+        <strong>Best persona recommendation:</strong> ${res.analysis.bestSalesPersona?.persona || '—'}
         ${
           res.analysis.bestSalesPersona?.reason
             ? `<br />
@@ -439,44 +477,9 @@ export function createBatchRenderFlow(deps: RenderFlowDeps) {
             : ''
         }
       </p>
-      <p><strong>Sales angle:</strong> ${res.analysis.salesAngle || '—'}</p>
-
-      <hr style="margin:10px 0; opacity:0.25" />
-
-      <p><strong>Recommended outreach</strong></p>
-
-      <p>
-        <strong>Who:</strong>
-        ${res.analysis.recommendedOutreach?.persona || '—'}
-      </p>
-
-      <p>
-        <strong>Goal:</strong>
-        ${res.analysis.recommendedOutreach?.goal || '—'}
-      </p>
-
-      <p>
-        <strong>Angle:</strong>
-        ${res.analysis.recommendedOutreach?.angle || '—'}
-      </p>
-
-      <p>
-        <strong>Message:</strong><br />
-        <span style="white-space: pre-wrap;">${(res.analysis.recommendedOutreach?.message || '—').trim()}</span>
-      </p>
-
-      <hr style="margin:8px 0; opacity:0.3" />
-
-      <p style="opacity:0.85">
-        <strong>Company overview:</strong>
-        ${res.content.metaDescription || '—'}
-      </p>
     `;
 
-      const outreachHost = document.createElement('div');
-      outreachHost.className = 'batch-outreach-inline hidden';
-      outreachHost.dataset.batchIndex = index.toString();
-      body.appendChild(outreachHost);
+      const outreachHost = body.querySelector<HTMLElement>('.batch-outreach-inline')!;
 
       wrapper.appendChild(headerRow);
       wrapper.appendChild(body);

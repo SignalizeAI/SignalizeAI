@@ -1,95 +1,77 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./icons/128.png" />
-    <source media="(prefers-color-scheme: light)" srcset="./icons/128(light).png" />
-    <img src="./icons/128(light).png" alt="SignalizeAI" width="128" />
-  </picture>
-</p>
+# SignalizeAI Extension
 
-<h1 align="center">SignalizeAI Extension</h1>
+SignalizeAI is the browser extension for turning public company websites into usable prospect records.
 
-<p align="center">
-  <strong>Sell to any company in seconds</strong><br />
-  Get sales-ready insights and outreach in seconds
-</p>
+Current version: `5.3.0`
 
-SignalizeAI is a Chrome and Firefox extension that turns any public company website into a usable prospect record. It helps users move from a website to sales context, outreach emails, follow-ups, and saved prospects without leaving the browser.
+## What it does
 
-## What The Extension Does
-
-- Prospects the current website or any URL through Quick Website Check
-- Generates sales-ready fields like:
+- Prospects the active website or any URL through Quick Website Check
+- Shows a tabbed insights flow:
+  - Strategy
+  - Emails
+  - Snapshot
+- Generates:
   - what they do
-  - target customer
+  - company overview
   - value proposition
+  - target customer
   - sales readiness
-  - best persona
-  - sales angle
-  - suggested message
-- Generates outreach emails:
-  - 3 approaches
+  - best persona recommendation
+  - goal
+  - outreach angle
+- Generates email content:
+  - 3 outreach approaches
   - 1 recommended email
   - follow-up emails
-- Supports Saved Prospects with:
-  - status tracking
-  - search and filtering
-  - CSV / Excel export on supported plans
-- Supports Batch Prospecting with:
-  - CSV upload or pasted URLs
-  - bulk prospecting
-  - per-row / bulk outreach generation
-  - follow-up generation
-  - save selected / save all
-- Syncs with the website dashboard for:
-  - auth state
-  - prospect status
-  - prospect content updates
-  - theme changes
+- Saves prospects to Supabase
+- Shows saved prospects instead of re-prospecting the same saved website by default
+- Opens saved or unsaved analyses on the website through `Open in website`
+- Supports Batch Prospecting:
+  - CSV upload
+  - pasted URLs
+  - multi-select save
+  - bulk outreach + follow-up generation
+  - CSV / Excel export
+  - compact batch analysis mode for faster large runs
+  - resilient fallback email generation when AI responses fail
 
-## Plans
+## Saved Prospect Features
 
-- Free: 5 prospects/day, save up to 3 prospects
-- Pro: 50 prospects/day, batch prospecting, saved search/filter, export, priority support
-- Team: 500 prospects/day, larger batch limits, larger saved limits, team-scale workflows
+- search and filter
+- prospect status tracking
+- copy / open in website / delete actions
+- inline status editing
+- shared data with the website prospect page
 
-## Tech Stack
+## Website Sync
 
-- Manifest V3 browser extension
-- TypeScript + esbuild
-- Supabase for auth and saved prospect storage
-- Cloudflare Workers backend for AI and billing endpoints
+The extension syncs with `signalizeai.org` for:
 
-## Project Structure
+- auth state
+- sign-out state
+- theme changes
+- prospect status updates
+- prospect content refreshes
+- install detection
 
-```text
-SignalizeAI/
-├── background.ts
-├── build.ts
-├── content-auth-bridge.ts
-├── content-extractor.ts
-├── sidepanel.ts
-├── sidepanel-loader.ts
-├── sidepanel-partials/
-├── sidepanel-styles/
-├── src/
-│   ├── analysis/
-│   ├── handlers/
-│   ├── outreach-messages/
-│   ├── saved/
-│   └── sidepanel/
-├── manifest.chrome*.json
-└── manifest.firefox*.json
-```
+## Tech stack
 
-## Local Development
+- Manifest V3
+- TypeScript
+- esbuild
+- Supabase auth + storage
+- Cloudflare Workers backend
 
-1. Install dependencies:
+## Local development
+
+1. Install dependencies
 
 ```bash
 npm install
 ```
 
-2. Create `.env.local` with at least:
+2. Create `.env.local`
 
 ```env
 VITE_SUPABASE_URL=your_supabase_url
@@ -102,7 +84,7 @@ API_ENV=dev
 - `https://dev-api.signalizeai.org`
 - `http://localhost:3000`
 
-3. Choose the browser manifest and build.
+3. Choose a manifest before building
 
 Chrome local:
 
@@ -118,49 +100,43 @@ cp manifest.firefox.dev.json manifest.json
 npm run build
 ```
 
-4. Load the extension manually:
+4. Load the extension
 
-- Chrome: load the `SignalizeAI/` folder as an unpacked extension
-- Firefox: load the `SignalizeAI/` folder as a temporary add-on
+- Chrome: load `SignalizeAI/` as an unpacked extension
+- Firefox: load `SignalizeAI/` as a temporary add-on
 
-## Build Commands
+## Build commands
 
-- `npm run build`  
-  Builds using the current `manifest.json`
+- `npm run build`
+  - builds using the current `manifest.json`
+- `npm run build:chrome`
+  - production Chrome build
+- `npm run build:firefox`
+  - production Firefox build
+- `npm run build:chrome:dev`
+  - dev Chrome manifest + build
+- `npm run build:firefox:dev`
+  - dev Firefox manifest + build
+- `npm run dev`
+  - Chromium watch flow
+- `npm run dev:firefox`
+  - Firefox watch flow
 
-- `npm run build:chrome`  
-  Production Chrome build
-
-- `npm run build:firefox`  
-  Production Firefox build
-
-- `npm run build:chrome:dev`  
-  Chrome dev manifest + build
-
-- `npm run build:firefox:dev`  
-  Firefox dev manifest + build
-
-- `npm run dev`  
-  Chromium watch flow with auto-reload
-
-- `npm run dev:firefox`  
-  Firefox watch flow
-
-## Quality Checks
+## Checks
 
 - `npm run lint`
 - `npm run format`
 - `npm run format:check`
 
-## Auth And Security Notes
+## Important notes
 
-- Google sign-in uses Supabase auth
-- Saved prospects live in Supabase
 - Production manifests only inject the website bridge on `signalizeai.org`
-- Dev manifests also allow localhost website syncing for local testing
+- Dev manifests also allow localhost syncing with the website
+- `npm run build:chrome` and `npm run build:firefox` overwrite `manifest.json`
+- If you switch between prod and local testing, re-copy the correct manifest before rebuilding
 
 ## Support
 
 - Website: https://signalizeai.org
-- Email: support@signalizeai.org
 - Privacy: https://signalizeai.org/privacy
+- Email: support@signalizeai.org

@@ -11,6 +11,7 @@ import { generateSavedFollowUpPayload, generateSavedOutreachPayload } from './ou
 import { updateDeleteState, updateSelectAllIcon } from './selection.js';
 import { showUndoToast } from './delete.js';
 import { buildSavedOutreachMarkup } from './outreach-render.js';
+import { splitPersistedOutreachAngle } from '../analysis/outreach-angle.js';
 
 const exportToggle = document.getElementById('export-menu-toggle');
 const filterToggle = document.getElementById('filter-toggle');
@@ -27,11 +28,8 @@ interface SavedItem {
   value_proposition?: string;
   best_sales_persona?: string;
   best_sales_persona_reason?: string;
-  sales_angle?: string;
-  recommended_outreach_persona?: string;
   recommended_outreach_goal?: string;
   recommended_outreach_angle?: string;
-  recommended_outreach_message?: string;
   prospect_status?: string;
   [key: string]: any;
 }
@@ -137,6 +135,14 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
   const escapedTitle = escapeHtml(item.title || item.domain || '');
   const escapedDescription = escapeHtml(item.description || '—');
   const currentStatus = item.prospect_status || 'not_contacted';
+  const angleItems = splitPersistedOutreachAngle(item.recommended_outreach_angle || '');
+  const angleMarkup = angleItems.length
+    ? `
+      <ul class="outreach-bullet-list">
+        ${angleItems.map((entry) => `<li>${escapeHtml(entry)}</li>`).join('')}
+      </ul>
+    `
+    : '—';
 
   const wrapper = document.createElement('div');
   wrapper.dataset.salesScore = String(Number(item.sales_readiness_score ?? 0));
@@ -235,12 +241,31 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
   </div>
 
   <div class="saved-item-body hidden">
-    <p><strong>Sales readiness:</strong> ${item.sales_readiness_score ?? '—'}</p>
-    <p><strong>What they do:</strong> ${item.what_they_do || '—'}</p>
-    <p><strong>Target customer:</strong> ${item.target_customer || '—'}</p>
-    <p><strong>Value proposition:</strong> ${item.value_proposition || '—'}</p>
     <p>
-      <strong>Best sales persona:</strong> ${item.best_sales_persona || '—'}
+      <strong>Goal:</strong>
+      ${item.recommended_outreach_goal || '—'}
+    </p>
+    <div>
+      <strong>Outreach angle:</strong>
+      ${angleMarkup}
+    </div>
+
+    <hr style="margin:8px 0; opacity:0.3" />
+
+    ${buildSavedOutreachMarkup(item)}
+
+    <hr style="margin:8px 0; opacity:0.3" />
+
+    <p><strong>What they do:</strong> ${item.what_they_do || '—'}</p>
+    <p style="opacity:0.85">
+      <strong>Company overview:</strong>
+      ${escapedDescription}
+    </p>
+    <p><strong>Value proposition:</strong> ${item.value_proposition || '—'}</p>
+    <p><strong>Target customer:</strong> ${item.target_customer || '—'}</p>
+    <p><strong>Sales readiness:</strong> ${item.sales_readiness_score ?? '—'}</p>
+    <p>
+      <strong>Best persona recommendation:</strong> ${item.best_sales_persona || '—'}
       ${
         item.best_sales_persona_reason
           ? `<br />
@@ -249,40 +274,6 @@ export function renderSavedItem(item: SavedItem): HTMLElement {
       </span>`
           : ''
       }
-    </p>
-    <p><strong>Sales angle:</strong> ${item.sales_angle || '—'}</p>
-
-    <hr style="margin:10px 0; opacity:0.25" />
-
-    <p><strong>Recommended outreach</strong></p>
-
-    <p>
-      <strong>Who:</strong>
-      ${item.recommended_outreach_persona || '—'}
-    </p>
-
-    <p>
-      <strong>Goal:</strong>
-      ${item.recommended_outreach_goal || '—'}
-    </p>
-
-    <p>
-      <strong>Angle:</strong>
-      ${item.recommended_outreach_angle || '—'}
-    </p>
-
-    <p>
-      <strong>Message:</strong><br />
-<span style="white-space: pre-wrap;">${(item.recommended_outreach_message || '—').trim()}</span>
-    </p>
-
-    ${buildSavedOutreachMarkup(item)}
-
-    <hr style="margin:8px 0; opacity:0.3" />
-
-    <p style="opacity:0.85">
-      <strong>Company overview:</strong>
-      ${escapedDescription}
     </p>
 
     ${

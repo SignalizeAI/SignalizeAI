@@ -25,7 +25,6 @@ export interface BestSalesPersona {
 }
 
 export interface RecommendedOutreach {
-  persona: string;
   goal: string;
   angle: string;
   message: string;
@@ -51,6 +50,7 @@ export interface ActiveFilters {
 }
 
 export interface State {
+  analysisTab: 'strategy' | 'outreach' | 'overview';
   lastContentHash: string | null;
   lastAnalysis: Analysis | null;
   lastExtractedMeta: ExtractedMeta | null;
@@ -88,6 +88,7 @@ export interface State {
 }
 
 export const state: State = {
+  analysisTab: 'strategy',
   lastContentHash: null,
   lastAnalysis: null,
   lastExtractedMeta: null,

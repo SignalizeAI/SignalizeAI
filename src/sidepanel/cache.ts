@@ -11,6 +11,7 @@ interface WebsiteContent {
 interface CachedEntry {
   analysis: any;
   meta: any;
+  outreachPayload?: any;
   timestamp: number;
 }
 
@@ -134,11 +135,15 @@ export async function getCachedAnalysisByDomain(domain: string): Promise<CachedE
   });
 }
 
-export function setCachedAnalysis(url: string, payload: { analysis: any; meta: any }): void {
+export function setCachedAnalysis(
+  url: string,
+  payload: { analysis: any; meta: any; outreachPayload?: any }
+): void {
   const key = makeCacheKey(url);
   const value = {
     analysis: payload.analysis,
     meta: payload.meta,
+    outreachPayload: payload.outreachPayload,
     timestamp: Date.now(),
   };
   chrome.storage.local.set({ [key]: value });
@@ -146,13 +151,45 @@ export function setCachedAnalysis(url: string, payload: { analysis: any; meta: a
 
 export function setCachedAnalysisByDomain(
   domain: string,
-  payload: { analysis: any; meta: any }
+  payload: { analysis: any; meta: any; outreachPayload?: any }
 ): void {
   const key = makeDomainCacheKey(domain);
   const value = {
     analysis: payload.analysis,
     meta: payload.meta,
+    outreachPayload: payload.outreachPayload,
     timestamp: Date.now(),
   };
   chrome.storage.local.set({ [key]: value });
+}
+
+export async function updateCachedOutreach(
+  url: string,
+  domain: string,
+  outreachPayload: any
+): Promise<void> {
+  const [urlEntry, domainEntry] = await Promise.all([
+    getCachedAnalysis(url),
+    getCachedAnalysisByDomain(domain),
+  ]);
+
+  if (urlEntry) {
+    setCachedAnalysis(url, {
+      analysis: urlEntry.analysis,
+      meta: urlEntry.meta,
+      outreachPayload,
+    });
+  }
+
+  if (domainEntry) {
+    setCachedAnalysisByDomain(domain, {
+      analysis: domainEntry.analysis,
+      meta: domainEntry.meta,
+      outreachPayload,
+    });
+  }
+}
+
+export async function clearCachedOutreach(url: string, domain: string): Promise<void> {
+  await updateCachedOutreach(url, domain, null);
 }

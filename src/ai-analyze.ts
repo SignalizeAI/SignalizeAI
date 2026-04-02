@@ -24,7 +24,6 @@ interface BestSalesPersona {
 }
 
 interface RecommendedOutreach {
-  persona: string;
   goal: string;
   angle: string;
   message: string;
@@ -263,23 +262,46 @@ function normalizeAnalysis(raw: any): Analysis {
     'Partnerships / Alliances',
   ];
 
-  const OUTREACH_PERSONAS = [
-    'SDR',
-    'Account Executive',
-    'Enterprise AE',
-    'Partnerships Manager',
-    'Founder',
-  ];
-
   const cleanText = (v: any, max: number = 240): string =>
     typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '';
+  const splitBulletFragments = (value: string): string[] =>
+    value
+      .split(/\r?\n+/)
+      .flatMap((line: string) =>
+        line.split(/\s*(?:[;|]|\.\s+(?=[A-Z]))\s*/g).map((part: string) =>
+          part
+            .replace(/^[-*•]\s*/, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+        )
+      )
+      .filter(Boolean);
+  const cleanBulletLines = (v: any, max: number = 260): string =>
+    typeof v === 'string'
+      ? splitBulletFragments(
+          v
+            .trim()
+            .replace(/\s+-\s+/g, '\n- ')
+            .replace(/\s+[•*]\s+/g, '\n- ')
+            .replace(
+              /,\s+(?=(?:Focus|Lead|Position|Tie|Frame|Keep|Show|Use|Align|Target|Pitch)\b)/g,
+              '\n- '
+            )
+            .replace(
+              /\s+(?=(?:Focus|Lead|Position|Tie|Frame|Keep|Show|Use|Align|Target|Pitch)\b)/g,
+              '\n'
+            )
+            .replace(/\n{2,}/g, '\n')
+            .trim()
+        )
+          .map((line: string) => `- ${line}`)
+          .slice(0, 6)
+          .join('\n')
+          .slice(0, max)
+      : '';
 
   const normalizeBuyerPersona = (p: any): string =>
     BUYER_PERSONAS.find((x) => x.toLowerCase() === String(p).toLowerCase()) || 'Mid-Market AE';
-
-  const normalizeOutreachPersona = (p: any): string =>
-    OUTREACH_PERSONAS.find((x) => x.toLowerCase() === String(p).toLowerCase()) ||
-    'Account Executive';
 
   return {
     whatTheyDo: cleanText(raw.whatTheyDo, 200),
@@ -295,9 +317,8 @@ function normalizeAnalysis(raw: any): Analysis {
     },
 
     recommendedOutreach: {
-      persona: normalizeOutreachPersona(raw.recommendedOutreach?.persona),
       goal: cleanText(raw.recommendedOutreach?.goal, 160),
-      angle: cleanText(raw.recommendedOutreach?.angle, 220),
+      angle: cleanBulletLines(raw.recommendedOutreach?.angle, 260),
       message: cleanText(raw.recommendedOutreach?.message, 420),
     },
   };

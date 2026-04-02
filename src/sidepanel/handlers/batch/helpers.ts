@@ -1,3 +1,4 @@
+import { buildPersistedOutreachAngle } from '../../analysis/outreach-angle.js';
 import type { BatchResult, Content } from './types.js';
 
 export function parseUrlsFromText(text: string): string[] {
@@ -64,11 +65,8 @@ export function mapBatchResultToExportItem(r: BatchResult) {
     value_proposition: r.analysis.valueProposition,
     best_sales_persona: r.analysis.bestSalesPersona?.persona,
     best_sales_persona_reason: r.analysis.bestSalesPersona?.reason,
-    sales_angle: r.analysis.salesAngle,
-    recommended_outreach_persona: r.analysis.recommendedOutreach?.persona,
     recommended_outreach_goal: r.analysis.recommendedOutreach?.goal,
-    recommended_outreach_angle: r.analysis.recommendedOutreach?.angle,
-    recommended_outreach_message: r.analysis.recommendedOutreach?.message,
+    recommended_outreach_angle: buildPersistedOutreachAngle(r.analysis),
     outreach_angles: outreachAngles,
   };
 }
@@ -81,23 +79,23 @@ export function cleanTitle(title: string): string {
 
 export function trimContentForAnalyze(content: Content): Content {
   const title = (content.title || '').trim().slice(0, 220);
-  const metaDescription = (content.metaDescription || '').trim().slice(0, 450);
+  const metaDescription = (content.metaDescription || '').trim().slice(0, 320);
 
   const headings = content.headings
     .map((h) => (h || '').replace(/\s+/g, ' ').trim())
     .filter(Boolean)
-    .slice(0, 12)
-    .map((h) => h.slice(0, 180));
+    .slice(0, 8)
+    .map((h) => h.slice(0, 140));
 
   let totalParagraphChars = 0;
   const paragraphs: string[] = [];
   for (const raw of content.paragraphs) {
-    if (paragraphs.length >= 18) break;
+    if (paragraphs.length >= 10) break;
     const cleaned = (raw || '').replace(/\s+/g, ' ').trim();
     if (!cleaned) continue;
 
-    const clipped = cleaned.slice(0, 420);
-    if (totalParagraphChars + clipped.length > 8000) break;
+    const clipped = cleaned.slice(0, 260);
+    if (totalParagraphChars + clipped.length > 3200) break;
 
     paragraphs.push(clipped);
     totalParagraphChars += clipped.length;
