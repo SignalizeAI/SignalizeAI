@@ -146,23 +146,31 @@ export function buildUrlOnlyContent(url: string, reason: string): Content {
   };
 }
 
-export function buildDegradedAnalysis(content: Content, reason: string) {
+export function buildDegradedAnalysis(content: Content) {
   const domain = new URL(content.url).hostname.replace(/^www\./, '');
+  const fallbackSummary =
+    content.metaDescription?.replace(/\s+/g, ' ').trim().slice(0, 140) ||
+    `${cleanTitle(content.title || domain)} website`;
   return {
-    whatTheyDo: `Automatic fallback summary for ${domain}.`,
-    targetCustomer: 'Unknown (AI service temporarily unavailable).',
-    valueProposition: 'Could not be reliably inferred from full page content.',
-    salesAngle: `Lead with discovery questions and verify fit manually. (${reason})`,
+    whatTheyDo: fallbackSummary,
+    targetCustomer: 'Target buyer needs a quick manual review.',
+    valueProposition: 'Confirm the core offer from the live site before pitching.',
+    salesAngle: 'Keep the opener neutral and validate fit from the site copy.',
     salesReadinessScore: 20,
     bestSalesPersona: {
       persona: 'Mid-Market AE',
-      reason: 'Fallback default due to temporary AI service unavailability.',
+      reason: 'Use a general outbound motion until the sales path is clearer.',
     },
     recommendedOutreach: {
       persona: 'Account Executive',
-      goal: 'Start a qualification conversation',
-      angle: 'Acknowledge limited context and ask targeted discovery questions',
-      message: `Hi team at ${domain}, I looked at your site and wanted to ask a few questions to understand your priorities and see if there's a fit.`,
+      goal: 'Get a quick response',
+      angle: [
+        '- Reference visible site copy only',
+        '- Keep the opener brief',
+        '- Validate fit before pitching',
+        '- Use one concrete observation',
+      ].join('\n'),
+      message: `Hi ${domain}, came across your site and wanted to reach out. If improving prospecting or first-touch outreach is relevant right now, happy to share a quick idea.`,
     },
   };
 }
