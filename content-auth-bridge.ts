@@ -155,6 +155,18 @@ chrome.runtime.onMessage.addListener((message) => {
     return;
   }
 
+  if (message?.type === 'SYNC_PROSPECT_CONTENT_TO_PAGE') {
+    window.postMessage(
+      {
+        type: 'SIGNALIZE_EXTENSION_PROSPECT_CONTENT_UPDATED',
+        savedId: message.savedId,
+        savedIds: message.savedIds,
+      },
+      window.location.origin
+    );
+    return;
+  }
+
   if (message?.type !== 'SYNC_PROSPECT_STATUS_TO_PAGE') return;
 
   window.postMessage(

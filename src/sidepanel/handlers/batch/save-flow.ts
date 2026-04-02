@@ -3,6 +3,7 @@ import { loadQuotaFromAPI, renderQuotaBanner } from '../../quota.js';
 import { showActionTooltip } from '../../clipboard.js';
 import { showToast } from '../../toast.js';
 import { buildPersistedOutreachAngle } from '../../analysis/outreach-angle.js';
+import { syncProspectContentToWebsite } from '../../content-sync.js';
 import { batchState } from './state.js';
 import { cleanTitle } from './helpers.js';
 import type { BatchResult } from './types.js';
@@ -47,6 +48,7 @@ export function createBatchSaveFlow(deps: SaveFlowDeps) {
         actionLabel = 'Saved';
       }
 
+      await syncProspectContentToWebsite();
       btn.disabled = false;
       showActionTooltip(btn, actionLabel);
       await refreshQuotaBannerNow();
@@ -84,6 +86,9 @@ export function createBatchSaveFlow(deps: SaveFlowDeps) {
       }
     }
 
+    if (savedCount > 0) {
+      await syncProspectContentToWebsite();
+    }
     await refreshQuotaBannerNow();
 
     renderBatchResultsPage();
@@ -106,6 +111,7 @@ export function createBatchSaveFlow(deps: SaveFlowDeps) {
 
     const allSaved = batchState.tempBatchResults.every((r) => r.status === 'saved');
     let actionLabel = '';
+    let didChange = false;
 
     try {
       if (allSaved) {
@@ -123,6 +129,7 @@ export function createBatchSaveFlow(deps: SaveFlowDeps) {
 
         batchState.tempBatchResults.forEach((r) => (r.status = 'ready'));
         actionLabel = 'Unsaved all';
+        didChange = true;
       } else {
         const indicesToSave = batchState.tempBatchResults
           .map((_, i) => i)
@@ -142,11 +149,15 @@ export function createBatchSaveFlow(deps: SaveFlowDeps) {
 
         if (savedCount > 0) {
           actionLabel = 'Saved all';
+          didChange = true;
         } else {
           showToast('No new prospects available to save.');
         }
       }
 
+      if (didChange) {
+        await syncProspectContentToWebsite();
+      }
       await refreshQuotaBannerNow();
     } catch (err: any) {
       console.error('Batch action error:', err);
