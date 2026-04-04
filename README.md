@@ -2,7 +2,7 @@
 
 SignalizeAI is the browser extension for turning public company websites into usable prospect records.
 
-Current version: `5.4.0`
+Current version: `5.4.1`
 
 ## What it does
 

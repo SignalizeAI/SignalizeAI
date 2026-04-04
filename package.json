@@ -1,6 +1,6 @@
 {
   "name": "signalizeai",
-  "version": "5.4.0",
+  "version": "5.4.1",
   "description": "Find the right angle to sell to any company in seconds. Get clear strategy, targeting, and outreach you can actually use without guessing.",
   "main": "background.js",
   "scripts": {
