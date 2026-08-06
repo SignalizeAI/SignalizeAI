@@ -19,6 +19,12 @@ interface ExtractionMessage {
       .trim();
   }
 
+  function isBlacklistMatch(lower: string, word: string): boolean {
+    if (word === '©') return lower.includes(word);
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`).test(lower);
+  }
+
   function isMeaningful(text: string): boolean {
     if (!text) return false;
 
@@ -40,7 +46,7 @@ interface ExtractionMessage {
     ];
 
     const lower = text.toLowerCase();
-    return !blacklist.some((word) => lower.includes(word));
+    return !blacklist.some((word) => isBlacklistMatch(lower, word));
   }
 
   function detectRestriction(): string | null {

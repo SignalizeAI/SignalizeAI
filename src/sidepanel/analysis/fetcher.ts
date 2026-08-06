@@ -16,6 +16,12 @@ function cleanText(text: string): string {
     .trim();
 }
 
+function isBlacklistMatch(lower: string, word: string): boolean {
+  if (word === '©') return lower.includes(word);
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`).test(lower);
+}
+
 function isMeaningful(text: string): boolean {
   if (!text) return false;
 
@@ -40,7 +46,7 @@ function isMeaningful(text: string): boolean {
       'menu',
       'legal',
     ];
-    if (blacklist.some((word) => lower.includes(word))) return false;
+    if (blacklist.some((word) => isBlacklistMatch(lower, word))) return false;
   }
 
   return true;
