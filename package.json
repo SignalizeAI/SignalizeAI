@@ -2,7 +2,7 @@
   "name": "signalizeai",
   "version": "5.4.1",
   "description": "Find the right angle to sell to any company in seconds. Get clear strategy, targeting, and outreach you can actually use without guessing.",
-  "main": "background.js",
+  "main": "extension/background.js",
   "scripts": {
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -18,9 +18,15 @@
     "dev": "cp manifest.chrome.dev.json manifest.json && concurrently -k \"npm:watch\" \"web-ext run --chromium --source-dir . --watch-file sidepanel.html --watch-file sidepanel-loader.ts --watch-file sidepanel.css --watch-file sidepanel-partials/** --watch-file sidepanel-styles/** --watch-file extension/**\"",
     "dev:firefox": "cp manifest.firefox.dev.json manifest.json && concurrently -k \"npm:watch\" \"web-ext run --firefox --source-dir . --watch-file sidepanel.html --watch-file sidepanel-loader.ts --watch-file sidepanel.css --watch-file sidepanel-partials/** --watch-file sidepanel-styles/** --watch-file extension/**\""
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "browser-extension",
+    "manifest-v3",
+    "sales",
+    "prospecting",
+    "supabase"
+  ],
+  "author": "SignalizeAI",
+  "license": "MIT",
   "dependencies": {
     "@supabase/supabase-js": "^2.78.0",
     "exceljs": "^4.4.0"
