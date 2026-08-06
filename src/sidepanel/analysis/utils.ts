@@ -23,16 +23,28 @@ export function cleanTitle(title = ''): string {
   return title.replace(/^\(\d+\)\s*/, '').trim();
 }
 
+export function isIrrelevantDomain(rawUrl = ''): boolean {
+  let hostname: string;
+  try {
+    hostname = new URL(rawUrl).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+
+  return IRRELEVANT_DOMAINS.some((entry) => {
+    const normalized = entry.toLowerCase();
+    if (normalized.endsWith('.')) {
+      // Trailing-dot entries are intentional prefixes: google. matches
+      // google.com, google.co.uk, google.de, and so on.
+      return hostname.startsWith(normalized);
+    }
+    return hostname === normalized || hostname.endsWith(`.${normalized}`);
+  });
+}
+
 export async function shouldAutoAnalyze(url = ''): Promise<boolean> {
   const settings = await loadSettings();
   if (!settings.autoReanalysis) return false;
 
-  url = url?.toLowerCase() || '';
-  for (const domain of IRRELEVANT_DOMAINS) {
-    if (url.includes(domain)) {
-      return false;
-    }
-  }
-
-  return true;
+  return !isIrrelevantDomain(url);
 }

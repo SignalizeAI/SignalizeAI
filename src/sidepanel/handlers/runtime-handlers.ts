@@ -1,10 +1,11 @@
 import { restoreSessionFromStorage, signOut } from '../auth.js';
-import { AUTO_ANALYZE_DEBOUNCE, IRRELEVANT_DOMAINS } from '../constants.js';
+import { AUTO_ANALYZE_DEBOUNCE } from '../constants.js';
 import {
   extractWebsiteContent,
   shouldAutoAnalyze,
   showIrrelevantDomainView,
 } from '../analysis/index.js';
+import { isIrrelevantDomain } from '../analysis/utils.js';
 import { loadQuotaFromAPI } from '../quota.js';
 import { loadSavedAnalyses } from '../saved/index.js';
 import { applyTheme, saveSettings } from '../settings.js';
@@ -31,9 +32,7 @@ export function setupRuntimeHandlers(): void {
         const enabled = await shouldAutoAnalyze(url);
 
         if (!enabled && state.currentView === 'analysis') {
-          const lowerUrl = url?.toLowerCase() || '';
-          const isIrrelevant = IRRELEVANT_DOMAINS.some((domain) => lowerUrl.includes(domain));
-          if (isIrrelevant) {
+          if (isIrrelevantDomain(url)) {
             showIrrelevantDomainView();
           }
           return;
@@ -126,9 +125,7 @@ export function setupRuntimeHandlers(): void {
         })
         .then(({ enabled, url }) => {
           if (!enabled && state.currentView === 'analysis') {
-            const lowerUrl = url?.toLowerCase() || '';
-            const isIrrelevant = IRRELEVANT_DOMAINS.some((domain) => lowerUrl.includes(domain));
-            if (isIrrelevant) {
+            if (isIrrelevantDomain(url)) {
               showIrrelevantDomainView();
             }
             return;
