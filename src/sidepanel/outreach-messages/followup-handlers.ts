@@ -11,9 +11,12 @@ import {
 } from './followup-render.js';
 
 function getOpeningEmail(): { subject: string; body: string } | null {
-  if (!state.outreachAngles?.angles?.length) return null;
-  const recommended = state.outreachAngles.angles.find(
-    (angle) => angle.id === getRecommendedAngleId(state.outreachAngles)
+  // Hoisted to a local because `state` is mutable: TypeScript discards the
+  // optional-chain narrowing as soon as the value is read inside the callback.
+  const outreachAngles = state.outreachAngles;
+  if (!outreachAngles?.angles?.length) return null;
+  const recommended = outreachAngles.angles.find(
+    (angle) => angle.id === getRecommendedAngleId(outreachAngles)
   );
   const variation = recommended?.variations?.[0];
   return variation ? { subject: variation.subject, body: variation.body } : null;

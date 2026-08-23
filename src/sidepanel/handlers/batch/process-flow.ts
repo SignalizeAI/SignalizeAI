@@ -181,7 +181,7 @@ async function processSingleUrl(url: string, telemetry: Map<string, BatchTelemet
       return {
         url,
         content: contentForAnalyze,
-        analysis: buildDegradedAnalysis(contentForAnalyze, normalizeErrorMessage(err)),
+        analysis: buildDegradedAnalysis(contentForAnalyze),
         contentHash: await hashContent(contentForAnalyze),
       };
     }

@@ -9,6 +9,13 @@ interface ExtractedContent {
 const BG_FETCH_TIMEOUT_MS = 30000;
 const BG_MESSAGE_TIMEOUT_MS = 35000;
 
+/**
+ * Result of fetching a page's text, from either the background service worker
+ * or a direct fetch. Discriminated on `ok` so that a single `if (!res.ok)`
+ * guard narrows `status`/`text` to non-optional in the success path.
+ */
+type FetchTextResult = { ok: true; status: number; text: string } | { ok: false; error: string };
+
 function cleanText(text: string): string {
   return text
     .replace(/\s+/g, ' ')
@@ -113,11 +120,11 @@ export async function fetchAndExtractContent(
   compact: boolean = false
 ): Promise<{ ok: boolean; content?: ExtractedContent; reason?: string; error?: string }> {
   try {
-    const fetchRes = viaBackground
+    const fetchRes: FetchTextResult = viaBackground
       ? await sendBackgroundFetchText(url)
       : await (async () => {
           const res = await fetch(url);
-          return { ok: true, status: res.status, text: await res.text() };
+          return { ok: true as const, status: res.status, text: await res.text() };
         })();
 
     if (!fetchRes.ok) {
@@ -185,9 +192,30 @@ export async function fetchAndExtractContent(
   }
 }
 
-async function sendBackgroundFetchText(
-  url: string
-): Promise<{ ok: boolean; status?: number; text?: string; error?: string }> {
+/**
+ * The background router is untyped, so the message response arrives as
+ * `unknown`. Validate it here rather than asserting, so that a malformed or
+ * missing reply becomes an error result instead of a `text` of `undefined`
+ * flowing into the parser.
+ */
+function toFetchTextResult(response: unknown): FetchTextResult {
+  if (typeof response !== 'object' || response === null) {
+    return { ok: false, error: 'No response from background' };
+  }
+
+  const res = response as Record<string, unknown>;
+
+  if (res.ok === true && typeof res.status === 'number' && typeof res.text === 'string') {
+    return { ok: true, status: res.status, text: res.text };
+  }
+
+  return {
+    ok: false,
+    error: typeof res.error === 'string' ? res.error : 'Malformed background fetch response',
+  };
+}
+
+async function sendBackgroundFetchText(url: string): Promise<FetchTextResult> {
   return await new Promise((resolve) => {
     let isResolved = false;
     const timeoutId = setTimeout(() => {
@@ -209,7 +237,7 @@ async function sendBackgroundFetchText(
           });
           return;
         }
-        resolve(response || { ok: false, error: 'No response from background' });
+        resolve(toFetchTextResult(response));
       }
     );
   });

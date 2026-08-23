@@ -131,7 +131,12 @@ window.addEventListener('message', (event: MessageEvent) => {
 
 chrome.runtime.onMessage.addListener((message) => {
   if (message?.type === '__PING__') {
-    return { ok: true };
+    // Deliberately does not answer. __PING__ asks whether the *extractor* is
+    // loaded, and this bridge does not handle EXTRACT_WEBSITE_CONTENT. Release
+    // manifests declare only this script on signalizeai.org, so the unanswered
+    // ping is what makes ensureContentScriptLoaded() inject the extractor here.
+    // Answering would skip that injection and break extraction on this origin.
+    return false;
   }
 
   if (message?.type === 'SYNC_EXTENSION_SIGNED_OUT') {
@@ -141,7 +146,7 @@ chrome.runtime.onMessage.addListener((message) => {
       },
       window.location.origin
     );
-    return;
+    return false;
   }
 
   if (message?.type === 'SYNC_EXTENSION_THEME') {
@@ -152,7 +157,7 @@ chrome.runtime.onMessage.addListener((message) => {
       },
       window.location.origin
     );
-    return;
+    return false;
   }
 
   if (message?.type === 'SYNC_PROSPECT_CONTENT_TO_PAGE') {
@@ -164,10 +169,10 @@ chrome.runtime.onMessage.addListener((message) => {
       },
       window.location.origin
     );
-    return;
+    return false;
   }
 
-  if (message?.type !== 'SYNC_PROSPECT_STATUS_TO_PAGE') return;
+  if (message?.type !== 'SYNC_PROSPECT_STATUS_TO_PAGE') return false;
 
   window.postMessage(
     {
@@ -177,6 +182,7 @@ chrome.runtime.onMessage.addListener((message) => {
     },
     window.location.origin
   );
+  return false;
 });
 
 syncStoredWebsiteSession();

@@ -47,7 +47,10 @@ export function parseUrlsFromCsv(text: string): string[] {
 export function mapBatchResultToExportItem(r: BatchResult) {
   const outreachAngles = r.outreachAngles?.angles?.length
     ? {
-        generated_at: r.outreachGeneratedAt,
+        // BatchResult carries `string | null`; SavedAnalysis.outreach_angles
+        // declares `generated_at?: string`. Coerce here rather than widening
+        // the export type, so the null stays contained to the batch layer.
+        generated_at: r.outreachGeneratedAt ?? undefined,
         recommended_angle_id: r.outreachAngles.recommendedAngleId,
         angles: r.outreachAngles.angles,
         ...(r.followUpEmails?.emails?.length ? { follow_ups: r.followUpEmails } : {}),
