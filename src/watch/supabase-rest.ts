@@ -10,12 +10,13 @@
 
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../config.js';
 
-interface StoredSession {
-  access_token: string;
-  refresh_token: string;
-  expires_at?: number;
-  user?: { id?: string };
-}
+import {
+  readStoredSession,
+  writeStoredSession,
+  sessionExpiry,
+  withSessionLock,
+  type StoredSession,
+} from '../auth/session-storage.js';
 
 const REST_TIMEOUT_MS = 15000;
 
@@ -27,20 +28,6 @@ async function fetchWithTimeout(input: string, init: RequestInit): Promise<Respo
   } finally {
     clearTimeout(timeout);
   }
-}
-
-function readStoredSession(): Promise<StoredSession | null> {
-  return new Promise((resolve) => {
-    chrome.storage.local.get('supabaseSession', ({ supabaseSession }) => {
-      resolve((supabaseSession as StoredSession) || null);
-    });
-  });
-}
-
-function writeStoredSession(session: StoredSession): Promise<void> {
-  return new Promise((resolve) => {
-    chrome.storage.local.set({ supabaseSession: session }, () => resolve());
-  });
 }
 
 async function refreshSession(session: StoredSession): Promise<StoredSession | null> {
@@ -56,7 +43,14 @@ async function refreshSession(session: StoredSession): Promise<StoredSession | n
       body: JSON.stringify({ refresh_token: session.refresh_token }),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // Transient errors retain the session for a later retry; revoked refresh
+      // tokens cannot recover and must not be retried on every watch alarm.
+      if (res.status === 400 || res.status === 401) {
+        await chrome.storage.local.remove('supabaseSession');
+      }
+      return null;
+    }
 
     const next = (await res.json()) as StoredSession;
     if (!next?.access_token) return null;
@@ -76,13 +70,16 @@ export interface WatchSession {
 
 /** Current session, refreshed if the stored access token is close to expiry. */
 export async function getWatchSession(): Promise<WatchSession | null> {
-  let session = await readStoredSession();
-  if (!session?.access_token) return null;
-
-  const expiresAt = Number(session.expires_at || 0);
-  if (expiresAt && expiresAt * 1000 - Date.now() < 60_000) {
-    session = (await refreshSession(session)) || session;
-  }
+  const session = await withSessionLock(async () => {
+    const current = await readStoredSession();
+    if (!current?.access_token) return null;
+    const expiresAt = sessionExpiry(current);
+    if (!expiresAt || expiresAt * 1000 - Date.now() < 60_000) {
+      return refreshSession(current);
+    }
+    return current;
+  });
+  if (!session) return null;
 
   const userId = session.user?.id || (await fetchUserId(session.access_token));
   if (!userId) return null;

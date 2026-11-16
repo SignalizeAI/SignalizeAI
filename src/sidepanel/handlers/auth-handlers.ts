@@ -18,12 +18,8 @@ export function setupAuthHandlers(): void {
   const cancelBtn = document.getElementById('cancel-signin');
   if (cancelBtn) cancelBtn.addEventListener('click', cancelSignIn);
 
-  supabase.auth.onAuthStateChange((event, session) => {
+  supabase.auth.onAuthStateChange((_event, session) => {
     updateUI(session);
-  });
-
-  supabase.auth.getSession().then(({ data }) => {
-    updateUI(data.session);
   });
 
   restoreSessionFromStorage().then(async () => {

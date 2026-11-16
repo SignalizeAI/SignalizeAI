@@ -103,15 +103,9 @@ export async function signOut(): Promise<void> {
   state.pendingDeleteMap.clear();
   state.selectedSavedIds.clear();
 
-  await chrome.storage.local.remove('supabaseSession');
-
-  const { data } = await supabase.auth.getSession();
-
-  if (data?.session) {
-    const { error } = await supabase.auth.signOut();
-    if (error && error.name !== 'AuthSessionMissingError') {
-      console.error('Sign out error:', error);
-    }
+  const { error } = await supabase.auth.signOut({ scope: 'local' });
+  if (error && error.name !== 'AuthSessionMissingError') {
+    console.error('Sign out error:', error);
   }
 
   await broadcastToWebsiteTabs({ type: 'SYNC_EXTENSION_SIGNED_OUT' });
@@ -120,18 +114,7 @@ export async function signOut(): Promise<void> {
 }
 
 export async function restoreSessionFromStorage(): Promise<void> {
-  const { supabaseSession } = await chrome.storage.local.get('supabaseSession');
-
-  if (!supabaseSession?.access_token || !supabaseSession?.refresh_token) {
-    return;
-  }
-
-  const { error } = await supabase.auth.setSession({
-    access_token: supabaseSession.access_token,
-    refresh_token: supabaseSession.refresh_token,
-  });
-
-  if (error) {
-    console.error('Failed to restore session', error);
-  }
+  // The SDK and background worker now read the same chrome.storage session.
+  // setSession here would re-import a stale copy and rotate it a second time.
+  await supabase.auth.getSession();
 }

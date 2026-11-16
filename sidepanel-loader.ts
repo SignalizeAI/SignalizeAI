@@ -34,7 +34,6 @@ const loadPartials = async (): Promise<void> => {
 
 const boot = async (): Promise<void> => {
   await loadPartials();
-  await loadScript('extension/supabase.bundle.js');
   await loadScript('extension/sidepanel.js', 'module');
 };
 

@@ -48,17 +48,7 @@ export function setupRuntimeHandlers(): void {
         break;
       }
       case 'SESSION_UPDATED': {
-        if (message.session?.access_token && message.session?.refresh_token) {
-          const { error } = await supabase.auth.setSession({
-            access_token: message.session.access_token,
-            refresh_token: message.session.refresh_token,
-          });
-          if (error) {
-            console.error('Failed to apply session from website sync', error);
-          }
-        } else {
-          await restoreSessionFromStorage();
-        }
+        await restoreSessionFromStorage();
         const { data } = await supabase.auth.getSession();
         if (!data?.session) return;
         updateUI(data.session);
@@ -84,11 +74,6 @@ export function setupRuntimeHandlers(): void {
         if (!data?.session) {
           console.warn('No active session after payment success');
           return;
-        }
-        try {
-          await supabase.auth.refreshSession();
-        } catch (err) {
-          console.warn('Failed to refresh session after payment', err);
         }
         await new Promise((resolve) => setTimeout(resolve, 500));
         await loadQuotaFromAPI(true);

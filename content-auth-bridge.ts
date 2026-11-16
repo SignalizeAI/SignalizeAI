@@ -1,9 +1,7 @@
+import { sessionExpiry, type StoredSession } from './src/auth/session-storage.js';
 import { SUPABASE_URL } from './src/config.js';
 
-type WebsiteSession = {
-  access_token: string;
-  refresh_token: string;
-};
+type WebsiteSession = StoredSession;
 
 const SUPABASE_PROJECT_REF = new URL(SUPABASE_URL).hostname.split('.')[0];
 const WEBSITE_SESSION_STORAGE_KEY = `sb-${SUPABASE_PROJECT_REF}-auth-token`;
@@ -16,6 +14,12 @@ function extractSession(candidate: unknown): WebsiteSession | null {
     return {
       access_token: direct.access_token,
       refresh_token: direct.refresh_token,
+      expires_at: sessionExpiry({
+        access_token: direct.access_token,
+        refresh_token: direct.refresh_token,
+        expires_at: typeof direct.expires_at === 'number' ? direct.expires_at : undefined,
+      }),
+      user: direct.user as WebsiteSession['user'],
     };
   }
 
@@ -56,21 +60,28 @@ function syncStoredWebsiteSession(): void {
   });
 }
 
+function publishExtensionSession(candidate: unknown): void {
+  const session = extractSession(candidate);
+  if (!session || sessionExpiry(session) * 1000 <= Date.now()) return;
+  const website = getWebsiteSessionFromStorage();
+  if (website?.access_token === session.access_token) return;
+  if (website && sessionExpiry(website) >= sessionExpiry(session)) return;
+  window.postMessage({ type: 'SIGNALIZE_EXTENSION_SESSION_SYNC', session }, window.location.origin);
+}
+
 function syncExtensionSessionToWebsite(): void {
   chrome.runtime.sendMessage({ type: 'GET_EXTENSION_SESSION' }, (response) => {
     if (chrome.runtime.lastError) return;
-    const session = extractSession(response?.session);
-    if (!session) return;
-
-    window.postMessage(
-      {
-        type: 'SIGNALIZE_EXTENSION_SESSION_SYNC',
-        session,
-      },
-      window.location.origin
-    );
+    publishExtensionSession(response?.session);
   });
 }
+
+// Keep an open website on the token rotated by the panel or watch worker.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.supabaseSession?.newValue) {
+    publishExtensionSession(changes.supabaseSession.newValue);
+  }
+});
 
 window.addEventListener('message', (event: MessageEvent) => {
   if (event.source !== window) return;

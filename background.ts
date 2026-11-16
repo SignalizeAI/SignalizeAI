@@ -2,10 +2,13 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL, WEBSITE_BASE_URL } from './src/config.
 import { refreshActionBadge, runWatchSweep, updateActionBadge } from './src/watch/sweep.js';
 import { SWEEP_PERIOD_MINUTES } from './src/watch/plans.js';
 
-type WebsiteSession = {
-  access_token: string;
-  refresh_token: string;
-};
+import {
+  readStoredSession,
+  sessionExpiry,
+  withSessionLock,
+  writeStoredSession,
+  type StoredSession as WebsiteSession,
+} from './src/auth/session-storage.js';
 
 const WATCH_ALARM = 'watch-sweep';
 
@@ -144,8 +147,8 @@ async function fetchWithTimeout(
   }
 }
 
-async function validateWebsiteSession(session: WebsiteSession): Promise<boolean> {
-  if (!session.access_token || !session.refresh_token) return false;
+async function validateWebsiteSession(session: WebsiteSession): Promise<WebsiteSession | null> {
+  if (!session?.access_token || !session?.refresh_token) return null;
 
   try {
     const res = await fetchWithTimeout(
@@ -161,10 +164,11 @@ async function validateWebsiteSession(session: WebsiteSession): Promise<boolean>
       10000
     );
 
-    return res.ok;
+    if (!res.ok) return null;
+    return { ...session, expires_at: sessionExpiry(session), user: await res.json() };
   } catch (error) {
     console.error('Failed to validate website session', error);
-    return false;
+    return null;
   }
 }
 
@@ -187,16 +191,25 @@ chrome.runtime.onMessage.addListener(
 
     if (msg.type === 'AUTH_SUCCESS_FROM_WEBSITE') {
       (async () => {
-        if (!(await validateWebsiteSession(msg.session))) {
-          await chrome.storage.local.remove('supabaseSession');
+        const validated = await validateWebsiteSession(msg.session);
+        if (!validated) {
           sendResponse({ ok: false, error: 'Invalid website session' });
           return;
         }
 
-        chrome.storage.local.set({ supabaseSession: msg.session }, () => {
-          chrome.runtime.sendMessage({ type: 'SESSION_UPDATED', session: msg.session }, () => {
-            void chrome.runtime.lastError;
-          });
+        const session = await withSessionLock(async () => {
+          const current = await readStoredSession();
+          if (
+            current &&
+            current.user?.id === validated.user?.id &&
+            sessionExpiry(current) >= sessionExpiry(validated)
+          )
+            return current;
+          await writeStoredSession(validated);
+          return validated;
+        });
+        chrome.runtime.sendMessage({ type: 'SESSION_UPDATED', session }, () => {
+          void chrome.runtime.lastError;
         });
         sendResponse({ ok: true });
       })();
@@ -204,19 +217,21 @@ chrome.runtime.onMessage.addListener(
     }
 
     if (msg.type === 'WEBSITE_SIGN_OUT') {
-      chrome.storage.local.remove('supabaseSession', () => {
+      // Wait for an in-flight refresh before clearing storage, so its response
+      // cannot restore the session after sign-out.
+      void withSessionLock(() => chrome.storage.local.remove('supabaseSession')).then(() => {
         void updateActionBadge(0);
         chrome.runtime.sendMessage({ type: 'EXTENSION_SIGNED_OUT' }, () => {
           void chrome.runtime.lastError;
         });
+        sendResponse({ ok: true });
       });
-      sendResponse({ ok: true });
       return true;
     }
 
     if (msg.type === 'GET_EXTENSION_SESSION') {
-      chrome.storage.local.get('supabaseSession', ({ supabaseSession }) => {
-        sendResponse({ ok: true, session: supabaseSession || null });
+      void withSessionLock(readStoredSession).then((session) => {
+        sendResponse({ ok: true, session });
       });
       return true;
     }

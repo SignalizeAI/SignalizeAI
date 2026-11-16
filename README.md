@@ -80,6 +80,17 @@ that cries wolf gets muted in a week.
 
 Check frequency is the paid lever: Free weekly, Pro every 48 hours, Team daily.
 
+## Session recovery
+
+The side panel and background watches share one session in `chrome.storage.local`
+and serialize token rotation with the browser's Web Locks API. The panel loads
+one Supabase client. Website sync preserves expiry and never replaces a newer
+extension session with an older website token.
+
+After updating an unpacked extension, reload it at `chrome://extensions` and
+reopen the panel. If Supabase already revoked the old refresh token, sign in
+again once. Reloading cannot restore a revoked session.
+
 ## Tech stack
 
 Manifest V3 · TypeScript · esbuild · Supabase (auth and storage) · Cloudflare

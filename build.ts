@@ -102,10 +102,6 @@ if (fs.existsSync(outDir)) {
   fs.mkdirSync(outDir, { recursive: true });
 }
 
-// Build supabase bundle from TypeScript
-const cmd1 = `esbuild src/sidepanel-entry.ts --bundle --format=iife --minify --outfile=extension/supabase.bundle.js`;
-execSync(cmd1, { stdio: 'inherit' });
-
 // Build sidepanel from TypeScript
 const cmd2 = `esbuild sidepanel.ts --bundle --platform=browser --format=esm --minify --tree-shaking=true --splitting --outdir=extension`;
 execSync(cmd2, { stdio: 'inherit' });
