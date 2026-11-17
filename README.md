@@ -65,13 +65,12 @@ one.
 Two design decisions worth calling out, because they are the ones people ask
 about:
 
-**Fetching happens in your browser, not on a server.** The Cloudflare Worker has
-no crawler. Workers also have no `DOMParser`, so a server-side implementation
-would mean maintaining a second extractor that drifts from this one. More
-importantly, fetching sites you are not visiting from our infrastructure would
-contradict the privacy policy, which says content is read from the page you are
-on. The cost of this choice is that checks only happen while your browser is
-running, which is what the action badge is for.
+**Choose browser-only or opt-in server monitoring.** Existing browser watchers
+keep fetching from your device while the browser runs. The website's
+[opportunity inbox](https://signalizeai.org/opportunities) adds offering context,
+evidence and editable introductions. Its Monitored accounts screen lets you
+explicitly switch a saved company to server checks while your browser is closed.
+No account is automatically enrolled in server monitoring. See [privacy](PRIVACY.md).
 
 **The differ is tuned to stay quiet.** Whitespace, reordered navigation,
 tracking parameters, and a page that suddenly reports no prices at all (almost

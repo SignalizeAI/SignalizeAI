@@ -3,14 +3,10 @@
  *
  * This runs in the background service worker, driven by `chrome.alarms`.
  *
- * Why client-side and not a Worker cron (feature-spec.md section 2):
- *   - The Cloudflare Worker has no fetcher today; every page fetch in this
- *     product already happens in the user's browser.
- *   - Workers have no DOMParser, so the extractor would have to be ported and
- *     the two implementations would drift.
- *   - Server-side fetching of sites the user is not visiting contradicts the
- *     current privacy policy and store listing, which say content is read from
- *     the page you are on.
+ * This remains the browser-only mode. The website can separately enroll an
+ * account in server monitoring with explicit consent; enrollment switches off
+ * this legacy watch_enabled bit. Old clients cannot enroll server monitoring.
+ * Extraction/diff modules are DOM-free and synchronized with the backend.
  *
  * The cost is that checks only happen while the browser is running. The action
  * badge is what brings the user back.

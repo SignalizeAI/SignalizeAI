@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SignalizeAI: AI Prospect Research & Alerts",
-  "version": "5.5.0",
+  "version": "5.6.0",
   "description": "AI sales prospecting. Research any company in seconds, then get alerts when their pricing, hiring or messaging changes.",
   "permissions": ["activeTab", "storage", "tabs", "scripting", "alarms"],
   "host_permissions": ["https://*.supabase.co/*", "https://api.signalizeai.org/*", "<all_urls>"],

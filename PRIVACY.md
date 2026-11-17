@@ -66,10 +66,13 @@ This data is stored securely in Supabase and is **only accessible to the authent
 If a user turns on watching for a saved prospect, the extension re-reads that
 company's public website on a schedule so it can tell the user what changed.
 
-- All fetching is performed **by the user's own browser**, from the user's own
-  network, using the same public pages anyone can open. Our servers never fetch
-  third-party websites.
-- Checks only run while the browser is open, and only for domains the user saved
+- Browser-only watching fetches from the user's own browser and network. Existing
+  browser watchers stay in that mode unless the user explicitly enables server
+  monitoring for a saved account in the website workspace.
+- Opt-in server monitoring fetches the selected company's public homepage and
+  linked pricing/careers pages from SignalizeAI servers, including while the
+  browser is closed. It does not use user cookies or read authenticated pages.
+- Browser-only checks run while the browser is open, and only for domains the user saved
   and explicitly kept under watch. Watching can be turned off per prospect at any
   time, which stops all further checks for that domain.
 - Only the pages needed for the comparison are read: the homepage, and, when they
@@ -81,6 +84,15 @@ company's public website on a schedule so it can tell the user what changed.
 - When a change is detected, the before and after text of that change may be sent
   to our AI provider to generate a one-line summary and a suggested opening line,
   under the same terms as section 3.
+- A private offering profile can supply services, target customer description,
+  work examples and writing preferences for fit suggestions. Bounded profile
+  excerpts and change evidence may be processed by our AI provider. Fit is an
+  inference; drafts remain editable and nothing is sent automatically.
+- Server monitoring retains 12 recent snapshots per account and up to 2,000 inbox
+  items per user. Evidence excerpts stay with inbox items when snapshots are
+  pruned. Disabling monitoring stops future checks and opportunities, but retains
+  existing evidence and drafts. Deleting the saved prospect removes its related
+  monitoring data. An already-started fetch may finish after disabling.
 
 ## 2. How We Use Data
 
